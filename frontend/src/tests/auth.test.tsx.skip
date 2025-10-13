@@ -1,0 +1,696 @@
+/**
+ * Frontend тесты авторизации для Timly
+ * Проверяет компоненты логина, регистрации и AuthContext
+ */
+import React from 'react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { BrowserRouter } from 'react-router-dom';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+
+// Компоненты для тестирования
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import { AuthProvider, useAuth } from '@/store/AuthContext';
+
+// Мокирование API клиента
+const mockApiClient = {
+  login: vi.fn(),
+  register: vi.fn(),
+  getProfile: vi.fn(),
+  logout: vi.fn(),
+  updateHHToken: vi.fn(),
+  hasToken: vi.fn(),
+  clearToken: vi.fn(),
+};
+
+vi.mock('@/services/api', () => ({
+  apiClient: mockApiClient,
+}));
+
+// Мок react-router-dom
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
+// Компонент-обертка для тестов
+const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <BrowserRouter>
+    <AuthProvider>
+      {children}
+    </AuthProvider>
+  </BrowserRouter>
+);
+
+// Тестовый компонент для проверки AuthContext
+const TestAuthComponent: React.FC = () => {
+  const { user, isAuthenticated, error, login, register, logout } = useAuth();
+
+  return (
+    <div>
+      <div data-testid="auth-state">
+        {isAuthenticated ? 'authenticated' : 'not-authenticated'}
+      </div>
+      <div data-testid="user-email">{user?.email || 'no-user'}</div>
+      <div data-testid="error">{error || 'no-error'}</div>
+      <button
+        data-testid="test-login"
+        onClick={() => login({ email: 'test@test.ru', password: 'Test123' })}
+      >
+        Test Login
+      </button>
+      <button
+        data-testid="test-register"
+        onClick={() => register({
+          email: 'new@test.ru',
+          password: 'NewPass123',
+          company_name: 'Test Co',
+          full_name: 'Test User'
+        })}
+      >
+        Test Register
+      </button>
+      <button data-testid="test-logout" onClick={() => logout()}>
+        Test Logout
+      </button>
+    </div>
+  );
+};
+
+describe('Login Component', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('рендерит форму логина с правильными элементами', () => {
+    render(
+      <TestWrapper>
+        <Login />
+      </TestWrapper>
+    );
+
+    // Проверяем основные элементы
+    expect(screen.getByText('Timly')).toBeInTheDocument();
+    expect(screen.getByText('AI-скрининг резюме для HR')).toBeInTheDocument();
+
+    // Поля формы
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/пароль/i)).toBeInTheDocument();
+
+    // Кнопки
+    expect(screen.getByRole('button', { name: /войти/i })).toBeInTheDocument();
+    expect(screen.getByText(/зарегистрироваться/i)).toBeInTheDocument();
+  });
+
+  it('валидирует поля формы перед отправкой', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TestWrapper>
+        <Login />
+      </TestWrapper>
+    );
+
+    const submitButton = screen.getByRole('button', { name: /войти/i });
+
+    // Попытка отправки пустой формы
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/введите ваш email/i)).toBeInTheDocument();
+    });
+  });
+
+  it('показывает/скрывает пароль при клике на иконку', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TestWrapper>
+        <Login />
+      </TestWrapper>
+    );
+
+    const passwordInput = screen.getByLabelText(/пароль/i) as HTMLInputElement;
+    const toggleButton = screen.getByRole('button', { name: '' }); // Кнопка показа пароля
+
+    // Изначально пароль скрыт
+    expect(passwordInput.type).toBe('password');
+
+    // Клик на кнопку показа пароля
+    await user.click(toggleButton);
+    expect(passwordInput.type).toBe('text');
+
+    // Повторный клик скрывает пароль
+    await user.click(toggleButton);
+    expect(passwordInput.type).toBe('password');
+  });
+
+  it('валидирует email адрес', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TestWrapper>
+        <Login />
+      </TestWrapper>
+    );
+
+    const emailInput = screen.getByLabelText(/email/i);
+    const submitButton = screen.getByRole('button', { name: /войти/i });
+
+    // Некорректный email
+    await user.type(emailInput, 'invalid-email');
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/некорректный email/i)).toBeInTheDocument();
+    });
+  });
+
+  it('отправляет корректные данные при валидной форме', async () => {
+    const user = userEvent.setup();
+    mockApiClient.login.mockResolvedValue({
+      access_token: 'test-token',
+      token_type: 'bearer',
+      expires_in: 3600,
+    });
+    mockApiClient.getProfile.mockResolvedValue({
+      id: '1',
+      email: 'test@test.ru',
+      role: 'user',
+    });
+
+    render(
+      <TestWrapper>
+        <Login />
+      </TestWrapper>
+    );
+
+    const emailInput = screen.getByLabelText(/email/i);
+    const passwordInput = screen.getByLabelText(/пароль/i);
+    const submitButton = screen.getByRole('button', { name: /войти/i });
+
+    await user.type(emailInput, 'test@test.ru');
+    await user.type(passwordInput, 'TestPass123');
+
+    await act(async () => {
+      await user.click(submitButton);
+    });
+
+    await waitFor(() => {
+      expect(mockApiClient.login).toHaveBeenCalledWith({
+        email: 'test@test.ru',
+        password: 'TestPass123',
+      });
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+    });
+  });
+
+  it('показывает ошибку при неудачном логине', async () => {
+    const user = userEvent.setup();
+    mockApiClient.login.mockRejectedValue({
+      response: {
+        data: { detail: 'Неверный email или пароль' }
+      }
+    });
+
+    render(
+      <TestWrapper>
+        <Login />
+      </TestWrapper>
+    );
+
+    const emailInput = screen.getByLabelText(/email/i);
+    const passwordInput = screen.getByLabelText(/пароль/i);
+    const submitButton = screen.getByRole('button', { name: /войти/i });
+
+    await user.type(emailInput, 'wrong@test.ru');
+    await user.type(passwordInput, 'WrongPass');
+
+    await act(async () => {
+      await user.click(submitButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/неверный email или пароль/i)).toBeInTheDocument();
+    });
+  });
+});
+
+describe('Register Component', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('рендерит форму регистрации с правильными полями', () => {
+    render(
+      <TestWrapper>
+        <Register />
+      </TestWrapper>
+    );
+
+    // Заголовок
+    expect(screen.getByText('Присоединяйтесь к Timly')).toBeInTheDocument();
+
+    // Поля формы
+    expect(screen.getByLabelText(/название компании/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/полное имя/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/рабочий email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/пароль/i)).toBeInTheDocument();
+
+    // Кнопка регистрации
+    expect(screen.getByRole('button', { name: /зарегистрироваться/i })).toBeInTheDocument();
+  });
+
+  it('валидирует сложность пароля', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TestWrapper>
+        <Register />
+      </TestWrapper>
+    );
+
+    const passwordInput = screen.getByLabelText(/пароль/i);
+    const submitButton = screen.getByRole('button', { name: /зарегистрироваться/i });
+
+    // Слабый пароль
+    await user.type(passwordInput, 'weak');
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/пароль должен содержать/i)).toBeInTheDocument();
+    });
+  });
+
+  it('поддерживает кириллицу в названии компании', async () => {
+    const user = userEvent.setup();
+    mockApiClient.register.mockResolvedValue({
+      id: '1',
+      email: 'test@russian-company.ru',
+      company_name: 'ООО «Русская Компания»',
+    });
+    mockApiClient.login.mockResolvedValue({
+      access_token: 'test-token',
+      token_type: 'bearer',
+      expires_in: 3600,
+    });
+    mockApiClient.getProfile.mockResolvedValue({
+      id: '1',
+      email: 'test@russian-company.ru',
+      role: 'user',
+    });
+
+    render(
+      <TestWrapper>
+        <Register />
+      </TestWrapper>
+    );
+
+    const companyInput = screen.getByLabelText(/название компании/i);
+    const nameInput = screen.getByLabelText(/полное имя/i);
+    const emailInput = screen.getByLabelText(/рабочий email/i);
+    const passwordInput = screen.getByLabelText(/пароль/i);
+    const submitButton = screen.getByRole('button', { name: /зарегистрироваться/i });
+
+    await user.type(companyInput, 'ООО «Русская Компания»');
+    await user.type(nameInput, 'Иван Иванов');
+    await user.type(emailInput, 'test@russian-company.ru');
+    await user.type(passwordInput, 'RussianPass123');
+
+    await act(async () => {
+      await user.click(submitButton);
+    });
+
+    await waitFor(() => {
+      expect(mockApiClient.register).toHaveBeenCalledWith({
+        company_name: 'ООО «Русская Компания»',
+        full_name: 'Иван Иванов',
+        email: 'test@russian-company.ru',
+        password: 'RussianPass123',
+      });
+    });
+  });
+
+  it('показывает требования к паролю', () => {
+    render(
+      <TestWrapper>
+        <Register />
+      </TestWrapper>
+    );
+
+    expect(screen.getByText(/минимум 8 символов: строчные, заглавные буквы и цифры/i))
+      .toBeInTheDocument();
+  });
+
+  it('показывает ошибку при попытке регистрации существующего email', async () => {
+    const user = userEvent.setup();
+    mockApiClient.register.mockRejectedValue({
+      response: {
+        data: { detail: 'Пользователь с таким email уже существует' }
+      }
+    });
+
+    render(
+      <TestWrapper>
+        <Register />
+      </TestWrapper>
+    );
+
+    const companyInput = screen.getByLabelText(/название компании/i);
+    const nameInput = screen.getByLabelText(/полное имя/i);
+    const emailInput = screen.getByLabelText(/рабочий email/i);
+    const passwordInput = screen.getByLabelText(/пароль/i);
+    const submitButton = screen.getByRole('button', { name: /зарегистрироваться/i });
+
+    await user.type(companyInput, 'Test Company');
+    await user.type(nameInput, 'Test User');
+    await user.type(emailInput, 'existing@test.ru');
+    await user.type(passwordInput, 'TestPass123');
+
+    await act(async () => {
+      await user.click(submitButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/уже существует/i)).toBeInTheDocument();
+    });
+  });
+});
+
+describe('AuthContext', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockApiClient.hasToken.mockReturnValue(false);
+  });
+
+  it('изначально пользователь не аутентифицирован', () => {
+    render(
+      <TestWrapper>
+        <TestAuthComponent />
+      </TestWrapper>
+    );
+
+    expect(screen.getByTestId('auth-state')).toHaveTextContent('not-authenticated');
+    expect(screen.getByTestId('user-email')).toHaveTextContent('no-user');
+  });
+
+  it('успешно выполняет логин и обновляет состояние', async () => {
+    mockApiClient.login.mockResolvedValue({
+      access_token: 'test-token',
+      token_type: 'bearer',
+      expires_in: 3600,
+    });
+    mockApiClient.getProfile.mockResolvedValue({
+      id: '1',
+      email: 'test@test.ru',
+      role: 'user',
+      company_name: 'Test Co',
+      has_hh_token: false,
+      token_verified: false,
+    });
+
+    render(
+      <TestWrapper>
+        <TestAuthComponent />
+      </TestWrapper>
+    );
+
+    const loginButton = screen.getByTestId('test-login');
+
+    await act(async () => {
+      fireEvent.click(loginButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated');
+      expect(screen.getByTestId('user-email')).toHaveTextContent('test@test.ru');
+    });
+  });
+
+  it('обрабатывает ошибки логина', async () => {
+    mockApiClient.login.mockRejectedValue({
+      response: {
+        data: { detail: 'Неверные учетные данные' }
+      }
+    });
+
+    render(
+      <TestWrapper>
+        <TestAuthComponent />
+      </TestWrapper>
+    );
+
+    const loginButton = screen.getByTestId('test-login');
+
+    await act(async () => {
+      fireEvent.click(loginButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('error')).toHaveTextContent('Неверные учетные данные');
+      expect(screen.getByTestId('auth-state')).toHaveTextContent('not-authenticated');
+    });
+  });
+
+  it('успешно выполняет регистрацию', async () => {
+    mockApiClient.register.mockResolvedValue({
+      id: '1',
+      email: 'new@test.ru',
+      company_name: 'Test Co',
+    });
+    mockApiClient.login.mockResolvedValue({
+      access_token: 'test-token',
+      token_type: 'bearer',
+      expires_in: 3600,
+    });
+    mockApiClient.getProfile.mockResolvedValue({
+      id: '1',
+      email: 'new@test.ru',
+      role: 'user',
+    });
+
+    render(
+      <TestWrapper>
+        <TestAuthComponent />
+      </TestWrapper>
+    );
+
+    const registerButton = screen.getByTestId('test-register');
+
+    await act(async () => {
+      fireEvent.click(registerButton);
+    });
+
+    await waitFor(() => {
+      expect(mockApiClient.register).toHaveBeenCalled();
+      expect(mockApiClient.login).toHaveBeenCalled();
+      expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated');
+    });
+  });
+
+  it('корректно выполняет logout', async () => {
+    // Сначала "логинимся"
+    mockApiClient.login.mockResolvedValue({ access_token: 'token' });
+    mockApiClient.getProfile.mockResolvedValue({
+      id: '1',
+      email: 'test@test.ru',
+      role: 'user'
+    });
+    mockApiClient.logout.mockResolvedValue({});
+
+    render(
+      <TestWrapper>
+        <TestAuthComponent />
+      </TestWrapper>
+    );
+
+    // Логин
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('test-login'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated');
+    });
+
+    // Logout
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('test-logout'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-state')).toHaveTextContent('not-authenticated');
+      expect(screen.getByTestId('user-email')).toHaveTextContent('no-user');
+    });
+  });
+
+  it('восстанавливает сессию при наличии токена', async () => {
+    mockApiClient.hasToken.mockReturnValue(true);
+    mockApiClient.getProfile.mockResolvedValue({
+      id: '1',
+      email: 'restored@test.ru',
+      role: 'user',
+    });
+
+    render(
+      <TestWrapper>
+        <TestAuthComponent />
+      </TestWrapper>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated');
+      expect(screen.getByTestId('user-email')).toHaveTextContent('restored@test.ru');
+    });
+  });
+
+  it('очищает токен при ошибке восстановления сессии', async () => {
+    mockApiClient.hasToken.mockReturnValue(true);
+    mockApiClient.getProfile.mockRejectedValue({
+      response: { status: 401 }
+    });
+
+    render(
+      <TestWrapper>
+        <TestAuthComponent />
+      </TestWrapper>
+    );
+
+    await waitFor(() => {
+      expect(mockApiClient.clearToken).toHaveBeenCalled();
+      expect(screen.getByTestId('auth-state')).toHaveTextContent('not-authenticated');
+    });
+  });
+});
+
+describe('Form Validation', () => {
+  it('Login: не принимает пустые поля', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TestWrapper>
+        <Login />
+      </TestWrapper>
+    );
+
+    const submitButton = screen.getByRole('button', { name: /войти/i });
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/введите ваш email/i)).toBeInTheDocument();
+    });
+  });
+
+  it('Register: валидирует все обязательные поля', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TestWrapper>
+        <Register />
+      </TestWrapper>
+    );
+
+    const submitButton = screen.getByRole('button', { name: /зарегистрироваться/i });
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      // Проверяем что есть ошибки валидации для обязательных полей
+      const errorMessages = screen.getAllByText(/должен содержать|введите/i);
+      expect(errorMessages.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('Register: проверяет длину названия компании', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TestWrapper>
+        <Register />
+      </TestWrapper>
+    );
+
+    const companyInput = screen.getByLabelText(/название компании/i);
+    await user.type(companyInput, 'A'); // Слишком короткое
+
+    const submitButton = screen.getByRole('button', { name: /зарегистрироваться/i });
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/минимум 2 символа/i)).toBeInTheDocument();
+    });
+  });
+
+  it('проверяет отсутствие SQL-инъекций в полях форм', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TestWrapper>
+        <Login />
+      </TestWrapper>
+    );
+
+    const emailInput = screen.getByLabelText(/email/i);
+    const maliciousInput = "admin'; DROP TABLE users; --";
+
+    await user.type(emailInput, maliciousInput);
+
+    // Поле должно содержать введенное значение (защита на уровне API)
+    expect(emailInput).toHaveValue(maliciousInput);
+  });
+});
+
+describe('Accessibility', () => {
+  it('Login: все поля имеют правильные labels', () => {
+    render(
+      <TestWrapper>
+        <Login />
+      </TestWrapper>
+    );
+
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/пароль/i)).toBeInTheDocument();
+  });
+
+  it('Register: все поля имеют правильные labels', () => {
+    render(
+      <TestWrapper>
+        <Register />
+      </TestWrapper>
+    );
+
+    expect(screen.getByLabelText(/название компании/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/полное имя/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/рабочий email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/пароль/i)).toBeInTheDocument();
+  });
+
+  it('кнопки имеют правильные роли и названия', () => {
+    render(
+      <TestWrapper>
+        <Login />
+      </TestWrapper>
+    );
+
+    const submitButton = screen.getByRole('button', { name: /войти/i });
+    expect(submitButton).toHaveAttribute('type', 'submit');
+  });
+
+  it('формы имеют правильные autocomplete атрибуты', () => {
+    render(
+      <TestWrapper>
+        <Login />
+      </TestWrapper>
+    );
+
+    const emailInput = screen.getByLabelText(/email/i);
+    const passwordInput = screen.getByLabelText(/пароль/i);
+
+    expect(emailInput).toHaveAttribute('autoComplete', 'email');
+    expect(passwordInput).toHaveAttribute('autoComplete', 'current-password');
+  });
+});

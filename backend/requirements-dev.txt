@@ -1,0 +1,21 @@
+# FastAPI и основные зависимости
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Database
+sqlalchemy==2.0.23
+
+# Auth & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+cryptography==41.0.7
+python-dotenv==1.0.0
+
+# API Clients
+httpx==0.25.2
+
+# Data Processing
+pydantic==2.5.2
+pydantic-settings==2.1.0
+email-validator==2.1.0

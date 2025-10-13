@@ -1,0 +1,76 @@
+# Render.com конфигурация для TIMLY
+# Этот файл автоматически настроит все сервисы при подключении к Render
+
+services:
+  # Backend API (FastAPI)
+  - type: web
+    name: timly-backend
+    runtime: python
+    region: frankfurt  # Европейский регион для лучшей скорости
+    plan: starter  # Можете начать с free, потом перейти на starter
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: false
+      - key: OPENAI_API_KEY
+        sync: false  # Вы добавите это вручную в панели Render
+      - key: SECRET_KEY
+        generateValue: true  # Render автоматически сгенерирует
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: timly-db
+          property: connectionString
+      - key: CORS_ORIGINS
+        sync: false  # Добавите после настройки домена
+
+  # Frontend (React + Vite)
+  - type: web
+    name: timly-frontend
+    runtime: node
+    region: frankfurt
+    plan: starter  # Можете начать с free
+    buildCommand: "cd frontend && npm install && npm run build"
+    staticPublishPath: ./frontend/dist
+    pullRequestPreviewsEnabled: true  # Автоматические превью для PR
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-XSS-Protection
+        value: 1; mode=block
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: VITE_API_URL
+        sync: false  # Добавите URL вашего бэкенда
+
+# PostgreSQL Database
+databases:
+  - name: timly-db
+    databaseName: timly_production
+    region: frankfurt
+    plan: starter  # 1GB RAM, можете начать с free (256MB)
+    postgresMajorVersion: 15
+
+# Опционально: Redis для фоновых задач
+# - name: timly-redis
+#   type: redis
+#   region: frankfurt
+#   plan: starter
+#   maxmemoryPolicy: allkeys-lru
