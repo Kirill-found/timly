@@ -31,12 +31,10 @@ services:
       - key: CORS_ORIGINS
         sync: false  # Добавите после настройки домена
 
-  # Frontend (React + Vite)
-  - type: web
+  # Frontend (React + Vite) - Static Site
+  - type: static
     name: timly-frontend
-    runtime: node
     region: frankfurt
-    plan: starter  # Можете начать с free
     buildCommand: "cd frontend && npm install && npm run build"
     staticPublishPath: ./frontend/dist
     pullRequestPreviewsEnabled: true  # Автоматические превью для PR
