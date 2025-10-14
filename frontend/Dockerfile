@@ -2,9 +2,6 @@
 # Стадия 1: Сборка приложения
 FROM node:18-alpine AS build
 
-# Установка переменных окружения
-ENV NODE_ENV=production
-
 # Установка системных зависимостей
 RUN apk add --no-cache git
 
@@ -14,8 +11,8 @@ WORKDIR /app
 # Копирование package files
 COPY package.json package-lock.json* ./
 
-# Установка зависимостей
-RUN npm ci --only=production && npm cache clean --force
+# Установка всех зависимостей (включая devDependencies для сборки)
+RUN npm ci && npm cache clean --force
 
 # Копирование исходного кода
 COPY . .
@@ -29,7 +26,7 @@ FROM nginx:alpine
 # Копирование кастомной конфигурации Nginx
 COPY <<EOF /etc/nginx/conf.d/default.conf
 server {
-    listen 3000;
+    listen 80;
     server_name localhost;
 
     # Gzip compression
@@ -97,11 +94,11 @@ RUN addgroup -g 1001 -S nodejs && \
     chown -R nextjs:nodejs /etc/nginx/conf.d
 
 # Expose port
-EXPOSE 3000
+EXPOSE 80
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
 
 # Запуск Nginx
 CMD ["nginx", "-g", "daemon off;"]

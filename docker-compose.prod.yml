@@ -43,7 +43,7 @@ services:
 
       # App Config
       APP_ENV: production
-      DEBUG: false
+      DEBUG: "false"
       CORS_ORIGINS: ${FRONTEND_URL}
     depends_on:
       db:
