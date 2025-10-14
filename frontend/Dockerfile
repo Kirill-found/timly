@@ -2,6 +2,10 @@
 # Стадия 1: Сборка приложения
 FROM node:18-alpine AS build
 
+# Аргумент для API URL
+ARG VITE_API_BASE_URL=http://localhost:8000
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 # Установка системных зависимостей
 RUN apk add --no-cache git
 
