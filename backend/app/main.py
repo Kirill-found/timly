@@ -39,16 +39,17 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
-# Trusted Host Middleware для безопасности
-if settings.APP_ENV == "production":
-    app.add_middleware(
-        TrustedHostMiddleware,
-        allowed_hosts=["timly.ru", "*.timly.ru", "api.timly.ru", "188.225.24.157", "localhost"]
-    )
+# Trusted Host Middleware для безопасности - ВРЕМЕННО ОТКЛЮЧЕН ДЛЯ ДЕБАГА
+# if settings.APP_ENV == "production":
+#     app.add_middleware(
+#         TrustedHostMiddleware,
+#         allowed_hosts=["timly.ru", "*.timly.ru", "api.timly.ru", "188.225.24.157", "localhost"]
+#     )
 
 
 @app.middleware("http")
