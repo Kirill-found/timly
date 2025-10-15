@@ -33,7 +33,7 @@ const Settings: React.FC = () => {
   const handleOAuthConnect = () => {
     // HH.ru OAuth параметры
     const clientId = 'H1F4CKSVJ1360RB6KTOAG6NRQD8AQVLFDRLIPSLJ4N3I5164VRLC9JJU45AUVLTH';
-    const redirectUri = 'https://timly.ru/auth';
+    const redirectUri = 'http://188.225.24.157/settings';
     const authUrl = `https://hh.ru/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
     // Открываем HH.ru OAuth в новом окне
@@ -254,7 +254,7 @@ const Settings: React.FC = () => {
               <div className="space-y-2">
                 <p className="font-semibold">Ручной способ (если OAuth не работает):</p>
                 <ol className="list-decimal list-inside space-y-1 text-sm">
-                  <li>Перейдите на <a href="https://hh.ru/oauth/authorize?response_type=code&client_id=H1F4CKSVJ1360RB6KTOAG6NRQD8AQVLFDRLIPSLJ4N3I5164VRLC9JJU45AUVLTH&redirect_uri=https://timly.ru/auth" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">страницу авторизации</a></li>
+                  <li>Перейдите на <a href="https://hh.ru/oauth/authorize?response_type=code&client_id=H1F4CKSVJ1360RB6KTOAG6NRQD8AQVLFDRLIPSLJ4N3I5164VRLC9JJU45AUVLTH&redirect_uri=http://188.225.24.157/settings" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">страницу авторизации</a></li>
                   <li>Войдите как работодатель</li>
                   <li>Скопируйте код из URL (параметр code=...)</li>
                   <li>Обменяйте код на токен через <a href="https://httpie.io/app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">httpie.io</a></li>
@@ -462,7 +462,7 @@ const Settings: React.FC = () => {
                 }}
               />
               <p className="text-xs text-muted-foreground">
-                Пример: https://timly.ru/auth?<span className="font-semibold">code=ABC123XYZ</span>
+                Пример: http://188.225.24.157/settings?<span className="font-semibold">code=ABC123XYZ</span>
               </p>
             </div>
           </div>
