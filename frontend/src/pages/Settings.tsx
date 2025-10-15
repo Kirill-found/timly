@@ -36,11 +36,8 @@ const Settings: React.FC = () => {
     const redirectUri = 'https://timly-hr.ru/settings';
     const authUrl = `https://hh.ru/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-    // Открываем HH.ru OAuth в новом окне
-    window.open(authUrl, '_blank', 'width=600,height=700');
-
-    // Показываем модальное окно для ввода кода
-    setShowOAuthModal(true);
+    // Перенаправляем в текущем окне
+    window.location.href = authUrl;
   };
 
   const handleCodeExchange = async () => {
