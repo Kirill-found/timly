@@ -546,7 +546,8 @@ async def export_analysis_to_excel(
         if min_score is not None:
             query = query.filter(AnalysisResult.score >= min_score)
 
-        results = query.order_by(AnalysisResult.created_at.desc()).all()
+        # Сортировка по оценке от большей к меньшей
+        results = query.order_by(AnalysisResult.score.desc().nulls_last()).all()
 
         if not results:
             raise HTTPException(
@@ -559,19 +560,27 @@ async def export_analysis_to_excel(
         ws = wb.active
         ws.title = "AI Анализ Резюме"
 
-        # Заголовок
+        # Название вакансии в первой строке
+        ws.merge_cells('A1:O1')
+        title_cell = ws.cell(row=1, column=1, value=f"Вакансия: {vacancy.title}")
+        title_cell.font = Font(bold=True, size=14)
+        title_cell.alignment = Alignment(horizontal="center", vertical="center")
+        title_cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        title_cell.font = Font(bold=True, size=14, color="FFFFFF")
+
+        # Заголовок таблицы (без колонки "Модель AI")
         header = [
             "№", "Кандидат", "Email", "Телефон", "Ссылка на резюме",
             "Оценка", "Навыки", "Опыт", "Зарплата", "Рекомендация",
             "Сильные стороны", "Слабые стороны", "Красные флаги",
-            "Обоснование", "Дата анализа", "Модель AI"
+            "Обоснование", "Дата анализа"
         ]
 
         header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
         header_font = Font(bold=True, color="FFFFFF")
 
         for col, value in enumerate(header, 1):
-            cell = ws.cell(row=1, column=col, value=value)
+            cell = ws.cell(row=2, column=col, value=value)
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -584,12 +593,20 @@ async def export_analysis_to_excel(
             'reject': PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")  # Серый
         }
 
-        # Данные
-        for idx, (analysis, application) in enumerate(results, 2):
-            ws.cell(row=idx, column=1, value=idx-1)
-            ws.cell(row=idx, column=2, value=application.candidate_name or "N/A")
-            ws.cell(row=idx, column=3, value=application.candidate_email or "N/A")
-            ws.cell(row=idx, column=4, value=application.candidate_phone or "N/A")
+        # Перевод рекомендаций на русский
+        rec_translations = {
+            'hire': 'Нанять',
+            'interview': 'Собеседование',
+            'maybe': 'Возможно',
+            'reject': 'Отклонить'
+        }
+
+        # Данные (начинаем с 3-й строки, т.к. 1-я - название вакансии, 2-я - заголовки)
+        for idx, (analysis, application) in enumerate(results, 3):
+            ws.cell(row=idx, column=1, value=idx-2)  # Номер строки (idx-2 т.к. начинаем с 3)
+            ws.cell(row=idx, column=2, value=application.candidate_name or "Не указано")
+            ws.cell(row=idx, column=3, value=application.candidate_email or "Не указан")
+            ws.cell(row=idx, column=4, value=application.candidate_phone or "Не указан")
 
             # Ссылка на резюме
             if application.resume_url:
@@ -613,8 +630,9 @@ async def export_analysis_to_excel(
             }.get(analysis.salary_match, 'Н/Д')
             ws.cell(row=idx, column=9, value=salary_text)
 
-            # Рекомендация с цветом
-            rec_cell = ws.cell(row=idx, column=10, value=analysis.recommendation or "N/A")
+            # Рекомендация с цветом и переводом на русский
+            rec_text = rec_translations.get(analysis.recommendation, analysis.recommendation or "N/A")
+            rec_cell = ws.cell(row=idx, column=10, value=rec_text)
             if analysis.recommendation and analysis.recommendation in rec_colors:
                 rec_cell.fill = rec_colors[analysis.recommendation]
                 rec_cell.font = Font(bold=True)
@@ -624,7 +642,6 @@ async def export_analysis_to_excel(
             ws.cell(row=idx, column=13, value=", ".join(analysis.red_flags or []))
             ws.cell(row=idx, column=14, value=analysis.reasoning or "")
             ws.cell(row=idx, column=15, value=analysis.created_at.strftime("%Y-%m-%d %H:%M") if analysis.created_at else "N/A")
-            ws.cell(row=idx, column=16, value=analysis.ai_model or "N/A")
 
         # Автоширина колонок
         for column in ws.columns:
