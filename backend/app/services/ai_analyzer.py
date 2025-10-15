@@ -33,8 +33,12 @@ class AIAnalyzer:
         http_client = None
         if hasattr(settings, 'OPENAI_PROXY_URL') and settings.OPENAI_PROXY_URL:
             logger.info(f"Используется прокси для OpenAI: {settings.OPENAI_PROXY_URL}")
+            # httpx требует proxies в формате словаря для старых версий
             http_client = httpx.AsyncClient(
-                proxy=settings.OPENAI_PROXY_URL,
+                proxies={
+                    "http://": settings.OPENAI_PROXY_URL,
+                    "https://": settings.OPENAI_PROXY_URL
+                },
                 timeout=60.0
             )
 
