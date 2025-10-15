@@ -82,6 +82,50 @@ const Settings: React.FC = () => {
     }
   };
 
+  // Автоматическая обработка OAuth callback
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+
+    if (code) {
+      // Автоматически обмениваем код на токен
+      setOauthCode(code);
+      setIsExchangingCode(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      apiClient.exchangeHHCode(code)
+        .then(async (response) => {
+          if (response.data?.token_saved && response.data?.token_valid) {
+            setSuccessMessage('Токен HH.ru успешно сохранён и проверен!');
+            // Обновляем профиль пользователя
+            await refreshProfile();
+            // Убираем code из URL
+            window.history.replaceState({}, document.title, '/settings');
+          } else {
+            setError('Токен получен, но не прошёл валидацию');
+          }
+        })
+        .catch((err: any) => {
+          console.error('OAuth exchange error:', err);
+          if (err.response?.status === 401) {
+            setError('Ваша сессия истекла. Пожалуйста, перезагрузите страницу и войдите заново.');
+          } else {
+            setError(
+              err.response?.data?.error?.message ||
+              err.response?.data?.detail?.message ||
+              err.message ||
+              'Ошибка при обмене кода на токен'
+            );
+          }
+        })
+        .finally(() => {
+          setIsExchangingCode(false);
+          setOauthCode('');
+        });
+    }
+  }, [refreshProfile]);
+
   useEffect(() => {
     // Очистка сообщений через 5 секунд
     if (successMessage) {
