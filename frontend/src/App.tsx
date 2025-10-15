@@ -19,6 +19,7 @@ import Settings from '@/pages/Settings';
 import Export from '@/pages/Export';
 import Results from '@/pages/Results';
 import HHCallback from '@/pages/HHCallback';
+import HHCallbackPublic from '@/pages/HHCallbackPublic';
 import Pricing from '@/pages/Pricing';
 
 // Компоненты
@@ -36,8 +37,8 @@ const App: React.FC = () => {
             {/* Публичные страницы */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
-
             <Route path="/register" element={<Register />} />
+            <Route path="/auth/hh-callback" element={<HHCallbackPublic />} />
 
             {/* Временные страницы-заглушки */}
 

@@ -33,8 +33,11 @@ const Settings: React.FC = () => {
   const handleOAuthConnect = () => {
     // HH.ru OAuth параметры
     const clientId = 'H1F4CKSVJ1360RB6KTOAG6NRQD8AQVLFDRLIPSLJ4N3I5164VRLC9JJU45AUVLTH';
-    const redirectUri = 'https://timly-hr.ru/settings';
+    const redirectUri = 'https://timly-hr.ru/auth/hh-callback';
     const authUrl = `https://hh.ru/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+    // Открываем модальное окно для ввода кода
+    setShowOAuthModal(true);
 
     // Перенаправляем в текущем окне
     window.location.href = authUrl;
@@ -295,7 +298,7 @@ const Settings: React.FC = () => {
               <div className="space-y-2">
                 <p className="font-semibold">Ручной способ (если OAuth не работает):</p>
                 <ol className="list-decimal list-inside space-y-1 text-sm">
-                  <li>Перейдите на <a href="https://hh.ru/oauth/authorize?response_type=code&client_id=H1F4CKSVJ1360RB6KTOAG6NRQD8AQVLFDRLIPSLJ4N3I5164VRLC9JJU45AUVLTH&redirect_uri=https://timly-hr.ru/settings" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">страницу авторизации</a></li>
+                  <li>Перейдите на <a href="https://hh.ru/oauth/authorize?response_type=code&client_id=H1F4CKSVJ1360RB6KTOAG6NRQD8AQVLFDRLIPSLJ4N3I5164VRLC9JJU45AUVLTH&redirect_uri=https://timly-hr.ru/auth/hh-callback" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">страницу авторизации</a></li>
                   <li>Войдите как работодатель</li>
                   <li>Скопируйте код из URL (параметр code=...)</li>
                   <li>Обменяйте код на токен через <a href="https://httpie.io/app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">httpie.io</a></li>
