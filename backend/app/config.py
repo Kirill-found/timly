@@ -32,7 +32,11 @@ class Settings(BaseSettings):
     HH_MOCK_MODE: bool = False  # Использовать mock данные вместо реального API
     HH_CLIENT_ID: str
     HH_CLIENT_SECRET: str
-    HH_REDIRECT_URI: str = "https://timly.ru/auth"
+    HH_REDIRECT_URI: str = "https://timly-hr.ru/auth"
+
+    # URLs
+    FRONTEND_URL: str = "https://timly-hr.ru"
+    BACKEND_URL: str = "https://timly-hr.ru/api"
 
     # JWT Settings
     JWT_SECRET_KEY: str
