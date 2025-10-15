@@ -246,36 +246,8 @@ async def start_sync(
         )
 
 
-@router.get("/sync/{job_id}", response_model=APIResponse)
-async def get_sync_status(
-    job_id: str,
-    current_user = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Получение статуса задачи синхронизации
-    Для отслеживания прогресса синхронизации
-    """
-    from app.models.application import SyncJob
-
-    # Получаем задачу из БД
-    sync_job = db.query(SyncJob).filter(
-        SyncJob.id == job_id,
-        SyncJob.user_id == current_user.id
-    ).first()
-
-    if not sync_job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "error": "SYNC_JOB_NOT_FOUND",
-                "message": f"Задача синхронизации {job_id} не найдена"
-            }
-        )
-
-    return success(data=sync_job.to_dict())
-
-
+# ВАЖНО: /sync/history ДОЛЖЕН быть ПЕРЕД /sync/{job_id}
+# иначе FastAPI будет интерпретировать "history" как job_id
 @router.get("/sync/history", response_model=APIResponse)
 async def get_sync_history(
     limit: int = 20,
@@ -305,6 +277,36 @@ async def get_sync_history(
         "total": len(history_data),
         "limit": limit
     })
+
+
+@router.get("/sync/{job_id}", response_model=APIResponse)
+async def get_sync_status(
+    job_id: str,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Получение статуса задачи синхронизации
+    Для отслеживания прогресса синхронизации
+    """
+    from app.models.application import SyncJob
+
+    # Получаем задачу из БД
+    sync_job = db.query(SyncJob).filter(
+        SyncJob.id == job_id,
+        SyncJob.user_id == current_user.id
+    ).first()
+
+    if not sync_job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "SYNC_JOB_NOT_FOUND",
+                "message": f"Задача синхронизации {job_id} не найдена"
+            }
+        )
+
+    return success(data=sync_job.to_dict())
 
 
 @router.delete("/sync/{job_id}", response_model=APIResponse)
