@@ -37,9 +37,10 @@ services:
       # OpenAI
       OPENAI_API_KEY: ${OPENAI_API_KEY}
 
-      # HeadHunter (заглушки)
-      HH_CLIENT_ID: dummy
-      HH_CLIENT_SECRET: dummy
+      # HeadHunter
+      HH_CLIENT_ID: ${HH_CLIENT_ID}
+      HH_CLIENT_SECRET: ${HH_CLIENT_SECRET}
+      HH_REDIRECT_URI: ${HH_REDIRECT_URI}
 
       # App Config
       APP_ENV: production
