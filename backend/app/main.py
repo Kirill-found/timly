@@ -47,7 +47,7 @@ app.add_middleware(
 if settings.APP_ENV == "production":
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=["timly.ru", "*.timly.ru", "api.timly.ru"]
+        allowed_hosts=["timly.ru", "*.timly.ru", "api.timly.ru", "188.225.24.157", "localhost"]
     )
 
 
