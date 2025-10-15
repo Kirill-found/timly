@@ -28,7 +28,20 @@ class AIAnalyzer:
         logging.getLogger("openai").setLevel(logging.WARNING)
         logging.getLogger("httpx").setLevel(logging.WARNING)
 
-        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        # Настройка HTTP прокси если указан
+        import httpx
+        http_client = None
+        if hasattr(settings, 'OPENAI_PROXY_URL') and settings.OPENAI_PROXY_URL:
+            logger.info(f"Используется прокси для OpenAI: {settings.OPENAI_PROXY_URL}")
+            http_client = httpx.AsyncClient(
+                proxy=settings.OPENAI_PROXY_URL,
+                timeout=60.0
+            )
+
+        self.client = AsyncOpenAI(
+            api_key=settings.OPENAI_API_KEY,
+            http_client=http_client
+        )
         self.model = settings.OPENAI_MODEL
 
         # Redis для кеширования результатов
