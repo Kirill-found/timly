@@ -1,18 +1,18 @@
 /**
  * Публичная страница для OAuth callback от HH.ru
- * НЕ требует авторизации - показывает код пользователю
+ * Автоматически перенаправляет в Settings с кодом
  */
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { CheckCircle, Copy, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/store/AuthContext';
 
 const HHCallbackPublic: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [code, setCode] = useState<string>('');
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     // Извлекаем code из URL
@@ -21,19 +21,15 @@ const HHCallbackPublic: React.FC = () => {
 
     if (oauthCode) {
       setCode(oauthCode);
+      // Сохраняем код для использования после входа
+      sessionStorage.setItem('hh_oauth_code', oauthCode);
+
+      // Если пользователь уже авторизован - сразу перенаправляем в Settings
+      if (isAuthenticated) {
+        navigate('/settings');
+      }
     }
-  }, []);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleContinue = () => {
-    // Перенаправляем на страницу входа
-    navigate('/login');
-  };
+  }, [isAuthenticated, navigate]);
 
   if (!code) {
     return (
@@ -49,25 +45,44 @@ const HHCallbackPublic: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={handleContinue} className="w-full">
-              Вернуться к входу
-            </Button>
+            <Alert variant="destructive">
+              <AlertDescription>
+                Пожалуйста, повторите процесс авторизации через HH.ru
+              </AlertDescription>
+            </Alert>
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  // Если уже авторизован - показываем загрузку пока редиректим
+  if (isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground">Перенаправление в настройки...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Если не авторизован - показываем что нужно войти
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <Card className="w-full max-w-2xl">
+      <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-green-600" />
             Авторизация HH.ru успешна!
           </CardTitle>
           <CardDescription>
-            Скопируйте код ниже и войдите в систему
+            Войдите в систему для завершения подключения
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -75,57 +90,20 @@ const HHCallbackPublic: React.FC = () => {
             <AlertDescription className="text-green-700">
               <div className="space-y-2">
                 <p className="font-semibold">Код авторизации получен!</p>
-                <p className="text-sm">Следуйте инструкциям ниже для завершения подключения HH.ru</p>
+                <p className="text-sm">Войдите в свой аккаунт Timly - токен HH.ru будет подключен автоматически</p>
               </div>
             </AlertDescription>
           </Alert>
 
-          {/* Код для копирования */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Ваш код авторизации:</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={code}
-                readOnly
-                className="flex-1 px-3 py-2 border rounded-md bg-muted font-mono text-sm"
-              />
-              <Button
-                onClick={handleCopy}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Copy className="h-4 w-4" />
-                {copied ? 'Скопировано!' : 'Копировать'}
-              </Button>
-            </div>
-          </div>
-
-          {/* Инструкции */}
-          <Alert>
-            <AlertDescription>
-              <div className="space-y-2">
-                <p className="font-semibold">Что делать дальше:</p>
-                <ol className="list-decimal list-inside space-y-1 text-sm">
-                  <li>Скопируйте код выше (нажмите кнопку "Копировать")</li>
-                  <li>Нажмите кнопку "Войти в систему" ниже</li>
-                  <li>Войдите в свой аккаунт Timly</li>
-                  <li>Перейдите в раздел "Настройки"</li>
-                  <li>Вставьте скопированный код в модальное окно</li>
-                  <li>Нажмите "Подключить"</li>
-                </ol>
-              </div>
-            </AlertDescription>
-          </Alert>
-
-          {/* Кнопка продолжения */}
-          <Button onClick={handleContinue} className="w-full" size="lg">
+          <button
+            onClick={() => navigate('/login')}
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 rounded-md font-medium"
+          >
             Войти в систему
-          </Button>
+          </button>
 
-          {/* Дополнительная информация */}
           <p className="text-xs text-muted-foreground text-center">
-            Код действителен в течение 10 минут. Если возникли проблемы, повторите процесс авторизации.
+            Код действителен в течение 10 минут
           </p>
         </CardContent>
       </Card>

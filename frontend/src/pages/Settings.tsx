@@ -36,9 +36,6 @@ const Settings: React.FC = () => {
     const redirectUri = 'https://timly-hr.ru/auth/hh-callback';
     const authUrl = `https://hh.ru/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-    // Открываем модальное окно для ввода кода
-    setShowOAuthModal(true);
-
     // Перенаправляем в текущем окне
     window.location.href = authUrl;
   };
@@ -85,14 +82,15 @@ const Settings: React.FC = () => {
     }
   };
 
-  // Автоматическая обработка OAuth callback
+  // Автоматическая обработка OAuth callback из sessionStorage
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
+    const code = sessionStorage.getItem('hh_oauth_code');
 
     if (code) {
+      // Удаляем из sessionStorage сразу чтобы не обрабатывать повторно
+      sessionStorage.removeItem('hh_oauth_code');
+
       // Автоматически обмениваем код на токен
-      setOauthCode(code);
       setIsExchangingCode(true);
       setError(null);
       setSuccessMessage(null);
@@ -103,8 +101,6 @@ const Settings: React.FC = () => {
             setSuccessMessage('Токен HH.ru успешно сохранён и проверен!');
             // Обновляем профиль пользователя
             await refreshProfile();
-            // Убираем code из URL
-            window.history.replaceState({}, document.title, '/settings');
           } else {
             setError('Токен получен, но не прошёл валидацию');
           }
@@ -124,7 +120,6 @@ const Settings: React.FC = () => {
         })
         .finally(() => {
           setIsExchangingCode(false);
-          setOauthCode('');
         });
     }
   }, [refreshProfile]);
