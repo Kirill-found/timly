@@ -23,6 +23,9 @@ def upgrade() -> None:
     Добавление таблиц для системы подписок и платежей
     """
 
+    # Включение расширения для UUID (если еще не включено)
+    op.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
+
     # Создание таблицы subscription_plans
     op.create_table(
         'subscription_plans',
