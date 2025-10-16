@@ -26,7 +26,7 @@ def upgrade() -> None:
     # Создание таблицы subscription_plans
     op.create_table(
         'subscription_plans',
-        sa.Column('id', sa.String(length=36), nullable=False),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text('uuid_generate_v4()')),
         sa.Column('plan_type', sa.Enum('free', 'starter', 'professional', 'enterprise', name='plantype'), nullable=False),
         sa.Column('name', sa.String(length=100), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
@@ -48,9 +48,9 @@ def upgrade() -> None:
     # Создание таблицы subscriptions
     op.create_table(
         'subscriptions',
-        sa.Column('id', sa.String(length=36), nullable=False),
-        sa.Column('user_id', sa.String(length=36), nullable=False),
-        sa.Column('plan_id', sa.String(length=36), nullable=False),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text('uuid_generate_v4()')),
+        sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('plan_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('status', sa.Enum('active', 'expired', 'cancelled', 'trial', name='subscriptionstatus'), nullable=False, server_default='trial'),
         sa.Column('started_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
         sa.Column('expires_at', sa.DateTime(), nullable=True),
@@ -71,12 +71,12 @@ def upgrade() -> None:
     # Создание таблицы usage_logs
     op.create_table(
         'usage_logs',
-        sa.Column('id', sa.String(length=36), nullable=False),
-        sa.Column('user_id', sa.String(length=36), nullable=False),
-        sa.Column('subscription_id', sa.String(length=36), nullable=True),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text('uuid_generate_v4()')),
+        sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('subscription_id', postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column('action_type', sa.String(length=50), nullable=False),
-        sa.Column('vacancy_id', sa.String(length=36), nullable=True),
-        sa.Column('application_id', sa.String(length=36), nullable=True),
+        sa.Column('vacancy_id', postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column('application_id', postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column('action_metadata', sa.Text(), nullable=True),
         sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
@@ -92,9 +92,9 @@ def upgrade() -> None:
     # Создание таблицы payments
     op.create_table(
         'payments',
-        sa.Column('id', sa.String(length=36), nullable=False),
-        sa.Column('user_id', sa.String(length=36), nullable=False),
-        sa.Column('subscription_id', sa.String(length=36), nullable=True),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text('uuid_generate_v4()')),
+        sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('subscription_id', postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column('yookassa_payment_id', sa.String(length=255), nullable=False),
         sa.Column('yookassa_status', sa.Enum('pending', 'waiting_for_capture', 'succeeded', 'canceled', name='paymentstatus'), nullable=False),
         sa.Column('amount', sa.Float(), nullable=False),
