@@ -47,7 +47,7 @@ class Payment(Base):
 
     # Метаданные (JSON)
     payment_method = Column(Text, nullable=True)  # Способ оплаты (карта, кошелек и т.д.)
-    metadata = Column(Text, nullable=True)  # Дополнительная информация
+    payment_metadata = Column(Text, nullable=True)  # Дополнительная информация (переименовано из metadata)
 
     # Временные метки
     created_at = Column(DateTime, server_default=func.now(), nullable=False, index=True)
