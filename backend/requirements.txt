@@ -19,6 +19,8 @@ python-dotenv==1.0.0
 # API Clients
 httpx==0.24.1
 openai==1.3.7
+yookassa==3.0.0  # ЮKassa SDK для приема платежей
+python-telegram-bot==20.7  # Telegram бот для уведомлений
 
 # Background Jobs
 rq==1.15.1

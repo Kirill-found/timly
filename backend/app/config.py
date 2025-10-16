@@ -57,6 +57,14 @@ class Settings(BaseSettings):
     SENTRY_DSN: str = ""
     LOG_LEVEL: str = "INFO"
 
+    # Payment Systems
+    YOOKASSA_SHOP_ID: str = ""  # ID магазина в ЮKassa
+    YOOKASSA_SECRET_KEY: str = ""  # Секретный ключ ЮKassa
+
+    # Telegram Bot
+    TELEGRAM_BOT_TOKEN: str = ""  # Токен Telegram бота
+    TELEGRAM_ADMIN_CHAT_ID: str = ""  # Chat ID администратора для уведомлений
+
     @validator('CORS_ORIGINS')
     def parse_cors_origins(cls, v: str) -> List[str]:
         """Парсинг CORS origins из строки"""

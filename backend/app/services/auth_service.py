@@ -163,6 +163,14 @@ class AuthService:
             self.db.refresh(new_user)
 
             logger.info(f"Зарегистрирован новый пользователь: {new_user.email}")
+
+            # Отправляем уведомление в Telegram
+            try:
+                from app.services.telegram_service import notify_new_user
+                await notify_new_user(new_user.email, new_user.company_name)
+            except Exception as e:
+                logger.error(f"Не удалось отправить Telegram уведомление: {e}")
+
             return new_user
 
         except IntegrityError:

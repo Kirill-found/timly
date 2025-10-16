@@ -8,7 +8,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from app.config import settings
 from app.database import init_database, close_database
-from app.api import auth, settings as settings_api, hh_integration, analysis, vacancies, applications, subscription
+from app.api import auth, settings as settings_api, hh_integration, analysis, vacancies, applications, subscription, payment
 from app.utils.logger import setup_logging, setup_sentry, get_logger
 from app.middleware import register_exception_handlers
 
@@ -105,6 +105,7 @@ app.include_router(analysis.router, prefix="/api/analysis", tags=["Analysis"])
 app.include_router(vacancies.router, prefix="/api/vacancies", tags=["Vacancies"])
 app.include_router(applications.router, prefix="/api/applications", tags=["Applications"])
 app.include_router(subscription.router, prefix="/api/subscription", tags=["Subscription"])
+app.include_router(payment.router, prefix="/api/payment", tags=["Payment"])
 
 
 @app.get("/")
