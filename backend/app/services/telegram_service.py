@@ -3,10 +3,13 @@
 Уведомления о новых пользователях, платежах и событиях
 """
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 from telegram import Bot
 from telegram.error import TelegramError
 import asyncio
+from sqlalchemy.orm import Session
+from sqlalchemy import func, and_
+from datetime import datetime, timedelta
 
 from app.config import settings
 from app.utils.logger import get_logger
@@ -139,6 +142,102 @@ class TelegramService:
             f"🕐 Время: {self._get_moscow_time()}"
         )
         await self.send_message(message)
+
+    async def send_statistics(self, db: Session):
+        """
+        Отправить статистику по пользователям и подпискам
+
+        Args:
+            db: Сессия базы данных
+        """
+        from app.models.user import User
+        from app.models.subscription import Subscription, SubscriptionPlan, SubscriptionStatus, PlanType
+        from app.models.payment import Payment, PaymentStatus
+
+        try:
+            # Общая статистика пользователей
+            total_users = db.query(func.count(User.id)).scalar() or 0
+            active_users = db.query(func.count(User.id)).filter(User.is_active == True).scalar() or 0
+            users_with_hh_token = db.query(func.count(User.id)).filter(
+                User.token_verified == True
+            ).scalar() or 0
+
+            # Статистика по подпискам
+            subscription_stats = db.query(
+                SubscriptionPlan.plan_type,
+                func.count(Subscription.id).label('count')
+            ).join(
+                Subscription, Subscription.plan_id == SubscriptionPlan.id
+            ).filter(
+                Subscription.status == SubscriptionStatus.active
+            ).group_by(SubscriptionPlan.plan_type).all()
+
+            # Словарь для подсчёта по тарифам
+            plan_counts = {
+                PlanType.free.value: 0,
+                PlanType.starter.value: 0,
+                PlanType.professional.value: 0,
+                PlanType.enterprise.value: 0
+            }
+
+            for plan_type, count in subscription_stats:
+                plan_counts[plan_type.value] = count
+
+            # Пользователи без активной подписки
+            users_without_subscription = total_users - sum(plan_counts.values())
+
+            # Статистика платежей за последний месяц
+            month_ago = datetime.utcnow() - timedelta(days=30)
+            payments_last_month = db.query(func.count(Payment.id)).filter(
+                and_(
+                    Payment.created_at >= month_ago,
+                    Payment.yookassa_status == PaymentStatus.succeeded
+                )
+            ).scalar() or 0
+
+            revenue_last_month = db.query(func.sum(Payment.amount)).filter(
+                and_(
+                    Payment.created_at >= month_ago,
+                    Payment.yookassa_status == PaymentStatus.succeeded
+                )
+            ).scalar() or 0.0
+
+            # Новые пользователи за последнюю неделю
+            week_ago = datetime.utcnow() - timedelta(days=7)
+            new_users_week = db.query(func.count(User.id)).filter(
+                User.created_at >= week_ago
+            ).scalar() or 0
+
+            # Формирование сообщения
+            message = (
+                f"📊 <b>Статистика платформы Timly</b>\n"
+                f"🕐 {self._get_moscow_time()}\n\n"
+
+                f"👥 <b>Пользователи</b>\n"
+                f"├ Всего: {total_users}\n"
+                f"├ Активных: {active_users}\n"
+                f"├ С HH токеном: {users_with_hh_token}\n"
+                f"└ Новых за неделю: {new_users_week}\n\n"
+
+                f"💼 <b>Подписки (активные)</b>\n"
+                f"├ 🆓 Free: {plan_counts['free']}\n"
+                f"├ 🌱 Starter: {plan_counts['starter']}\n"
+                f"├ 💎 Professional: {plan_counts['professional']}\n"
+                f"├ 🏢 Enterprise: {plan_counts['enterprise']}\n"
+                f"└ Без подписки: {users_without_subscription}\n\n"
+
+                f"💰 <b>Платежи (30 дней)</b>\n"
+                f"├ Транзакций: {payments_last_month}\n"
+                f"└ Выручка: {revenue_last_month:,.2f} ₽"
+            )
+
+            await self.send_message(message)
+            logger.info("Statistics sent to Telegram successfully")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to send statistics: {e}")
+            return False
 
     def _get_moscow_time(self) -> str:
         """Получить текущее время в московском формате"""
