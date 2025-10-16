@@ -24,10 +24,11 @@ type AuthAction =
   | { type: 'UPDATE_USER'; payload: Partial<User> };
 
 // Начальное состояние
+// isLoading: true - чтобы дать время на проверку токена при загрузке
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true,
   error: null,
 };
 
@@ -105,7 +106,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (hasToken) {
         try {
-          dispatch({ type: 'AUTH_START' });
           const user = await apiClient.getProfile();
           console.log('[AuthContext] Profile loaded successfully:', user.email);
           dispatch({ type: 'AUTH_SUCCESS', payload: user });
@@ -123,6 +123,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             dispatch({ type: 'AUTH_FAILURE', payload: 'Ошибка загрузки профиля' });
           }
         }
+      } else {
+        // Если токена нет - сразу останавливаем загрузку
+        console.log('[AuthContext] No token found, stopping loading');
+        dispatch({ type: 'AUTH_FAILURE', payload: 'Не авторизован' });
       }
     };
 
