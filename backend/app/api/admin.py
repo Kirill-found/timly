@@ -8,7 +8,7 @@ from typing import Dict, Any
 
 from app.database import get_db
 from app.models.user import User, UserRole
-from app.services.auth_service import get_current_user
+from app.api.auth import get_current_user
 from app.services.telegram_service import get_telegram_service
 from app.utils.logger import get_logger
 from app.middleware.response_formatter import create_success_response
