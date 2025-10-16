@@ -11,7 +11,7 @@ from app.models.user import User, UserRole
 from app.api.auth import get_current_user
 from app.services.telegram_service import get_telegram_service
 from app.utils.logger import get_logger
-from app.middleware.response_formatter import create_success_response
+from app.utils.response import create_success_response
 
 logger = get_logger(__name__)
 
