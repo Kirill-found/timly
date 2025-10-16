@@ -70,8 +70,7 @@ async def send_telegram_statistics(
         logger.info(f"Статистика отправлена администратором {current_user.email}")
 
         return create_success_response(
-            data={"message": "Статистика успешно отправлена в Telegram"},
-            message="Статистика отправлена"
+            data={"message": "Статистика успешно отправлена в Telegram"}
         )
 
     except HTTPException:
@@ -176,8 +175,7 @@ async def get_statistics(
         logger.info(f"Статистика запрошена администратором {current_user.email}")
 
         return create_success_response(
-            data=statistics,
-            message="Статистика получена"
+            data=statistics
         )
 
     except Exception as e:
