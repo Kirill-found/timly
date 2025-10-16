@@ -72,6 +72,15 @@ async def startup_event():
     """Инициализация приложения при старте"""
     logger.info(f"Starting {settings.APP_NAME} in {settings.APP_ENV} mode")
     await init_database()
+
+    # Инициализация Telegram сервиса
+    try:
+        from app.services.telegram_service import get_telegram_service
+        telegram_service = get_telegram_service()
+        logger.info("Telegram service initialization checked")
+    except Exception as e:
+        logger.error(f"Error initializing Telegram service: {e}")
+
     logger.info("Application started successfully")
 
 
