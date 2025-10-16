@@ -21,6 +21,7 @@ import Results from '@/pages/Results';
 import HHCallback from '@/pages/HHCallback';
 import HHCallbackPublic from '@/pages/HHCallbackPublic';
 import Pricing from '@/pages/Pricing';
+import Admin from '@/pages/Admin';
 
 // Компоненты
 import ProtectedRoute from '@/components/Auth/ProtectedRoute';
@@ -137,6 +138,17 @@ const App: React.FC = () => {
                 <ProtectedRoute>
                   <AppLayout>
                     <Pricing />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AppLayout>
+                    <Admin />
                   </AppLayout>
                 </ProtectedRoute>
               }

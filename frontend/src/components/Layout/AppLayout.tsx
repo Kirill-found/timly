@@ -15,7 +15,8 @@ import {
   Menu,
   X,
   Bell,
-  CreditCard
+  CreditCard,
+  Shield
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -76,6 +77,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       label: 'Тарифы',
       href: '/pricing',
     },
+    ...(user?.role === 'admin' ? [{
+      key: '/admin',
+      icon: Shield,
+      label: 'Админ-панель',
+      href: '/admin',
+    }] : []),
     {
       key: '/settings',
       icon: Settings,
