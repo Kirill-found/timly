@@ -643,18 +643,26 @@ async def export_analysis_to_excel(
             ws.cell(row=idx, column=14, value=analysis.reasoning or "")
             ws.cell(row=idx, column=15, value=analysis.created_at.strftime("%Y-%m-%d %H:%M") if analysis.created_at else "N/A")
 
-        # Автоширина колонок
+        # Автоширина колонок (пропускаем MergedCell)
+        from openpyxl.cell.cell import MergedCell
         for column in ws.columns:
             max_length = 0
-            column_letter = column[0].column_letter
+            column_letter = None
             for cell in column:
+                # Пропускаем объединенные ячейки
+                if isinstance(cell, MergedCell):
+                    continue
+                # Получаем column_letter из первой обычной ячейки
+                if column_letter is None:
+                    column_letter = cell.column_letter
                 try:
                     if len(str(cell.value)) > max_length:
                         max_length = len(str(cell.value))
                 except:
                     pass
-            adjusted_width = min(max_length + 2, 50)
-            ws.column_dimensions[column_letter].width = adjusted_width
+            if column_letter:
+                adjusted_width = min(max_length + 2, 50)
+                ws.column_dimensions[column_letter].width = adjusted_width
 
         # Сохранение в временный файл
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
