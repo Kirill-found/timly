@@ -44,6 +44,9 @@ class ApiClient {
       const token = this.getAuthToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log('[ApiClient] Request with token to:', config.url);
+      } else {
+        console.log('[ApiClient] Request WITHOUT token to:', config.url);
       }
       return config;
     });
@@ -57,19 +60,26 @@ class ApiClient {
         // Если получили 401 и это не повторный запрос
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
+          console.log('[ApiClient] Got 401, attempting token refresh');
 
           try {
             // Попытка обновить access токен используя refresh токен
             const refreshToken = this.getRefreshToken();
             if (refreshToken) {
+              console.log('[ApiClient] Refresh token found, refreshing...');
               await this.refreshAccessToken();
+              console.log('[ApiClient] Token refreshed successfully, retrying request');
               // Повторяем оригинальный запрос с новым токеном
               return this.client(originalRequest);
+            } else {
+              console.log('[ApiClient] No refresh token found');
             }
           } catch (refreshError) {
             // Если обновление токена не удалось - выходим
+            console.error('[ApiClient] Token refresh failed:', refreshError);
             this.removeAuthToken();
             this.removeRefreshToken();
+            console.log('[ApiClient] Redirecting to /login');
             window.location.href = '/login';
             return Promise.reject(refreshError);
           }
@@ -77,6 +87,7 @@ class ApiClient {
 
         // Для всех остальных ошибок или если refresh токена нет
         if (error.response?.status === 401) {
+          console.log('[ApiClient] 401 error, no retry possible, redirecting to /login');
           this.removeAuthToken();
           this.removeRefreshToken();
           window.location.href = '/login';
@@ -90,8 +101,15 @@ class ApiClient {
   // Управление токенами через localStorage
   private getAuthToken(): string | null {
     try {
-      return localStorage.getItem('timly_access_token');
-    } catch {
+      const token = localStorage.getItem('timly_access_token');
+      if (token) {
+        console.log('[ApiClient] Access token found in localStorage');
+      } else {
+        console.log('[ApiClient] No access token in localStorage');
+      }
+      return token;
+    } catch (e) {
+      console.error('[ApiClient] Failed to get access token:', e);
       return null;
     }
   }
@@ -99,16 +117,18 @@ class ApiClient {
   private setAuthToken(token: string): void {
     try {
       localStorage.setItem('timly_access_token', token);
+      console.log('[ApiClient] Access token saved to localStorage');
     } catch (e) {
-      console.error('Failed to save access token:', e);
+      console.error('[ApiClient] Failed to save access token:', e);
     }
   }
 
   private removeAuthToken(): void {
     try {
       localStorage.removeItem('timly_access_token');
+      console.log('[ApiClient] Access token removed from localStorage');
     } catch (e) {
-      console.error('Failed to remove access token:', e);
+      console.error('[ApiClient] Failed to remove access token:', e);
     }
   }
 

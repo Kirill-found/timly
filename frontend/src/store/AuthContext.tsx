@@ -100,14 +100,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Проверка текущей сессии при загрузке
   useEffect(() => {
     const initializeAuth = async () => {
-      if (apiClient.hasToken()) {
+      const hasToken = apiClient.hasToken();
+      console.log('[AuthContext] Initializing auth, hasToken:', hasToken);
+
+      if (hasToken) {
         try {
           dispatch({ type: 'AUTH_START' });
           const user = await apiClient.getProfile();
+          console.log('[AuthContext] Profile loaded successfully:', user.email);
           dispatch({ type: 'AUTH_SUCCESS', payload: user });
-        } catch (error) {
-          dispatch({ type: 'AUTH_FAILURE', payload: 'Сессия истекла' });
-          apiClient.clearToken();
+        } catch (error: any) {
+          console.error('[AuthContext] Failed to load profile:', error?.response?.status, error?.message);
+
+          // Не удаляем токен сразу - даем refresh token шанс сработать
+          // Токен будет удален interceptor'ом если refresh тоже не сработает
+          if (error?.response?.status === 401) {
+            console.log('[AuthContext] 401 error, will try refresh token via interceptor');
+            dispatch({ type: 'AUTH_FAILURE', payload: 'Сессия истекла' });
+          } else {
+            // Для других ошибок (сеть, сервер) - оставляем токен
+            console.log('[AuthContext] Non-auth error, keeping token');
+            dispatch({ type: 'AUTH_FAILURE', payload: 'Ошибка загрузки профиля' });
+          }
         }
       }
     };
