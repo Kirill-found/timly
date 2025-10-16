@@ -36,11 +36,20 @@ services:
 
       # OpenAI
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_PROXY_URL: ${OPENAI_PROXY_URL}
 
       # HeadHunter
       HH_CLIENT_ID: ${HH_CLIENT_ID}
       HH_CLIENT_SECRET: ${HH_CLIENT_SECRET}
       HH_REDIRECT_URI: ${HH_REDIRECT_URI}
+
+      # Payment Systems
+      YOOKASSA_SHOP_ID: ${YOOKASSA_SHOP_ID}
+      YOOKASSA_SECRET_KEY: ${YOOKASSA_SECRET_KEY}
+
+      # Telegram Bot
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_ADMIN_CHAT_ID: ${TELEGRAM_ADMIN_CHAT_ID}
 
       # App Config
       APP_ENV: production
