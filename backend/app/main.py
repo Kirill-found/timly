@@ -11,6 +11,8 @@ from app.database import init_database, close_database
 from app.api import auth, settings as settings_api, hh_integration, analysis, vacancies, applications, subscription, payment, admin
 from app.utils.logger import setup_logging, setup_sentry, get_logger
 from app.middleware import register_exception_handlers
+from app.middleware.rate_limit import limiter, rate_limit_handler
+from slowapi.errors import RateLimitExceeded
 
 # Настройка централизованного логирования
 setup_logging(
@@ -30,6 +32,10 @@ app = FastAPI(
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None
 )
+
+# Добавляем state для limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
 # Регистрация централизованных обработчиков ошибок
 register_exception_handlers(app)

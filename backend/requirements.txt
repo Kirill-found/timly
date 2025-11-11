@@ -26,6 +26,9 @@ python-telegram-bot==20.7  # Telegram бот для уведомлений
 rq==1.15.1
 redis==5.2.1  # Updated for Redis 7.2+ server compatibility
 
+# Rate Limiting
+slowapi==0.1.9
+
 # Data Processing
 pandas==2.1.4
 openpyxl==3.1.2
