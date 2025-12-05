@@ -16,7 +16,8 @@ import {
   X,
   Bell,
   CreditCard,
-  Shield
+  Shield,
+  Search
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       icon: BarChart3,
       label: 'Анализ резюме',
       href: '/analysis',
+    },
+    {
+      key: '/candidate-search',
+      icon: Search,
+      label: 'Поиск кандидатов',
+      href: '/candidate-search',
     },
     {
       key: '/sync',

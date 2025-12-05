@@ -458,6 +458,95 @@ class ApiClient {
   public hasRefreshToken(): boolean {
     return this.getRefreshToken() !== null;
   }
+
+  // ==================== Поиск по базе резюме ====================
+
+  async getResumeSearches(params?: {
+    status_filter?: string;
+    vacancy_id?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ searches: any[]; total: number }> {
+    const response = await this.client.get<ApiResponse<any>>('/api/resume-search/searches', { params });
+    return response.data.data || { searches: [], total: 0 };
+  }
+
+  async createResumeSearch(data: {
+    name: string;
+    description?: string;
+    search_query: string;
+    vacancy_id?: string;
+    filters?: any;
+  }): Promise<any> {
+    const response = await this.client.post<ApiResponse<any>>('/api/resume-search/searches', data);
+    return response.data.data;
+  }
+
+  async getResumeSearch(searchId: string): Promise<any> {
+    const response = await this.client.get<ApiResponse<any>>(`/api/resume-search/searches/${searchId}`);
+    return response.data.data;
+  }
+
+  async updateResumeSearch(searchId: string, data: any): Promise<any> {
+    const response = await this.client.put<ApiResponse<any>>(`/api/resume-search/searches/${searchId}`, data);
+    return response.data.data;
+  }
+
+  async deleteResumeSearch(searchId: string): Promise<void> {
+    await this.client.delete(`/api/resume-search/searches/${searchId}`);
+  }
+
+  async runResumeSearch(searchId: string, maxResults: number = 100): Promise<any> {
+    const response = await this.client.post<ApiResponse<any>>(`/api/resume-search/searches/${searchId}/run`, {
+      max_results: maxResults
+    });
+    return response.data.data;
+  }
+
+  async getSearchCandidates(searchId: string, params?: {
+    analyzed_only?: boolean;
+    recommendation?: string;
+    min_score?: number;
+    favorites_only?: boolean;
+    order_by?: string;
+    page?: number;
+    per_page?: number;
+  }): Promise<{ candidates: any[]; total: number; page: number; per_page: number }> {
+    const response = await this.client.get<ApiResponse<any>>(`/api/resume-search/searches/${searchId}/candidates`, { params });
+    return response.data.data || { candidates: [], total: 0, page: 0, per_page: 20 };
+  }
+
+  async getSearchCandidate(searchId: string, candidateId: string): Promise<any> {
+    const response = await this.client.get<ApiResponse<any>>(`/api/resume-search/searches/${searchId}/candidates/${candidateId}`);
+    return response.data.data;
+  }
+
+  async updateSearchCandidate(searchId: string, candidateId: string, data: {
+    is_favorite?: boolean;
+    is_contacted?: boolean;
+    notes?: string;
+  }): Promise<any> {
+    const response = await this.client.put<ApiResponse<any>>(`/api/resume-search/searches/${searchId}/candidates/${candidateId}`, data);
+    return response.data.data;
+  }
+
+  async analyzeSearchCandidates(searchId: string, params?: {
+    candidate_ids?: string[];
+    force_reanalysis?: boolean;
+  }): Promise<any> {
+    const response = await this.client.post<ApiResponse<any>>(`/api/resume-search/searches/${searchId}/analyze`, params || {});
+    return response.data.data;
+  }
+
+  async getSearchStats(searchId: string): Promise<any> {
+    const response = await this.client.get<ApiResponse<any>>(`/api/resume-search/searches/${searchId}/stats`);
+    return response.data.data;
+  }
+
+  async getSearchDictionaries(): Promise<any> {
+    const response = await this.client.get<ApiResponse<any>>('/api/resume-search/dictionaries');
+    return response.data.data;
+  }
 }
 
 // Singleton instance
