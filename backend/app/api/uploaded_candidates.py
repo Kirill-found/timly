@@ -14,7 +14,7 @@ from app.models.user import User
 from app.models.vacancy import Vacancy
 from app.models.uploaded_candidate import UploadedCandidate, UploadSource
 from app.services.resume_parser import ResumeParser
-from app.utils.auth import get_current_user
+from app.api.auth import get_current_user
 from app.utils.exceptions import FileParseError
 
 logger = logging.getLogger(__name__)
