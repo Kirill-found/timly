@@ -158,6 +158,17 @@ const App: React.FC = () => {
             />
 
             <Route
+              path="/upload-candidates"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <UploadCandidates />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
               path="/admin"
               element={
                 <ProtectedRoute adminOnly>
