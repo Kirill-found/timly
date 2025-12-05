@@ -564,6 +564,27 @@ class ApiClient {
     const response = await this.client.get<ApiResponse<any>>('/api/resume-search/dictionaries');
     return response.data.data;
   }
+
+  // Публичные HTTP методы для прямых запросов
+  public get<T = any>(url: string, config?: any): Promise<AxiosResponse<T>> {
+    return this.client.get<T>(url, config);
+  }
+
+  public post<T = any>(url: string, data?: any, config?: any): Promise<AxiosResponse<T>> {
+    return this.client.post<T>(url, data, config);
+  }
+
+  public put<T = any>(url: string, data?: any, config?: any): Promise<AxiosResponse<T>> {
+    return this.client.put<T>(url, data, config);
+  }
+
+  public patch<T = any>(url: string, data?: any, config?: any): Promise<AxiosResponse<T>> {
+    return this.client.patch<T>(url, data, config);
+  }
+
+  public delete<T = any>(url: string, config?: any): Promise<AxiosResponse<T>> {
+    return this.client.delete<T>(url, config);
+  }
 }
 
 // Singleton instance

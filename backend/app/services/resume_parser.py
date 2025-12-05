@@ -10,8 +10,9 @@ import re
 from typing import Dict, Any, List, Optional, BinaryIO
 from datetime import datetime
 
-import pdfplumber
-import pandas as pd
+# Ленивые импорты для тяжелых библиотек - импортируем только когда нужно
+# import pdfplumber  # Lazy import
+# import pandas as pd  # Lazy import
 from openai import AsyncOpenAI
 
 from app.config import settings
@@ -64,6 +65,9 @@ class ResumeParser:
 
     def _extract_text_from_pdf(self, file: BinaryIO) -> str:
         """Извлечение текста из PDF файла"""
+        # Ленивый импорт pdfplumber - загружаем только когда нужно
+        import pdfplumber
+
         text_parts = []
 
         with pdfplumber.open(file) as pdf:
@@ -85,6 +89,9 @@ class ResumeParser:
         Returns:
             List[Dict]: Список кандидатов
         """
+        # Ленивый импорт pandas - загружаем только когда нужно
+        import pandas as pd
+
         try:
             # Читаем Excel
             df = pd.read_excel(file)
@@ -147,8 +154,10 @@ class ResumeParser:
         logger.info(f"Автоматический маппинг колонок: {mapping}")
         return mapping
 
-    def _map_excel_row(self, row: pd.Series, mapping: Dict[str, str]) -> Dict[str, Any]:
+    def _map_excel_row(self, row, mapping: Dict[str, str]) -> Dict[str, Any]:
         """Маппинг строки Excel в структуру кандидата"""
+        import pandas as pd
+
         candidate = {}
 
         for field, column in mapping.items():

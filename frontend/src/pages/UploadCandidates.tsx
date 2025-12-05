@@ -90,9 +90,9 @@ const UploadCandidates: React.FC = () => {
     setIsLoading(true);
     try {
       const params: any = {};
-      if (selectedVacancy) params.vacancy_id = selectedVacancy;
+      if (selectedVacancy && selectedVacancy !== '_none') params.vacancy_id = selectedVacancy;
       if (recommendationFilter !== 'all') params.recommendation = recommendationFilter;
-      if (minScore) params.min_score = parseInt(minScore);
+      if (minScore && minScore !== '_any') params.min_score = parseInt(minScore);
 
       const response = await apiClient.get('/api/candidates/uploaded-candidates/', { params });
       setCandidates(response.data.candidates);
@@ -137,7 +137,7 @@ const UploadCandidates: React.FC = () => {
       try {
         const formData = new FormData();
         formData.append('file', file);
-        if (selectedVacancy) {
+        if (selectedVacancy && selectedVacancy !== '_none') {
           formData.append('vacancy_id', selectedVacancy);
         }
         formData.append('auto_analyze', 'true');
@@ -290,7 +290,7 @@ const UploadCandidates: React.FC = () => {
                 <SelectValue placeholder="Выберите вакансию для AI анализа" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Без вакансии</SelectItem>
+                <SelectItem value="_none">Без вакансии</SelectItem>
                 {vacancies.map(v => (
                   <SelectItem key={v.id} value={v.id}>{v.title}</SelectItem>
                 ))}
@@ -366,7 +366,7 @@ const UploadCandidates: React.FC = () => {
                   <SelectValue placeholder="Любой" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Любой</SelectItem>
+                  <SelectItem value="_any">Любой</SelectItem>
                   <SelectItem value="90">90+</SelectItem>
                   <SelectItem value="70">70+</SelectItem>
                   <SelectItem value="50">50+</SelectItem>
@@ -519,7 +519,7 @@ const UploadCandidates: React.FC = () => {
                           <StarOff className="h-4 w-4" />
                         )}
                       </Button>
-                      {!candidate.is_analyzed && selectedVacancy && (
+                      {!candidate.is_analyzed && selectedVacancy && selectedVacancy !== '_none' && (
                         <Button
                           variant="ghost"
                           size="icon"
