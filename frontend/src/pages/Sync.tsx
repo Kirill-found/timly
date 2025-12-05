@@ -3,7 +3,8 @@
  * Запуск и отслеживание синхронизации вакансий и откликов
  */
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, CheckCircle, XCircle, AlertCircle, Briefcase, Users } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { RefreshCw, CheckCircle, XCircle, AlertCircle, Briefcase, Users, Sparkles } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -264,14 +265,28 @@ const Sync: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Заголовок */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Синхронизация с HH.ru</h1>
-        <p className="text-muted-foreground">
-          Получение вакансий и откликов из вашего аккаунта работодателя
-        </p>
-      </div>
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+      {/* Заголовок с градиентом */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-500 p-8 text-white"
+      >
+        <div className="absolute inset-0 bg-grid-white/10" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-2">
+            <RefreshCw className="h-8 w-8" />
+            <h1 className="text-3xl font-bold">Синхронизация с HH.ru</h1>
+          </div>
+          <p className="text-white/90 text-lg">
+            Получение вакансий и откликов из вашего аккаунта работодателя
+          </p>
+        </div>
+        {/* Декоративные элементы */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
+      </motion.div>
 
       {/* Ошибки */}
       {error && (
@@ -283,7 +298,12 @@ const Sync: React.FC = () => {
 
       {/* Текущая синхронизация */}
       {currentJob && (
-        <Card>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <Card className="border-2 hover:shadow-xl transition-all duration-300">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -365,10 +385,16 @@ const Sync: React.FC = () => {
             )}
           </CardContent>
         </Card>
+        </motion.div>
       )}
 
       {/* Кнопка запуска */}
-      <Card>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <Card className="border-2 hover:shadow-xl transition-all duration-300">
         <CardHeader>
           <CardTitle>Запустить синхронизацию</CardTitle>
           <CardDescription>
@@ -415,10 +441,16 @@ const Sync: React.FC = () => {
           )}
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* История синхронизаций */}
       {syncHistory.length > 0 && (
-        <Card>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <Card className="border-2 hover:shadow-xl transition-all duration-300">
           <CardHeader>
             <CardTitle>История синхронизаций</CardTitle>
             <CardDescription>Последние 10 задач</CardDescription>
@@ -444,6 +476,7 @@ const Sync: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+        </motion.div>
       )}
     </div>
   );

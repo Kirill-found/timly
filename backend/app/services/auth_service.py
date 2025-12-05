@@ -164,6 +164,39 @@ class AuthService:
 
             logger.info(f"Зарегистрирован новый пользователь: {new_user.email}")
 
+            # Автоматическое создание Trial подписки
+            try:
+                from app.models.subscription import Subscription, SubscriptionPlan, SubscriptionStatus, PlanType
+                from datetime import timedelta
+                import uuid as uuid_lib
+
+                # Получаем Trial план
+                trial_plan = self.db.query(SubscriptionPlan).filter(
+                    SubscriptionPlan.plan_type == PlanType.trial
+                ).first()
+
+                if trial_plan:
+                    # Создаём Trial подписку на 30 дней с лимитом 50 анализов
+                    trial_subscription = Subscription(
+                        id=uuid_lib.uuid4(),
+                        user_id=new_user.id,
+                        plan_id=trial_plan.id,
+                        status=SubscriptionStatus.trial,
+                        started_at=datetime.utcnow(),
+                        expires_at=datetime.utcnow() + timedelta(days=30),
+                        analyses_used_this_month=0,
+                        exports_used_this_month=0
+                    )
+                    self.db.add(trial_subscription)
+                    self.db.commit()
+                    logger.info(f"Trial подписка создана для пользователя: {new_user.email}")
+                else:
+                    logger.warning("Trial план не найден в базе данных")
+
+            except Exception as e:
+                logger.error(f"Не удалось создать Trial подписку: {e}")
+                # Не прерываем регистрацию, если не удалось создать подписку
+
             # Отправляем уведомление в Telegram
             try:
                 from app.services.telegram_service import notify_new_user

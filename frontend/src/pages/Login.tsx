@@ -1,16 +1,18 @@
 /**
  * Страница входа в систему Timly
- * Аутентификация пользователя с JWT токенами
+ * Современный дизайн с анимациями и градиентами
  */
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import {
   Form,
   FormControl,
@@ -19,7 +21,17 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  ArrowRight,
+  Sparkles,
+  Shield,
+  Zap
+} from 'lucide-react';
 import { useAuth } from '@/store/AuthContext';
 
 const formSchema = z.object({
@@ -64,124 +76,342 @@ const Login: React.FC = () => {
     }
   };
 
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-6"
-         style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)))' }}>
-      <Card className="w-full max-w-md shadow-2xl">
-        <CardHeader className="text-center space-y-4">
-          <div className="flex justify-center">
-            <img src="/logo.jpg" alt="Timly Logo" className="h-20 w-20 rounded-full object-cover shadow-lg" />
-          </div>
-          <CardTitle className="text-3xl font-bold text-primary">
-            Timly
-          </CardTitle>
-          <CardDescription className="text-base">
-            AI-скрининг резюме для HR
-          </CardDescription>
-        </CardHeader>
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
+      {/* Анимированный градиентный фон */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600" />
 
-        <CardContent className="space-y-6">
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                          placeholder="your@email.com"
-                          className="pl-10"
-                          autoComplete="email"
-                          {...field}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Пароль</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Введите пароль"
-                          className="pl-10 pr-10"
-                          autoComplete="current-password"
-                          {...field}
-                        />
-                        <button
-                          type="button"
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full h-12 text-base bg-gradient-to-r from-blue-600 to-green-600 text-white hover:from-blue-700 hover:to-green-700 font-semibold shadow-md"
-              >
-                {loading ? 'Вход в систему...' : 'Войти в систему'}
-              </Button>
-            </form>
-          </Form>
-
-          <div className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              Нет аккаунта?{' '}
-              <Link to="/register" className="text-blue-600 hover:text-blue-800 hover:underline font-medium">
-                Зарегистрироваться
-              </Link>
-            </p>
-
-            <Link to="/demo" className="text-blue-600 hover:text-blue-800 hover:underline font-medium block">
-              Посмотреть демо без регистрации
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 text-center">
-        <p className="text-white/80 text-sm mb-2">
-          Безопасный вход с шифрованием данных
-        </p>
-        <Link
-          to="/"
-          className="text-white/90 hover:text-white text-sm hover:underline"
-        >
-          ← Вернуться на главную
-        </Link>
+      {/* Декоративные плавающие элементы */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.5, 0.3],
+            x: [0, 50, 0],
+            y: [0, -50, 0],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+          className="absolute top-20 left-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{
+            scale: [1, 1.3, 1],
+            opacity: [0.2, 0.4, 0.2],
+            x: [0, -50, 0],
+            y: [0, 50, 0],
+          }}
+          transition={{
+            duration: 12,
+            repeat: Infinity,
+            ease: 'easeInOut',
+            delay: 1,
+          }}
+          className="absolute bottom-20 right-20 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{
+            scale: [1, 1.1, 1],
+            opacity: [0.2, 0.3, 0.2],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: 'easeInOut',
+            delay: 2,
+          }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-pink-400/10 rounded-full blur-3xl"
+        />
       </div>
+
+      {/* Основной контент */}
+      <div className="relative w-full max-w-6xl mx-auto grid lg:grid-cols-2 gap-8 items-center">
+        {/* Левая часть - информация */}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0, x: -50 },
+            visible: { opacity: 1, x: 0 },
+          }}
+          transition={{ duration: 0.6 }}
+          className="hidden lg:block text-white space-y-8 px-8"
+        >
+          <div className="space-y-4">
+            <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">
+              <Sparkles className="w-4 h-4 mr-2" />
+              AI-powered HR Platform
+            </Badge>
+
+            <h1 className="text-5xl font-bold leading-tight">
+              Добро пожаловать <br />
+              в <span className="bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">Timly</span>
+            </h1>
+
+            <p className="text-xl text-white/90 leading-relaxed">
+              Умная платформа для автоматизации рекрутинга с помощью искусственного интеллекта
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {[
+              {
+                icon: Zap,
+                title: 'Мгновенный анализ',
+                description: '100 резюме за 15 минут',
+              },
+              {
+                icon: Shield,
+                title: 'Безопасность данных',
+                description: 'Шифрование на уровне банков',
+              },
+              {
+                icon: Sparkles,
+                title: 'AI-технологии',
+                description: 'Точность анализа 95%',
+              },
+            ].map((feature, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 + i * 0.1 }}
+                className="flex items-start gap-4 bg-white/10 backdrop-blur-sm rounded-2xl p-4"
+              >
+                <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <feature.icon className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">{feature.title}</h3>
+                  <p className="text-white/80 text-sm">{feature.description}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-8 text-sm text-white/80">
+            <div>
+              <div className="text-3xl font-bold text-white">10,000+</div>
+              <div>Проанализировано резюме</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-white">500+</div>
+              <div>Довольных клиентов</div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Правая часть - форма входа */}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0, y: 20 },
+            visible: { opacity: 1, y: 0 },
+          }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-xl">
+            <CardHeader className="text-center space-y-6 pb-8">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="flex justify-center"
+              >
+                <div className="relative">
+                  <motion.div
+                    animate={{
+                      boxShadow: [
+                        '0 0 20px rgba(59, 130, 246, 0.3)',
+                        '0 0 40px rgba(147, 51, 234, 0.4)',
+                        '0 0 20px rgba(59, 130, 246, 0.3)',
+                      ],
+                    }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                    className="h-24 w-24 rounded-3xl overflow-hidden"
+                  >
+                    <img
+                      src="/logo.jpg"
+                      alt="Timly Logo"
+                      className="h-full w-full object-cover"
+                    />
+                  </motion.div>
+                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl opacity-20 blur-xl" />
+                </div>
+              </motion.div>
+
+              <div className="space-y-2">
+                <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Вход в систему
+                </CardTitle>
+                <CardDescription className="text-base text-gray-600">
+                  Введите свои данные для входа в аккаунт
+                </CardDescription>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <Alert variant="destructive" className="border-red-200">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                </motion.div>
+              )}
+
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base font-semibold">Email</FormLabel>
+                        <FormControl>
+                          <div className="relative group">
+                            <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 group-focus-within:text-blue-600 transition-colors" />
+                            <Input
+                              placeholder="your@email.com"
+                              className="pl-12 h-12 text-base border-2 border-gray-200 focus:border-blue-600 transition-all"
+                              autoComplete="email"
+                              {...field}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base font-semibold">Пароль</FormLabel>
+                        <FormControl>
+                          <div className="relative group">
+                            <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 group-focus-within:text-blue-600 transition-colors" />
+                            <Input
+                              type={showPassword ? 'text' : 'password'}
+                              placeholder="Введите пароль"
+                              className="pl-12 pr-12 h-12 text-base border-2 border-gray-200 focus:border-blue-600 transition-all"
+                              autoComplete="current-password"
+                              {...field}
+                            />
+                            <button
+                              type="button"
+                              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                              onClick={() => setShowPassword(!showPassword)}
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-5 w-5" />
+                              ) : (
+                                <Eye className="h-5 w-5" />
+                              )}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-12 text-base bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+                  >
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        >
+                          <Sparkles className="h-5 w-5" />
+                        </motion.div>
+                        Вход в систему...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        Войти в систему
+                        <ArrowRight className="h-5 w-5" />
+                      </span>
+                    )}
+                  </Button>
+                </form>
+              </Form>
+
+              <div className="space-y-4">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-white text-gray-500">или</span>
+                  </div>
+                </div>
+
+                <div className="text-center space-y-3">
+                  <p className="text-gray-600">
+                    Нет аккаунта?{' '}
+                    <Link
+                      to="/register"
+                      className="text-blue-600 hover:text-blue-800 font-semibold hover:underline transition-colors"
+                    >
+                      Зарегистрироваться бесплатно
+                    </Link>
+                  </p>
+
+                  <Link
+                    to="/"
+                    className="text-gray-500 hover:text-gray-700 text-sm hover:underline block transition-colors"
+                  >
+                    ← Вернуться на главную
+                  </Link>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                  <Shield className="h-4 w-4" />
+                  <span>Безопасный вход с шифрованием данных</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Мобильная версия статистики */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="lg:hidden absolute bottom-8 left-0 right-0 flex justify-center gap-8 text-white/90 text-sm px-4"
+      >
+        <div className="text-center">
+          <div className="text-2xl font-bold">10,000+</div>
+          <div className="text-white/70">Резюме</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold">500+</div>
+          <div className="text-white/70">Клиентов</div>
+        </div>
+      </motion.div>
     </div>
   );
 };

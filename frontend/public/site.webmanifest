@@ -1,0 +1,23 @@
+{
+  "name": "Timly - AI Скрининг Резюме",
+  "short_name": "Timly",
+  "description": "AI-powered Resume Screening Platform для российского рынка труда",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "640x640",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "theme_color": "#3B82F6",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/"
+}

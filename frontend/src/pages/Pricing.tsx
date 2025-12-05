@@ -12,7 +12,6 @@ const Pricing: React.FC = () => {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
-  const [upgrading, setUpgrading] = useState<string | null>(null);
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
 
   useEffect(() => {
@@ -35,24 +34,9 @@ const Pricing: React.FC = () => {
     }
   };
 
-  const handleUpgrade = async (planType: string) => {
-    try {
-      setUpgrading(planType);
-      await apiClient.upgradeSubscription({
-        new_plan_type: planType as any,
-        duration_months: billingPeriod === 'yearly' ? 12 : 1
-      });
-
-      // Перезагружаем данные
-      await loadData();
-
-      alert('Подписка успешно обновлена!');
-    } catch (error: any) {
-      console.error('Failed to upgrade subscription:', error);
-      alert(error.response?.data?.message || 'Не удалось обновить подписку');
-    } finally {
-      setUpgrading(null);
-    }
+  const handleSelectPlan = (planType: string) => {
+    // Перенаправляем на страницу оформления заказа
+    navigate(`/checkout?plan=${planType}&period=${billingPeriod}`);
   };
 
   const formatPrice = (price: number) => {
@@ -147,7 +131,6 @@ const Pricing: React.FC = () => {
             const price = getPlanPrice(plan);
             const features = getPlanFeatures(plan);
             const current = isCurrentPlan(plan.plan_type);
-            const isUpgrading = upgrading === plan.plan_type;
 
             return (
               <div
@@ -216,15 +199,14 @@ const Pricing: React.FC = () => {
                     </button>
                   ) : (
                     <button
-                      onClick={() => handleUpgrade(plan.plan_type)}
-                      disabled={isUpgrading}
+                      onClick={() => handleSelectPlan(plan.plan_type)}
                       className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors ${
                         plan.is_popular
                           ? 'bg-indigo-600 text-white hover:bg-indigo-700'
                           : 'bg-gray-900 text-white hover:bg-gray-800'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      }`}
                     >
-                      {isUpgrading ? 'Обновление...' : price === 0 ? 'Начать бесплатно' : 'Выбрать план'}
+                      {price === 0 ? 'Начать бесплатно' : 'Выбрать план'}
                     </button>
                   )}
                 </div>

@@ -120,8 +120,40 @@ async def start_analysis_new_applications(
     try:
         from app.models.application import Application, AnalysisResult
         from app.models.vacancy import Vacancy
+        from app.models.subscription import Subscription, SubscriptionStatus
         from app.workers.analysis_jobs import run_ai_analysis_batch
         import uuid
+
+        # ПРОВЕРКА ЛИМИТОВ ПОДПИСКИ
+        active_subscription = db.query(Subscription).filter(
+            Subscription.user_id == current_user.id,
+            Subscription.status.in_([SubscriptionStatus.active, SubscriptionStatus.trial])
+        ).first()
+
+        if not active_subscription:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "NO_SUBSCRIPTION",
+                    "message": "У вас нет активной подписки. Пожалуйста, выберите тариф."
+                }
+            )
+
+        # Проверка возможности анализа (лимиты)
+        can_analyze, error_message = active_subscription.can_analyze()
+        if not can_analyze:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "LIMIT_EXCEEDED",
+                    "message": error_message,
+                    "subscription": {
+                        "plan_type": active_subscription.plan.plan_type.value if active_subscription.plan else "unknown",
+                        "analyses_used": active_subscription.analyses_used_this_month,
+                        "analyses_limit": active_subscription.plan.max_analyses_per_month if active_subscription.plan else 0
+                    }
+                }
+            )
 
         # Проверка существования вакансии и принадлежности пользователю
         vacancy = db.query(Vacancy).filter(
@@ -560,15 +592,36 @@ async def export_analysis_to_excel(
         ws = wb.active
         ws.title = "AI Анализ Резюме"
 
-        # Название вакансии в первой строке
-        ws.merge_cells('A1:O1')
-        title_cell = ws.cell(row=1, column=1, value=f"Вакансия: {vacancy.title}")
-        title_cell.font = Font(bold=True, size=14)
-        title_cell.alignment = Alignment(horizontal="center", vertical="center")
-        title_cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-        title_cell.font = Font(bold=True, size=14, color="FFFFFF")
+        # Добавляем лист со статистикой
+        stats_ws = wb.create_sheet("Статистика", 0)
 
-        # Заголовок таблицы (без колонки "Модель AI")
+        # ========== БРЕНДИРОВАННЫЙ ЗАГОЛОВОК ==========
+        # Логотип и название компании (строки 1-3)
+        ws.merge_cells('A1:O3')
+        logo_cell = ws.cell(row=1, column=1, value="TIMLY\nAI-Powered HR Analytics")
+        logo_cell.font = Font(bold=True, size=20, color="FFFFFF", name="Arial")
+        logo_cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        logo_cell.fill = PatternFill(start_color="6366F1", end_color="8B5CF6", fill_type="solid")  # Градиент синий-фиолетовый
+        ws.row_dimensions[1].height = 25
+        ws.row_dimensions[2].height = 25
+        ws.row_dimensions[3].height = 25
+
+        # Название вакансии (строка 4)
+        ws.merge_cells('A4:O4')
+        title_cell = ws.cell(row=4, column=1, value=f"📋 Вакансия: {vacancy.title}")
+        title_cell.font = Font(bold=True, size=16, color="1F2937", name="Arial")
+        title_cell.alignment = Alignment(horizontal="center", vertical="center")
+        title_cell.fill = PatternFill(start_color="E0E7FF", end_color="E0E7FF", fill_type="solid")
+        ws.row_dimensions[4].height = 30
+
+        # Информация о дате экспорта (строка 5)
+        ws.merge_cells('A5:O5')
+        date_cell = ws.cell(row=5, column=1, value=f"📅 Дата экспорта: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+        date_cell.font = Font(size=11, color="6B7280", italic=True)
+        date_cell.alignment = Alignment(horizontal="center", vertical="center")
+        ws.row_dimensions[5].height = 20
+
+        # Заголовок таблицы (строка 7 - после брендинга)
         header = [
             "№", "Кандидат", "Email", "Телефон", "Ссылка на резюме",
             "Оценка", "Навыки", "Опыт", "Зарплата", "Рекомендация",
@@ -576,34 +629,47 @@ async def export_analysis_to_excel(
             "Обоснование", "Дата анализа"
         ]
 
-        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-        header_font = Font(bold=True, color="FFFFFF")
+        # Современный градиентный стиль заголовков
+        header_fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=12, name="Arial")
 
         for col, value in enumerate(header, 1):
-            cell = ws.cell(row=2, column=col, value=value)
+            cell = ws.cell(row=7, column=col, value=value)
             cell.fill = header_fill
             cell.font = header_font
-            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-        # Цвета для рекомендаций
+        ws.row_dimensions[7].height = 30
+
+        # Заморозка панелей (заголовок всегда видим)
+        ws.freeze_panes = "A8"
+
+        # Современная цветовая палитра для рекомендаций
         rec_colors = {
-            'hire': PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid"),  # Светло-зеленый
-            'interview': PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid"),  # Светло-желтый
-            'maybe': PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid"),  # Светло-розовый
-            'reject': PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")  # Серый
+            'hire': PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid"),  # Мятно-зеленый
+            'interview': PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid"),  # Теплый желтый
+            'maybe': PatternFill(start_color="FBCFE8", end_color="FBCFE8", fill_type="solid"),  # Мягкий розовый
+            'reject': PatternFill(start_color="F3F4F6", end_color="F3F4F6", fill_type="solid")  # Нейтральный серый
         }
 
-        # Перевод рекомендаций на русский
+        rec_font_colors = {
+            'hire': "065F46",  # Темно-зеленый
+            'interview': "92400E",  # Темно-желтый
+            'maybe': "9F1239",  # Темно-розовый
+            'reject': "6B7280"  # Темно-серый
+        }
+
+        # Перевод рекомендаций на русский с эмодзи
         rec_translations = {
-            'hire': 'Нанять',
-            'interview': 'Собеседование',
-            'maybe': 'Возможно',
-            'reject': 'Отклонить'
+            'hire': '✅ Нанять',
+            'interview': '👤 Собеседование',
+            'maybe': '🤔 Возможно',
+            'reject': '❌ Отклонить'
         }
 
-        # Данные (начинаем с 3-й строки, т.к. 1-я - название вакансии, 2-я - заголовки)
-        for idx, (analysis, application) in enumerate(results, 3):
-            ws.cell(row=idx, column=1, value=idx-2)  # Номер строки (idx-2 т.к. начинаем с 3)
+        # Данные (начинаем с 8-й строки, т.к. строки 1-7 заняты брендингом и заголовками)
+        for idx, (analysis, application) in enumerate(results, 8):
+            ws.cell(row=idx, column=1, value=idx-7)  # Номер строки (idx-7 т.к. начинаем с 8)
             ws.cell(row=idx, column=2, value=application.candidate_name or "Не указано")
             ws.cell(row=idx, column=3, value=application.candidate_email or "Не указан")
             ws.cell(row=idx, column=4, value=application.candidate_phone or "Не указан")
@@ -630,12 +696,13 @@ async def export_analysis_to_excel(
             }.get(analysis.salary_match, 'Н/Д')
             ws.cell(row=idx, column=9, value=salary_text)
 
-            # Рекомендация с цветом и переводом на русский
+            # Рекомендация с цветом, эмодзи и переводом на русский
             rec_text = rec_translations.get(analysis.recommendation, analysis.recommendation or "N/A")
             rec_cell = ws.cell(row=idx, column=10, value=rec_text)
             if analysis.recommendation and analysis.recommendation in rec_colors:
                 rec_cell.fill = rec_colors[analysis.recommendation]
-                rec_cell.font = Font(bold=True)
+                rec_cell.font = Font(bold=True, size=11, color=rec_font_colors.get(analysis.recommendation, "000000"))
+            rec_cell.alignment = Alignment(horizontal="center", vertical="center")
 
             ws.cell(row=idx, column=11, value=", ".join(analysis.strengths or []))
             ws.cell(row=idx, column=12, value=", ".join(analysis.weaknesses or []))
@@ -643,16 +710,46 @@ async def export_analysis_to_excel(
             ws.cell(row=idx, column=14, value=analysis.reasoning or "")
             ws.cell(row=idx, column=15, value=analysis.created_at.strftime("%Y-%m-%d %H:%M") if analysis.created_at else "N/A")
 
-        # Автоширина колонок (пропускаем MergedCell)
+        # ========== АВТОФИЛЬТР ==========
+        # Включаем автофильтр для заголовков (строка 7)
+        ws.auto_filter.ref = f"A7:O{len(results) + 7}"
+
+        # ========== УСЛОВНОЕ ФОРМАТИРОВАНИЕ ДЛЯ ОЦЕНОК ==========
+        from openpyxl.styles import Color
+        from openpyxl.formatting.rule import ColorScaleRule
+
+        # Градиентная раскраска для колонки "Оценка" (F)
+        score_rule = ColorScaleRule(
+            start_type='num', start_value=0, start_color='FFC7CE',  # Красный для низких
+            mid_type='num', mid_value=50, mid_color='FFEB9C',  # Желтый для средних
+            end_type='num', end_value=100, end_color='C6EFCE'  # Зеленый для высоких
+        )
+        ws.conditional_formatting.add(f"F8:F{len(results) + 7}", score_rule)
+
+        # Градиентная раскраска для колонки "Навыки" (G)
+        skills_rule = ColorScaleRule(
+            start_type='num', start_value=0, start_color='FFC7CE',
+            mid_type='num', mid_value=50, mid_color='FFEB9C',
+            end_type='num', end_value=100, end_color='C6EFCE'
+        )
+        ws.conditional_formatting.add(f"G8:G{len(results) + 7}", skills_rule)
+
+        # Градиентная раскраска для колонки "Опыт" (H)
+        exp_rule = ColorScaleRule(
+            start_type='num', start_value=0, start_color='FFC7CE',
+            mid_type='num', mid_value=50, mid_color='FFEB9C',
+            end_type='num', end_value=100, end_color='C6EFCE'
+        )
+        ws.conditional_formatting.add(f"H8:H{len(results) + 7}", exp_rule)
+
+        # ========== АВТОШИРИНА КОЛОНОК ==========
         from openpyxl.cell.cell import MergedCell
         for column in ws.columns:
             max_length = 0
             column_letter = None
             for cell in column:
-                # Пропускаем объединенные ячейки
                 if isinstance(cell, MergedCell):
                     continue
-                # Получаем column_letter из первой обычной ячейки
                 if column_letter is None:
                     column_letter = cell.column_letter
                 try:
@@ -663,6 +760,56 @@ async def export_analysis_to_excel(
             if column_letter:
                 adjusted_width = min(max_length + 2, 50)
                 ws.column_dimensions[column_letter].width = adjusted_width
+
+        # ========== СТРАНИЦА СТАТИСТИКИ ==========
+        # Брендированный заголовок
+        stats_ws.merge_cells('A1:E3')
+        stats_logo = stats_ws.cell(row=1, column=1, value="TIMLY\n📊 Статистика анализа")
+        stats_logo.font = Font(bold=True, size=18, color="FFFFFF", name="Arial")
+        stats_logo.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        stats_logo.fill = PatternFill(start_color="8B5CF6", end_color="6366F1", fill_type="solid")
+        stats_ws.row_dimensions[1].height = 20
+        stats_ws.row_dimensions[2].height = 20
+        stats_ws.row_dimensions[3].height = 20
+
+        # Название вакансии
+        stats_ws.merge_cells('A4:E4')
+        stats_title = stats_ws.cell(row=4, column=1, value=f"Вакансия: {vacancy.title}")
+        stats_title.font = Font(bold=True, size=14, color="1F2937")
+        stats_title.alignment = Alignment(horizontal="center", vertical="center")
+        stats_title.fill = PatternFill(start_color="E0E7FF", end_color="E0E7FF", fill_type="solid")
+
+        # Подсчет статистики
+        total_count = len(results)
+        hire_count = len([r for r, _ in results if r.recommendation == 'hire'])
+        interview_count = len([r for r, _ in results if r.recommendation == 'interview'])
+        maybe_count = len([r for r, _ in results if r.recommendation == 'maybe'])
+        reject_count = len([r for r, _ in results if r.recommendation == 'reject'])
+        avg_score = sum([r.score for r, _ in results if r.score]) / total_count if total_count > 0 else 0
+
+        # Карточки статистики (начиная со строки 6)
+        stats_data = [
+            ("Всего кандидатов", total_count, "4F46E5"),
+            ("Средний балл", f"{avg_score:.1f}", "10B981"),
+            ("Нанять ✅", hire_count, "059669"),
+            ("Собеседование 👤", interview_count, "D97706"),
+            ("Возможно 🤔", maybe_count, "DB2777"),
+            ("Отклонить ❌", reject_count, "6B7280"),
+        ]
+
+        row = 6
+        for label, value, color in stats_data:
+            stats_ws.merge_cells(f'A{row}:E{row}')
+            cell = stats_ws.cell(row=row, column=1, value=f"{label}: {value}")
+            cell.font = Font(bold=True, size=14, color="FFFFFF")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
+            stats_ws.row_dimensions[row].height = 30
+            row += 1
+
+        # Автоширина для статистики
+        for col in range(1, 6):
+            stats_ws.column_dimensions[chr(64 + col)].width = 30
 
         # Сохранение в временный файл
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")

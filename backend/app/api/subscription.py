@@ -22,8 +22,13 @@ router = APIRouter()
 # Pydantic schemas для запросов
 class UpgradeSubscriptionRequest(BaseModel):
     """Запрос на смену тарифного плана"""
-    plan_type: str  # free, starter, professional, enterprise
+    plan_type: Optional[str] = None  # free, starter, professional, enterprise
+    new_plan_type: Optional[str] = None  # Для обратной совместимости
     duration_months: int = 1  # 1 или 12
+
+    def get_plan_type(self) -> str:
+        """Получить тип плана из любого доступного поля"""
+        return self.plan_type or self.new_plan_type or ""
 
     class Config:
         json_schema_extra = {
@@ -109,13 +114,21 @@ async def upgrade_subscription(
         duration_months: Длительность подписки (1 или 12 месяцев)
     """
     try:
+        # Получаем тип плана из любого доступного поля
+        plan_type_str = request.get_plan_type()
+        if not plan_type_str:
+            return bad_request(
+                error="MISSING_PLAN_TYPE",
+                message="Необходимо указать plan_type или new_plan_type"
+            )
+
         # Валидация типа плана
         try:
-            plan_type_enum = PlanType[request.plan_type]
+            plan_type_enum = PlanType[plan_type_str]
         except KeyError:
             return bad_request(
                 error="INVALID_PLAN_TYPE",
-                message=f"Неверный тип тарифа: {request.plan_type}"
+                message=f"Неверный тип тарифа: {plan_type_str}"
             )
 
         # Валидация длительности
@@ -214,6 +227,58 @@ async def check_limits(
         can_export, export_msg = await service.check_can_export(current_user.id)
         can_add_vacancy, vacancy_msg = await service.check_vacancy_limit(current_user.id)
 
+        # Получаем текущую подписку
+        subscription = await service.get_or_create_subscription(current_user.id)
+
+        # Считаем анализы из таблицы analysis_results за текущий период подписки
+        from app.models.application import AnalysisResult, Application
+        from app.models.vacancy import Vacancy
+        from datetime import datetime, timedelta
+        from sqlalchemy import func
+
+        # Определяем начало текущего периода
+        if subscription and subscription.started_at:
+            period_start = subscription.started_at
+        else:
+            # Если нет started_at, берём начало текущего месяца
+            now = datetime.utcnow()
+            period_start = datetime(now.year, now.month, 1)
+
+        # Считаем количество анализов за период (через JOIN с applications и vacancies)
+        analyses_used = db.query(func.count(AnalysisResult.id))\
+            .join(Application, AnalysisResult.application_id == Application.id)\
+            .join(Vacancy, Application.vacancy_id == Vacancy.id)\
+            .filter(
+                Vacancy.user_id == current_user.id,
+                AnalysisResult.created_at >= period_start
+            ).scalar() or 0
+
+        # Вычисляем оставшиеся анализы
+        if subscription and subscription.plan:
+            max_analyses = subscription.plan.max_analyses_per_month
+            is_unlimited = max_analyses == -1
+
+            if is_unlimited:
+                analyses_remaining = -1
+                analyses_limit = -1
+            else:
+                analyses_limit = max_analyses
+                analyses_remaining = max(0, max_analyses - analyses_used)
+
+            # Дата обновления лимита
+            from dateutil.relativedelta import relativedelta
+
+            if subscription.expires_at:
+                reset_date = (subscription.expires_at + timedelta(days=1)).isoformat()
+            else:
+                reset_date = (datetime.utcnow() + relativedelta(months=1)).isoformat()
+        else:
+            # Нет подписки - бесплатный план
+            analyses_limit = 10  # Лимит free плана
+            analyses_remaining = max(0, analyses_limit - analyses_used)
+            is_unlimited = False
+            reset_date = None
+
         return success(data={
             "can_analyze": can_analyze,
             "can_export": can_export,
@@ -222,15 +287,25 @@ async def check_limits(
                 "analyze": analyze_msg,
                 "export": export_msg,
                 "vacancy": vacancy_msg
-            }
+            },
+            "analyses_remaining": analyses_remaining,
+            "analyses_used": analyses_used,
+            "analyses_limit": analyses_limit,
+            "is_unlimited": is_unlimited,
+            "reset_date": reset_date
         })
 
     except Exception as e:
+        import traceback
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in check_limits: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "LIMITS_CHECK_ERROR",
-                "message": "Ошибка при проверке лимитов"
+                "message": f"Ошибка при проверке лимитов: {str(e)}"
             }
         )
 

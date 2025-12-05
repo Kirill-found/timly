@@ -302,7 +302,7 @@ export interface UsageStatistics {
 }
 
 export interface UpgradeSubscriptionRequest {
-  new_plan_type: PlanType;
+  plan_type: PlanType;
   duration_months: number;
 }
 

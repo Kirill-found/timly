@@ -44,10 +44,11 @@ else:
     engine = create_engine(
         settings.DATABASE_URL,
         poolclass=QueuePool,
-        pool_size=20,
-        max_overflow=40,
-        pool_pre_ping=True,
+        pool_size=10,  # Уменьшено с 20 до 10 для экономии RAM
+        max_overflow=15,  # Уменьшено с 40 до 15
+        pool_pre_ping=True,  # Проверка соединений перед использованием
         pool_recycle=3600,  # Пересоздание соединений каждый час
+        pool_timeout=30,  # Timeout для получения соединения из пула
         echo=settings.DEBUG  # SQL логирование только в dev режиме
     )
 

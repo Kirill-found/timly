@@ -21,7 +21,9 @@ import Results from '@/pages/Results';
 import HHCallback from '@/pages/HHCallback';
 import HHCallbackPublic from '@/pages/HHCallbackPublic';
 import Pricing from '@/pages/Pricing';
+import Checkout from '@/pages/Checkout';
 import Admin from '@/pages/Admin';
+import DemoResults from '@/pages/DemoResults';
 
 // Компоненты
 import ProtectedRoute from '@/components/Auth/ProtectedRoute';
@@ -41,20 +43,8 @@ const App: React.FC = () => {
             <Route path="/register" element={<Register />} />
             <Route path="/auth/hh-callback" element={<HHCallbackPublic />} />
 
-            {/* Временные страницы-заглушки */}
-
-            <Route
-              path="/demo"
-              element={
-                <div className="min-h-screen bg-background flex items-center justify-center p-24">
-                  <div className="text-center space-y-4">
-                    <h2 className="text-2xl font-semibold">Демо Timly</h2>
-                    <p className="text-muted-foreground">Интерактивное демо будет реализовано</p>
-                    <a href="/" className="text-primary hover:underline">← На главную</a>
-                  </div>
-                </div>
-              }
-            />
+            {/* Демо страница для скриншота */}
+            <Route path="/demo-results" element={<DemoResults />} />
 
             {/* Защищенные страницы */}
             <Route
@@ -138,6 +128,17 @@ const App: React.FC = () => {
                 <ProtectedRoute>
                   <AppLayout>
                     <Pricing />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/checkout"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <Checkout />
                   </AppLayout>
                 </ProtectedRoute>
               }

@@ -2,9 +2,8 @@
  * Страница анализа резюме
  * Таблица с результатами AI анализа откликов
  */
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Brain, Filter, Download, Search, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, XCircle, Clock, Loader2, StopCircle, ExternalLink, Phone, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Brain, Filter, Download, Search, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, XCircle, Clock, Loader2, StopCircle, ExternalLink, Phone } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,9 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress';
 import { apiClient } from '@/services/api';
 import { Vacancy, AnalysisResult, AnalysisFilter } from '@/types';
-import { useApp } from '@/store/AppContext';
-import { AnalysisLimitsDisplay } from '@/components/AnalysisLimitsDisplay';
-import { LimitExceededModal } from '@/components/LimitExceededModal';
 
 interface AnalysisWithApplication extends AnalysisResult {
   application?: {
@@ -30,7 +26,6 @@ interface AnalysisWithApplication extends AnalysisResult {
 }
 
 const Analysis: React.FC = () => {
-  const app = useApp();
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [selectedVacancy, setSelectedVacancy] = useState<string>('all');
   const [results, setResults] = useState<AnalysisWithApplication[]>([]);
@@ -41,21 +36,15 @@ const Analysis: React.FC = () => {
   // Новые состояния для инкрементального анализа
   const [applicationsStats, setApplicationsStats] = useState<any>(null);
   const [dashboardStats, setDashboardStats] = useState<any>(null); // Статистика для дашборда (не зависит от фильтров)
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-
-  // Используем глобальное состояние анализа
-  // Показываем прогресс только если анализируем текущую выбранную вакансию
-  const isAnalyzing = app.activeAnalysis !== null && app.activeAnalysis.vacancyId === selectedVacancy;
-  // Но индикатор на странице показываем для любой активной вакансии
-  const hasActiveAnalysis = app.activeAnalysis !== null;
-  const analysisProgress = app.activeAnalysis || { total: 0, analyzed: 0, startTime: 0, vacancyId: '' };
+  const [analysisProgress, setAnalysisProgress] = useState({ total: 0, analyzed: 0, startTime: 0 });
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastPollTimeRef = useRef<number>(0);
 
   // Состояние для слайдера квоты анализа
   const [analysisLimit, setAnalysisLimit] = useState<number>(100); // % от новых откликов
-
-  // Состояние для модального окна лимита
-  const [limitModalOpen, setLimitModalOpen] = useState(false);
-  const [limitExceededInfo, setLimitExceededInfo] = useState<any>(null);
 
   // Загрузка вакансий при монтировании
   useEffect(() => {
@@ -66,42 +55,6 @@ const Analysis: React.FC = () => {
   useEffect(() => {
     loadResults();
   }, [selectedVacancy, recommendationFilter]);
-
-  // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Polling который работает пока есть activeAnalysis
-  useEffect(() => {
-    if (!app.activeAnalysis) {
-      return; // Нет активного анализа - ничего не делаем
-    }
-
-    console.log('[Analysis] Starting polling for active analysis', app.activeAnalysis);
-
-    const pollStats = async () => {
-      try {
-        const stats = await apiClient.getApplicationsStats(app.activeAnalysis!.vacancyId);
-
-        // Обновляем прогресс
-        app.updateAnalysisProgress({
-          analyzed: stats.analyzed_applications
-        });
-
-        // Проверяем завершение
-        if (stats.unanalyzed_applications === 0 || stats.analyzed_applications >= app.activeAnalysis!.total) {
-          console.log('[Analysis] Analysis completed!');
-          app.stopAnalysis();
-          loadResults();
-          loadApplicationsStats();
-          loadDashboardStats();
-        }
-      } catch (err) {
-        console.error('[Analysis] Error polling stats:', err);
-      }
-    };
-
-    // Запускаем глобальный polling
-    app.startGlobalPolling(pollStats, 3000, 300000);
-
-    // Cleanup НЕ нужен - polling глобальный
-  }, [app.activeAnalysis?.vacancyId]); // Перезапускаем только если изменилась vacancyId
 
   // Загрузка статистики для выбранной вакансии (независимо от фильтров)
   useEffect(() => {
@@ -191,7 +144,16 @@ const Analysis: React.FC = () => {
   };
 
   const handleStopAnalysis = () => {
-    app.stopAnalysis();
+    // Останавливаем все таймеры
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setIsAnalyzing(false);
     loadResults();
     loadApplicationsStats();
     loadDashboardStats();
@@ -203,37 +165,77 @@ const Analysis: React.FC = () => {
       return;
     }
 
+    setIsAnalyzing(true);
     setError(null);
 
+    // Сохраняем начальное количество неанализированных откликов
     const initialUnanalyzed = applicationsStats?.unanalyzed_applications || 0;
     const initialAnalyzed = applicationsStats?.analyzed_applications || 0;
+
+    // Вычисляем limit на основе слайдера
     const applicationsToAnalyze = Math.ceil((initialUnanalyzed * analysisLimit) / 100);
 
-    app.startAnalysis({
-      vacancyId: selectedVacancy,
+    setAnalysisProgress({
       total: applicationsToAnalyze,
       analyzed: 0,
       startTime: Date.now()
     });
 
     try {
+      // Запускаем анализ (по умолчанию анализирует response и consider, исключая discard)
       await apiClient.startAnalysisNewApplications(selectedVacancy, undefined, applicationsToAnalyze);
-      // Polling запустится автоматически из useEffect (строка 62-95)
+
+      // Периодически обновляем статистику пока идет анализ
+      const pollStats = async () => {
+        try {
+          await loadApplicationsStats();
+
+          // Проверяем, завершился ли анализ
+          const stats = await apiClient.getApplicationsStats(selectedVacancy);
+          const newlyAnalyzed = stats.analyzed_applications - initialAnalyzed;
+
+          // Обновляем прогресс (используем функциональный вариант для сохранения startTime)
+          setAnalysisProgress(prev => ({
+            total: applicationsToAnalyze,
+            analyzed: newlyAnalyzed,
+            startTime: prev.startTime || Date.now() // Защита от 0
+          }));
+
+          if (stats.unanalyzed_applications === 0 || newlyAnalyzed >= applicationsToAnalyze) {
+            handleStopAnalysis();
+          }
+        } catch (err) {
+          console.error('Error polling stats:', err);
+        }
+      };
+
+      pollIntervalRef.current = setInterval(pollStats, 3000); // Обновляем каждые 3 секунды
+
+      // Добавляем обработчик для Page Visibility API
+      // Когда пользователь возвращается на вкладку - сразу обновляем
+      const handleVisibilityChange = () => {
+        if (!document.hidden) {
+          console.log('Tab became visible, updating stats...');
+          pollStats(); // Немедленно обновляем при возврате на вкладку
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      // Очистка при размонтировании
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
+
+      // Останавливаем опрос через 5 минут на случай зависания
+      timeoutRef.current = setTimeout(() => {
+        handleStopAnalysis();
+      }, 300000);
+
     } catch (err: any) {
       console.error('Error starting analysis:', err);
-
-      // Проверяем, является ли это ошибкой превышения лимита
-      const errorDetail = err.response?.data?.detail;
-      if (errorDetail?.error === 'LIMIT_EXCEEDED') {
-        // Показываем модальное окно с предложением обновить тариф
-        setLimitExceededInfo(errorDetail.subscription);
-        setLimitModalOpen(true);
-      } else {
-        // Обычная ошибка
-        setError(errorDetail?.message || err.response?.data?.error?.message || 'Ошибка при запуске анализа');
-      }
-
-      app.stopAnalysis();
+      setError(err.response?.data?.error?.message || 'Ошибка при запуске анализа');
+      setIsAnalyzing(false);
     }
   };
 
@@ -318,28 +320,14 @@ const Analysis: React.FC = () => {
   };
 
   return (
-    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
-      {/* Заголовок с градиентом */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 via-blue-500 to-purple-500 p-4 sm:p-6 md:p-8 text-white"
-      >
-        <div className="absolute inset-0 bg-grid-white/10" />
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <Brain className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8" />
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Анализ резюме</h1>
-          </div>
-          <p className="text-white/90 text-sm sm:text-base md:text-lg">
-            Результаты AI анализа откликов кандидатов
-          </p>
-        </div>
-        {/* Декоративные элементы */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
-      </motion.div>
+    <div className="p-6 space-y-6">
+      {/* Заголовок */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Анализ резюме</h1>
+        <p className="text-muted-foreground">
+          Результаты AI анализа откликов кандидатов
+        </p>
+      </div>
 
       {/* Ошибки */}
       {error && (
@@ -348,9 +336,6 @@ const Analysis: React.FC = () => {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-
-      {/* Отображение оставшихся анализов согласно тарифному плану */}
-      <AnalysisLimitsDisplay />
 
       {/* Главная карточка анализа - для выбранной вакансии */}
       {selectedVacancy !== 'all' && applicationsStats && (
@@ -813,13 +798,6 @@ const Analysis: React.FC = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* Модальное окно при превышении лимита */}
-      <LimitExceededModal
-        isOpen={limitModalOpen}
-        onClose={() => setLimitModalOpen(false)}
-        subscriptionInfo={limitExceededInfo}
-      />
     </div>
   );
 };

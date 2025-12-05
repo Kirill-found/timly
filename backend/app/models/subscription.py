@@ -24,6 +24,7 @@ class SubscriptionStatus(enum.Enum):
 
 class PlanType(enum.Enum):
     """Типы тарифных планов"""
+    trial = "trial"  # Пробный период (50 анализов)
     free = "free"
     starter = "starter"
     professional = "professional"

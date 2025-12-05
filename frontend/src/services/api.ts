@@ -435,6 +435,23 @@ class ApiClient {
     return response.data.data!;
   }
 
+  // Payment
+  async createPayment(planType: string, durationMonths: number, returnUrl?: string): Promise<{
+    payment_id: string;
+    yookassa_payment_id: string;
+    confirmation_url: string;
+    amount: number;
+    currency: string;
+    status: string;
+  }> {
+    const response = await this.client.post<ApiResponse<any>>('/api/payment/create', {
+      plan_type: planType,
+      duration_months: durationMonths,
+      return_url: returnUrl
+    });
+    return response.data.data!;
+  }
+
   // Утилиты
   async healthCheck(): Promise<ApiResponse> {
     const response = await this.client.get<ApiResponse>('/health');

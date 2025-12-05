@@ -3,7 +3,8 @@
  * Настройка HH.ru токена и параметров анализа
  */
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Key, CheckCircle, XCircle, Info, Save, ExternalLink } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Settings as SettingsIcon, Key, CheckCircle, XCircle, Info, Save, ExternalLink, User, Shield, Sparkles } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -208,14 +209,28 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Заголовок */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Настройки</h1>
-        <p className="text-muted-foreground">
-          Настройка интеграции с HH.ru и параметров анализа
-        </p>
-      </div>
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+      {/* Заголовок с градиентом */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-8 text-white"
+      >
+        <div className="absolute inset-0 bg-grid-white/10" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-2">
+            <SettingsIcon className="h-8 w-8" />
+            <h1 className="text-3xl font-bold">Настройки</h1>
+          </div>
+          <p className="text-white/90 text-lg">
+            Настройка интеграции с HH.ru и параметров анализа
+          </p>
+        </div>
+        {/* Декоративные элементы */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
+      </motion.div>
 
       {/* Ошибки */}
       {error && (
@@ -244,7 +259,12 @@ const Settings: React.FC = () => {
       )}
 
       {/* HH.ru токен */}
-      <Card>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <Card className="border-2 hover:shadow-xl transition-all duration-300">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Key className="h-5 w-5" />
@@ -375,9 +395,15 @@ const Settings: React.FC = () => {
           </p>
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* Параметры анализа */}
-      <Card>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <Card className="border-2 hover:shadow-xl transition-all duration-300">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <SettingsIcon className="h-5 w-5" />
@@ -428,9 +454,15 @@ const Settings: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* Информация об аккаунте */}
-      <Card>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+        <Card className="border-2 hover:shadow-xl transition-all duration-300">
         <CardHeader>
           <CardTitle>Информация об аккаунте</CardTitle>
         </CardHeader>
@@ -463,6 +495,7 @@ const Settings: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* Модальное окно для ввода OAuth кода */}
       <Dialog open={showOAuthModal} onOpenChange={setShowOAuthModal}>

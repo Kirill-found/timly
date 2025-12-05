@@ -5,7 +5,14 @@
 import React, { createContext, useContext, useReducer } from 'react';
 import type { Vacancy, Application, AnalysisResult, SyncJob } from '@/types';
 
-// Типы состояния
+// Типы состояния анализа
+interface AnalysisProgress {
+  vacancyId: string;
+  total: number;
+  analyzed: number;
+  startTime: number;
+}
+
 interface AppState {
   // Вакансии
   vacancies: Vacancy[];
@@ -19,6 +26,9 @@ interface AppState {
   // Анализы
   analysisResults: AnalysisResult[];
   analysisLoading: boolean;
+
+  // Фоновый анализ
+  activeAnalysis: AnalysisProgress | null;
 
   // Синхронизация
   activeSyncJobs: SyncJob[];
@@ -42,6 +52,9 @@ type AppAction =
   | { type: 'SET_ANALYSIS_RESULTS'; payload: AnalysisResult[] }
   | { type: 'ADD_ANALYSIS_RESULT'; payload: AnalysisResult }
   | { type: 'UPDATE_ANALYSIS_RESULT'; payload: AnalysisResult }
+  | { type: 'START_ANALYSIS'; payload: AnalysisProgress }
+  | { type: 'UPDATE_ANALYSIS_PROGRESS'; payload: Partial<AnalysisProgress> }
+  | { type: 'STOP_ANALYSIS' }
   | { type: 'SET_SYNC_JOBS'; payload: SyncJob[] }
   | { type: 'ADD_SYNC_JOB'; payload: SyncJob }
   | { type: 'UPDATE_SYNC_JOB'; payload: SyncJob }
@@ -56,6 +69,7 @@ const initialState: AppState = {
   applicationsLoading: false,
   analysisResults: [],
   analysisLoading: false,
+  activeAnalysis: null,
   activeSyncJobs: [],
   syncHistory: [],
   globalLoading: false,
@@ -168,6 +182,26 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
           .filter((job) => job.status === 'pending' || job.status === 'processing'),
       };
 
+    case 'START_ANALYSIS':
+      return {
+        ...state,
+        activeAnalysis: action.payload,
+      };
+
+    case 'UPDATE_ANALYSIS_PROGRESS':
+      return {
+        ...state,
+        activeAnalysis: state.activeAnalysis
+          ? { ...state.activeAnalysis, ...action.payload }
+          : null,
+      };
+
+    case 'STOP_ANALYSIS':
+      return {
+        ...state,
+        activeAnalysis: null,
+      };
+
     case 'CLEAR_DATA':
       return initialState;
 
@@ -189,6 +223,10 @@ interface AppContextType extends AppState {
   setAnalysisResults: (results: AnalysisResult[]) => void;
   addAnalysisResult: (result: AnalysisResult) => void;
   updateAnalysisResult: (result: AnalysisResult) => void;
+  startAnalysis: (progress: AnalysisProgress) => void;
+  updateAnalysisProgress: (progress: Partial<AnalysisProgress>) => void;
+  stopAnalysis: () => void;
+  startGlobalPolling: (pollingFn: () => void, interval: number, timeout: number) => void;
   setSyncJobs: (jobs: SyncJob[]) => void;
   addSyncJob: (job: SyncJob) => void;
   updateSyncJob: (job: SyncJob) => void;
@@ -196,6 +234,10 @@ interface AppContextType extends AppState {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+// Глобальный ref для хранения интервала polling анализа
+let globalAnalysisPollingInterval: ReturnType<typeof setInterval> | null = null;
+let globalAnalysisTimeoutRef: ReturnType<typeof setTimeout> | null = null;
 
 // Провайдер
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -257,6 +299,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     dispatch({ type: 'UPDATE_SYNC_JOB', payload: job });
   };
 
+  const startAnalysis = (progress: AnalysisProgress) => {
+    dispatch({ type: 'START_ANALYSIS', payload: progress });
+  };
+
+  const updateAnalysisProgress = (progress: Partial<AnalysisProgress>) => {
+    dispatch({ type: 'UPDATE_ANALYSIS_PROGRESS', payload: progress });
+  };
+
+  const startGlobalPolling = (pollingFn: () => void, interval: number, timeout: number) => {
+    // Сначала останавливаем существующие таймеры
+    if (globalAnalysisPollingInterval) {
+      clearInterval(globalAnalysisPollingInterval);
+    }
+    if (globalAnalysisTimeoutRef) {
+      clearTimeout(globalAnalysisTimeoutRef);
+    }
+
+    // Запускаем новый polling
+    globalAnalysisPollingInterval = setInterval(pollingFn, interval);
+
+    // Устанавливаем timeout для автоматической остановки
+    globalAnalysisTimeoutRef = setTimeout(() => {
+      stopAnalysis();
+    }, timeout);
+
+    // Сразу вызываем первый раз
+    pollingFn();
+  };
+
+  const stopAnalysis = () => {
+    // Останавливаем глобальные таймеры
+    if (globalAnalysisPollingInterval) {
+      clearInterval(globalAnalysisPollingInterval);
+      globalAnalysisPollingInterval = null;
+    }
+    if (globalAnalysisTimeoutRef) {
+      clearTimeout(globalAnalysisTimeoutRef);
+      globalAnalysisTimeoutRef = null;
+    }
+    dispatch({ type: 'STOP_ANALYSIS' });
+  };
+
   const clearData = () => {
     dispatch({ type: 'CLEAR_DATA' });
   };
@@ -274,6 +358,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAnalysisResults,
     addAnalysisResult,
     updateAnalysisResult,
+    startAnalysis,
+    updateAnalysisProgress,
+    stopAnalysis,
+    startGlobalPolling,
     setSyncJobs,
     addSyncJob,
     updateSyncJob,
@@ -292,4 +380,5 @@ export const useApp = (): AppContextType => {
   return context;
 };
 
+export type { AnalysisProgress };
 export default AppContext;

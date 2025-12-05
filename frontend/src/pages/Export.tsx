@@ -4,7 +4,8 @@
  */
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, FileSpreadsheet, Filter, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Download, FileSpreadsheet, Filter, CheckCircle, Clock, XCircle, Sparkles } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -127,14 +128,28 @@ const Export: React.FC = () => {
   const selectedVacancyData = vacancies.find(v => v.id === selectedVacancy);
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Заголовок */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Экспорт данных</h1>
-        <p className="text-muted-foreground">
-          Экспорт результатов анализа резюме в Excel
-        </p>
-      </div>
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+      {/* Заголовок с градиентом */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 p-8 text-white"
+      >
+        <div className="absolute inset-0 bg-grid-white/10" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-2">
+            <Download className="h-8 w-8" />
+            <h1 className="text-3xl font-bold">Экспорт данных</h1>
+          </div>
+          <p className="text-white/90 text-lg">
+            Экспорт результатов анализа резюме в Excel
+          </p>
+        </div>
+        {/* Декоративные элементы */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
+      </motion.div>
 
       {/* Ошибки */}
       {error && (
@@ -153,7 +168,12 @@ const Export: React.FC = () => {
       )}
 
       {/* Настройки экспорта */}
-      <Card>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <Card className="border-2 hover:shadow-xl transition-all duration-300">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
@@ -243,9 +263,15 @@ const Export: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* Информация об экспорте */}
-      <Card>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <Card className="border-2 hover:shadow-xl transition-all duration-300">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
@@ -269,9 +295,15 @@ const Export: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* Кнопка экспорта */}
-      <Card>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+        <Card className="border-2 hover:shadow-xl transition-all duration-300">
         <CardContent className="pt-6">
           <Button
             onClick={handleExport}
@@ -299,6 +331,7 @@ const Export: React.FC = () => {
           )}
         </CardContent>
       </Card>
+      </motion.div>
     </div>
   );
 };

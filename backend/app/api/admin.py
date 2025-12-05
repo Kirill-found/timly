@@ -2,7 +2,7 @@
 API endpoints для администраторов
 Статистика, управление пользователями и система
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 
@@ -281,8 +281,8 @@ async def get_all_users(
 @router.post("/users/{user_id}/subscription")
 async def update_user_subscription(
     user_id: str,
-    plan_type: str,
-    duration_months: int = 1,
+    plan_type: str = Query(..., description="Тип тарифа"),
+    duration_months: int = Query(1, description="Длительность в месяцах"),
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
@@ -300,6 +300,8 @@ async def update_user_subscription(
     from datetime import datetime, timedelta
     import uuid
 
+    logger.info(f"[UPDATE_SUBSCRIPTION] Request received: user_id={user_id}, plan_type={plan_type}, duration={duration_months}, admin={current_user.email}")
+
     try:
         # Проверяем существование пользователя
         user = db.query(User).filter(User.id == user_id).first()
@@ -315,7 +317,7 @@ async def update_user_subscription(
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Неверный тип тарифа. Доступные: free, starter, professional, enterprise"
+                detail=f"Неверный тип тарифа. Доступные: trial, free, starter, professional, enterprise"
             )
 
         # Получаем план

@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/store/AuthContext';
+import { apiClient } from '@/services/api';
 import { Send, Users, DollarSign, Package, Search } from 'lucide-react';
 
 interface Statistics {
@@ -60,7 +61,7 @@ interface User {
 }
 
 export default function Admin() {
-  const { token } = useAuth();
+  useAuth(); // Ensure user is authenticated
   const [stats, setStats] = useState<Statistics | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,6 +73,8 @@ export default function Admin() {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
+  const getAuthToken = () => apiClient.getAuthToken();
+
   useEffect(() => {
     fetchStatistics();
     fetchUsers();
@@ -79,6 +82,7 @@ export default function Admin() {
 
   const fetchStatistics = async () => {
     try {
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/api/admin/statistics`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -97,6 +101,7 @@ export default function Admin() {
   const fetchUsers = async (search = '') => {
     setLoading(true);
     try {
+      const token = getAuthToken();
       const url = new URL(`${API_BASE_URL}/api/admin/users`);
       if (search) url.searchParams.append('search', search);
 
@@ -124,6 +129,7 @@ export default function Admin() {
     setSuccess('');
 
     try {
+      const token = getAuthToken();
       const response = await fetch(
         `${API_BASE_URL}/api/admin/telegram/send-statistics`,
         {
@@ -151,6 +157,7 @@ export default function Admin() {
     setSuccess('');
 
     try {
+      const token = getAuthToken();
       const response = await fetch(
         `${API_BASE_URL}/api/admin/users/${userId}/subscription?plan_type=${planType}&duration_months=1`,
         {
@@ -161,7 +168,11 @@ export default function Admin() {
         }
       );
 
-      if (!response.ok) throw new Error('Ошибка обновления подписки');
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMessage = errorData.detail || errorData.message || 'Ошибка обновления подписки';
+        throw new Error(errorMessage);
+      }
 
       setSuccess('Подписка успешно обновлена');
       setSelectedUser(null);
@@ -169,8 +180,9 @@ export default function Admin() {
       fetchUsers(searchQuery);
       fetchStatistics();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError('Не удалось обновить подписку');
+    } catch (err: any) {
+      console.error('Subscription update error:', err);
+      setError(err.message || 'Не удалось обновить подписку');
     } finally {
       setLoading(false);
     }
@@ -183,6 +195,8 @@ export default function Admin() {
   const getPlanBadgeColor = (planType: string | undefined) => {
     if (!planType) return 'bg-gray-500';
     switch (planType) {
+      case 'trial':
+        return 'bg-green-500';
       case 'free':
         return 'bg-gray-500';
       case 'starter':
@@ -197,7 +211,7 @@ export default function Admin() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Админ-панель</h1>
         <Button onClick={sendStatisticsToTelegram} disabled={loading}>
@@ -299,7 +313,7 @@ export default function Admin() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -341,6 +355,7 @@ export default function Admin() {
                             <SelectValue placeholder="Выберите тариф" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="trial">Trial (50 анализов)</SelectItem>
                             <SelectItem value="free">Free</SelectItem>
                             <SelectItem value="starter">Starter</SelectItem>
                             <SelectItem value="professional">Professional</SelectItem>
