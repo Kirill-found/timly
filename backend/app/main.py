@@ -8,7 +8,9 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from app.config import settings
 from app.database import init_database, close_database
-from app.api import auth, settings as settings_api, hh_integration, analysis, vacancies, applications, subscription, payment, admin, resume_search, uploaded_candidates
+from app.api import auth, settings as settings_api, hh_integration, analysis, vacancies, applications, subscription, payment, admin, resume_search
+# ВРЕМЕННО ОТКЛЮЧЕНО - вызывает зависание бэкенда
+# from app.api import uploaded_candidates
 from app.utils.logger import setup_logging, setup_sentry, get_logger
 from app.middleware import register_exception_handlers
 from app.middleware.rate_limit import limiter, rate_limit_handler
@@ -123,7 +125,8 @@ app.include_router(subscription.router, prefix="/api/subscription", tags=["Subsc
 app.include_router(payment.router, prefix="/api/payment", tags=["Payment"])
 app.include_router(resume_search.router, prefix="/api/resume-search", tags=["Resume Search"])
 app.include_router(admin.router, tags=["Admin"])
-app.include_router(uploaded_candidates.router, prefix="/api/candidates", tags=["Uploaded Candidates"])
+# ВРЕМЕННО ОТКЛЮЧЕНО - вызывает зависание бэкенда
+# app.include_router(uploaded_candidates.router, prefix="/api/candidates", tags=["Uploaded Candidates"])
 
 
 @app.get("/")
