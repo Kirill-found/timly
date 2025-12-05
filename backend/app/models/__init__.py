@@ -5,5 +5,9 @@ SQLAlchemy модели для Timly
 from .user import User
 from .vacancy import Vacancy
 from .application import Application, AnalysisResult, SyncJob
+from .resume_search import ResumeSearch, SearchCandidate, SearchStatus
 
-__all__ = ["User", "Vacancy", "Application", "AnalysisResult", "SyncJob"]
+__all__ = [
+    "User", "Vacancy", "Application", "AnalysisResult", "SyncJob",
+    "ResumeSearch", "SearchCandidate", "SearchStatus"
+]

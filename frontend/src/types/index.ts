@@ -326,3 +326,107 @@ export interface NotificationMessage {
   description?: string;
   duration?: number;
 }
+
+// ==================== Поиск по базе резюме ====================
+
+export type SearchStatus = 'draft' | 'running' | 'completed' | 'analyzing' | 'done' | 'failed';
+
+export interface SearchFilters {
+  area?: string;
+  experience?: string;
+  salary_from?: number;
+  salary_to?: number;
+  age_from?: number;
+  age_to?: number;
+  gender?: string;
+  education_level?: string;
+  job_search_status?: string;
+  relocation?: string;
+}
+
+export interface ResumeSearch {
+  id: string;
+  user_id: string;
+  vacancy_id?: string;
+  name: string;
+  description?: string;
+  search_query: string;
+  filters: SearchFilters;
+  status: SearchStatus;
+  total_found: number;
+  processed_count: number;
+  analyzed_count: number;
+  error_message?: string;
+  last_run_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SearchCandidate {
+  id: string;
+  search_id: string;
+  hh_resume_id: string;
+  full_name: string;
+  first_name?: string;
+  last_name?: string;
+  title?: string;
+  age?: number;
+  gender?: string;
+  area?: string;
+  salary?: number;
+  currency: string;
+  experience_years?: number;
+  skills: string[];
+  // AI анализ
+  is_analyzed: boolean;
+  ai_score?: number;
+  ai_recommendation?: 'hire' | 'consider' | 'reject';
+  ai_summary?: string;
+  ai_strengths: string[];
+  ai_weaknesses: string[];
+  analyzed_at?: string;
+  // Статус
+  is_favorite: boolean;
+  is_contacted: boolean;
+  notes?: string;
+  created_at: string;
+}
+
+export interface SearchCandidateDetail extends SearchCandidate {
+  resume_data: Record<string, any>;
+  ai_analysis_data: Record<string, any>;
+}
+
+export interface CreateSearchRequest {
+  name: string;
+  description?: string;
+  search_query: string;
+  vacancy_id?: string;
+  filters?: SearchFilters;
+}
+
+export interface SearchStats {
+  total_candidates: number;
+  analyzed_count: number;
+  hire_count: number;
+  consider_count: number;
+  reject_count: number;
+  favorites_count: number;
+  contacted_count: number;
+  avg_score?: number;
+}
+
+export interface DictionaryItem {
+  id: string;
+  name: string;
+}
+
+export interface SearchDictionaries {
+  experience: DictionaryItem[];
+  education_level: DictionaryItem[];
+  gender: DictionaryItem[];
+  job_search_status: DictionaryItem[];
+  relocation: DictionaryItem[];
+  order_by: DictionaryItem[];
+  areas: DictionaryItem[];
+}

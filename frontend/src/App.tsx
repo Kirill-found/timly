@@ -24,6 +24,7 @@ import Pricing from '@/pages/Pricing';
 import Checkout from '@/pages/Checkout';
 import Admin from '@/pages/Admin';
 import DemoResults from '@/pages/DemoResults';
+import CandidateSearch from '@/pages/CandidateSearch';
 
 // Компоненты
 import ProtectedRoute from '@/components/Auth/ProtectedRoute';
@@ -139,6 +140,17 @@ const App: React.FC = () => {
                 <ProtectedRoute>
                   <AppLayout>
                     <Checkout />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/candidate-search"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <CandidateSearch />
                   </AppLayout>
                 </ProtectedRoute>
               }

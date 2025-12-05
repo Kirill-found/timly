@@ -1,0 +1,15 @@
+ПРЯМАЯ ССЫЛКА НА КОД (БЕЗ КЭША):
+
+1. Code.gs (с функцией createTableAndChart):
+https://raw.githubusercontent.com/Kirill-found/SheetGPT/627415b/Code.gs
+
+2. Или коммит HEAD:
+https://raw.githubusercontent.com/Kirill-found/SheetGPT/main/Code.gs?token=$(date +%s)
+
+3. Проверь что скопировал ПРАВИЛЬНЫЙ файл:
+   После вставки в Apps Script нажми Ctrl+F и найди:
+   "function createTableAndChart"
+
+   ДОЛЖНА быть строка примерно 997!
+
+4. Если НЕ нашлась - значит скопировал НЕПРАВИЛЬНО!
