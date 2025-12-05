@@ -22,6 +22,7 @@ import HHCallback from '@/pages/HHCallback';
 import HHCallbackPublic from '@/pages/HHCallbackPublic';
 import Pricing from '@/pages/Pricing';
 import Admin from '@/pages/Admin';
+import CandidateSearch from '@/pages/CandidateSearch';
 
 // Компоненты
 import ProtectedRoute from '@/components/Auth/ProtectedRoute';
@@ -138,6 +139,17 @@ const App: React.FC = () => {
                 <ProtectedRoute>
                   <AppLayout>
                     <Pricing />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/candidate-search"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <CandidateSearch />
                   </AppLayout>
                 </ProtectedRoute>
               }

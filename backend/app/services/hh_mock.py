@@ -311,3 +311,325 @@ async def get_mock_applications(
         page=page,
         per_page=per_page
     )
+
+
+# ==================== MOCK ПОИСК РЕЗЮМЕ ====================
+
+# Генерация mock резюме для поиска
+MOCK_SEARCH_RESUMES = [
+    {
+        "id": "search_resume_001",
+        "title": "Python Developer",
+        "first_name": "Алексей",
+        "last_name": "Петров",
+        "middle_name": "Иванович",
+        "age": 28,
+        "gender": {"id": "male", "name": "Мужской"},
+        "area": {"id": "1", "name": "Москва"},
+        "salary": {"amount": 180000, "currency": "RUB"},
+        "total_experience": {"months": 48},
+        "skill_set": ["Python", "Django", "FastAPI", "PostgreSQL", "Docker", "Redis"],
+        "experience": [
+            {
+                "company": "TechCorp",
+                "position": "Senior Python Developer",
+                "start": "2021-01",
+                "end": None,
+                "description": "Разработка высоконагруженных сервисов"
+            }
+        ],
+        "education": {
+            "level": {"id": "higher", "name": "Высшее"},
+            "primary": [{"name": "МГУ", "year": 2018}]
+        }
+    },
+    {
+        "id": "search_resume_002",
+        "title": "Senior Python Developer",
+        "first_name": "Мария",
+        "last_name": "Сидорова",
+        "middle_name": "Александровна",
+        "age": 32,
+        "gender": {"id": "female", "name": "Женский"},
+        "area": {"id": "1", "name": "Москва"},
+        "salary": {"amount": 250000, "currency": "RUB"},
+        "total_experience": {"months": 96},
+        "skill_set": ["Python", "Django", "FastAPI", "AWS", "Kubernetes", "Machine Learning"],
+        "experience": [
+            {
+                "company": "AI Solutions",
+                "position": "Team Lead Python",
+                "start": "2020-03",
+                "end": None,
+                "description": "Руководство командой из 5 разработчиков, разработка ML pipeline"
+            }
+        ],
+        "education": {
+            "level": {"id": "master", "name": "Магистр"},
+            "primary": [{"name": "МФТИ", "year": 2015}]
+        }
+    },
+    {
+        "id": "search_resume_003",
+        "title": "Backend Developer",
+        "first_name": "Дмитрий",
+        "last_name": "Козлов",
+        "middle_name": None,
+        "age": 25,
+        "gender": {"id": "male", "name": "Мужской"},
+        "area": {"id": "2", "name": "Санкт-Петербург"},
+        "salary": {"amount": 120000, "currency": "RUB"},
+        "total_experience": {"months": 24},
+        "skill_set": ["Python", "Flask", "PostgreSQL", "Git", "Linux"],
+        "experience": [
+            {
+                "company": "StartupHub",
+                "position": "Python Developer",
+                "start": "2022-06",
+                "end": None,
+                "description": "Разработка REST API для мобильного приложения"
+            }
+        ],
+        "education": {
+            "level": {"id": "higher", "name": "Высшее"},
+            "primary": [{"name": "СПбГУ", "year": 2022}]
+        }
+    },
+    {
+        "id": "search_resume_004",
+        "title": "Full-stack разработчик",
+        "first_name": "Елена",
+        "last_name": "Новикова",
+        "middle_name": "Сергеевна",
+        "age": 29,
+        "gender": {"id": "female", "name": "Женский"},
+        "area": {"id": "1", "name": "Москва"},
+        "salary": {"amount": 200000, "currency": "RUB"},
+        "total_experience": {"months": 60},
+        "skill_set": ["Python", "Django", "React", "TypeScript", "PostgreSQL", "Docker"],
+        "experience": [
+            {
+                "company": "WebDev Pro",
+                "position": "Full-stack Developer",
+                "start": "2019-08",
+                "end": None,
+                "description": "Разработка веб-приложений полного цикла"
+            }
+        ],
+        "education": {
+            "level": {"id": "higher", "name": "Высшее"},
+            "primary": [{"name": "ВШЭ", "year": 2017}]
+        }
+    },
+    {
+        "id": "search_resume_005",
+        "title": "Data Engineer",
+        "first_name": "Артём",
+        "last_name": "Волков",
+        "middle_name": "Дмитриевич",
+        "age": 31,
+        "gender": {"id": "male", "name": "Мужской"},
+        "area": {"id": "1", "name": "Москва"},
+        "salary": {"amount": 280000, "currency": "RUB"},
+        "total_experience": {"months": 84},
+        "skill_set": ["Python", "Apache Spark", "Airflow", "Kafka", "Clickhouse", "SQL"],
+        "experience": [
+            {
+                "company": "DataCorp",
+                "position": "Senior Data Engineer",
+                "start": "2018-01",
+                "end": None,
+                "description": "Построение ETL пайплайнов, работа с Big Data"
+            }
+        ],
+        "education": {
+            "level": {"id": "master", "name": "Магистр"},
+            "primary": [{"name": "Бауманка", "year": 2016}]
+        }
+    },
+    {
+        "id": "search_resume_006",
+        "title": "Junior Python Developer",
+        "first_name": "Иван",
+        "last_name": "Смирнов",
+        "middle_name": "Петрович",
+        "age": 23,
+        "gender": {"id": "male", "name": "Мужской"},
+        "area": {"id": "2", "name": "Санкт-Петербург"},
+        "salary": {"amount": 80000, "currency": "RUB"},
+        "total_experience": {"months": 12},
+        "skill_set": ["Python", "Django", "Git", "HTML", "CSS"],
+        "experience": [
+            {
+                "company": "WebStudio",
+                "position": "Junior Developer",
+                "start": "2023-01",
+                "end": None,
+                "description": "Разработка и поддержка веб-сайтов"
+            }
+        ],
+        "education": {
+            "level": {"id": "higher", "name": "Высшее"},
+            "primary": [{"name": "ИТМО", "year": 2023}]
+        }
+    },
+    {
+        "id": "search_resume_007",
+        "title": "DevOps Engineer",
+        "first_name": "Ольга",
+        "last_name": "Михайлова",
+        "middle_name": "Владимировна",
+        "age": 27,
+        "gender": {"id": "female", "name": "Женский"},
+        "area": {"id": "1", "name": "Москва"},
+        "salary": {"amount": 220000, "currency": "RUB"},
+        "total_experience": {"months": 48},
+        "skill_set": ["Python", "Kubernetes", "Docker", "Terraform", "AWS", "CI/CD"],
+        "experience": [
+            {
+                "company": "CloudTech",
+                "position": "DevOps Engineer",
+                "start": "2020-06",
+                "end": None,
+                "description": "Настройка и поддержка инфраструктуры в облаке"
+            }
+        ],
+        "education": {
+            "level": {"id": "higher", "name": "Высшее"},
+            "primary": [{"name": "МИФИ", "year": 2019}]
+        }
+    },
+    {
+        "id": "search_resume_008",
+        "title": "ML Engineer",
+        "first_name": "Николай",
+        "last_name": "Федоров",
+        "middle_name": "Алексеевич",
+        "age": 30,
+        "gender": {"id": "male", "name": "Мужской"},
+        "area": {"id": "1", "name": "Москва"},
+        "salary": {"amount": 300000, "currency": "RUB"},
+        "total_experience": {"months": 72},
+        "skill_set": ["Python", "TensorFlow", "PyTorch", "Scikit-learn", "MLOps", "NLP"],
+        "experience": [
+            {
+                "company": "AI Lab",
+                "position": "Senior ML Engineer",
+                "start": "2019-01",
+                "end": None,
+                "description": "Разработка и внедрение ML моделей в продакшн"
+            }
+        ],
+        "education": {
+            "level": {"id": "candidate", "name": "Кандидат наук"},
+            "primary": [{"name": "МГУ, ВМК", "year": 2018}]
+        }
+    }
+]
+
+
+class HHMockService(HHMockService):
+    """Расширение mock сервиса для поиска резюме"""
+
+    async def search_mock_resumes(
+        self,
+        text: str,
+        page: int = 0,
+        per_page: int = 50
+    ) -> Dict[str, Any]:
+        """
+        Mock поиск по базе резюме
+
+        Args:
+            text: Поисковый запрос
+            page: Номер страницы
+            per_page: Количество на странице
+
+        Returns:
+            Dict: Результаты поиска
+        """
+        await self._simulate_network_delay(400)
+
+        logger.info(f"Mock поиск резюме: text='{text}', page={page}")
+
+        # Фильтруем резюме по запросу (простой поиск по навыкам и должности)
+        search_terms = text.lower().split()
+        filtered_resumes = []
+
+        for resume in MOCK_SEARCH_RESUMES:
+            # Проверяем совпадение в навыках или должности
+            skills_lower = [s.lower() for s in resume.get("skill_set", [])]
+            title_lower = resume.get("title", "").lower()
+
+            for term in search_terms:
+                if any(term in skill for skill in skills_lower) or term in title_lower:
+                    filtered_resumes.append(resume)
+                    break
+
+        # Если ничего не найдено по фильтрам - возвращаем все
+        if not filtered_resumes:
+            filtered_resumes = MOCK_SEARCH_RESUMES.copy()
+
+        # Пагинация
+        total = len(filtered_resumes)
+        start_idx = page * per_page
+        end_idx = start_idx + per_page
+        page_items = filtered_resumes[start_idx:end_idx]
+
+        return {
+            "items": page_items,
+            "found": total,
+            "pages": (total + per_page - 1) // per_page,
+            "page": page,
+            "per_page": per_page
+        }
+
+    async def get_mock_dictionaries(self) -> Dict[str, Any]:
+        """
+        Mock справочники для поиска
+
+        Returns:
+            Dict: Справочники
+        """
+        await self._simulate_network_delay(100)
+
+        return {
+            "experience": [
+                {"id": "noExperience", "name": "Нет опыта"},
+                {"id": "between1And3", "name": "От 1 года до 3 лет"},
+                {"id": "between3And6", "name": "От 3 до 6 лет"},
+                {"id": "moreThan6", "name": "Более 6 лет"}
+            ],
+            "education_level": [
+                {"id": "secondary", "name": "Среднее"},
+                {"id": "special_secondary", "name": "Среднее специальное"},
+                {"id": "higher", "name": "Высшее"},
+                {"id": "bachelor", "name": "Бакалавр"},
+                {"id": "master", "name": "Магистр"},
+                {"id": "candidate", "name": "Кандидат наук"}
+            ],
+            "gender": [
+                {"id": "male", "name": "Мужской"},
+                {"id": "female", "name": "Женский"}
+            ],
+            "job_search_status": [
+                {"id": "active", "name": "Активно ищет работу"},
+                {"id": "passive", "name": "Рассматривает предложения"}
+            ],
+            "relocation": [
+                {"id": "living_or_relocation", "name": "Живёт или готов к переезду"},
+                {"id": "living", "name": "Только живёт в указанном регионе"}
+            ],
+            "order_by": [
+                {"id": "relevance", "name": "По релевантности"},
+                {"id": "publication_time", "name": "По дате обновления"},
+                {"id": "salary_desc", "name": "По убыванию зарплаты"},
+                {"id": "salary_asc", "name": "По возрастанию зарплаты"}
+            ],
+            "areas": [
+                {"id": "1", "name": "Москва", "parent_id": None},
+                {"id": "2", "name": "Санкт-Петербург", "parent_id": None},
+                {"id": "3", "name": "Екатеринбург", "parent_id": None},
+                {"id": "4", "name": "Новосибирск", "parent_id": None}
+            ]
+        }

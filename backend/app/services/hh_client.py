@@ -549,3 +549,150 @@ class HHClient:
             Dict: Список откликов
         """
         return await self.get_applications(vacancy_id=vacancy_id, page=page, per_page=per_page)
+
+    # ==================== ПОИСК ПО БАЗЕ РЕЗЮМЕ ====================
+
+    async def search_resumes(
+        self,
+        text: str,
+        area: Optional[str] = None,
+        experience: Optional[str] = None,
+        salary_from: Optional[int] = None,
+        salary_to: Optional[int] = None,
+        age_from: Optional[int] = None,
+        age_to: Optional[int] = None,
+        gender: Optional[str] = None,
+        education_level: Optional[str] = None,
+        job_search_status: Optional[str] = None,
+        relocation: Optional[str] = None,
+        order_by: str = "relevance",
+        page: int = 0,
+        per_page: int = 50
+    ) -> Dict[str, Any]:
+        """
+        Поиск резюме в базе HH.ru
+
+        Args:
+            text: Поисковый запрос (ключевые слова, должность, навыки)
+            area: ID региона (1 - Москва, 2 - Санкт-Петербург и т.д.)
+            experience: Опыт работы (noExperience, between1And3, between3And6, moreThan6)
+            salary_from: Минимальная зарплата
+            salary_to: Максимальная зарплата
+            age_from: Минимальный возраст
+            age_to: Максимальный возраст
+            gender: Пол (male, female)
+            education_level: Уровень образования (secondary, special_secondary, unfinished_higher, higher, bachelor, master, candidate, doctor)
+            job_search_status: Статус поиска работы (active, passive, not_looking)
+            relocation: Готовность к переезду (living_or_relocation, living, relocation)
+            order_by: Сортировка (relevance, publication_time, salary_desc, salary_asc)
+            page: Номер страницы
+            per_page: Количество на странице (макс 100)
+
+        Returns:
+            Dict: Результаты поиска с пагинацией
+        """
+        try:
+            if self.is_mock_mode:
+                return await self.mock_service.search_mock_resumes(
+                    text=text,
+                    page=page,
+                    per_page=per_page
+                )
+
+            # Формируем параметры поиска
+            params = {
+                "text": text,
+                "page": page,
+                "per_page": min(per_page, 100),  # API ограничение
+                "order_by": order_by
+            }
+
+            # Добавляем опциональные фильтры
+            if area:
+                params["area"] = area
+            if experience:
+                params["experience"] = experience
+            if salary_from:
+                params["salary_from"] = salary_from
+            if salary_to:
+                params["salary_to"] = salary_to
+            if age_from:
+                params["age_from"] = age_from
+            if age_to:
+                params["age_to"] = age_to
+            if gender:
+                params["gender"] = gender
+            if education_level:
+                params["education_level"] = education_level
+            if job_search_status:
+                params["job_search_status"] = job_search_status
+            if relocation:
+                params["relocation"] = relocation
+
+            logger.info(f"Поиск резюме: text='{text}', area={area}, experience={experience}")
+
+            data = await self._make_request("GET", "/resumes", params=params)
+
+            logger.info(f"✅ Найдено {data.get('found', 0)} резюме по запросу '{text}'")
+            return data
+
+        except Exception as e:
+            logger.error(f"Ошибка поиска резюме: {e}")
+            raise HHIntegrationError(f"Не удалось выполнить поиск резюме: {e}")
+
+    async def get_resume_search_dictionaries(self) -> Dict[str, Any]:
+        """
+        Получение справочников для поиска резюме
+        (регионы, опыт, образование и т.д.)
+
+        Returns:
+            Dict: Справочники для фильтров поиска
+        """
+        try:
+            if self.is_mock_mode:
+                return await self.mock_service.get_mock_dictionaries()
+
+            # Получаем справочники из API
+            dictionaries = await self._make_request("GET", "/dictionaries")
+
+            # Также получаем регионы
+            areas = await self._make_request("GET", "/areas")
+
+            return {
+                "experience": dictionaries.get("experience", []),
+                "education_level": dictionaries.get("education_level", []),
+                "gender": dictionaries.get("gender", []),
+                "job_search_status": dictionaries.get("resume_search_job_search_status", []),
+                "relocation": dictionaries.get("relocation_type", []),
+                "order_by": [
+                    {"id": "relevance", "name": "По релевантности"},
+                    {"id": "publication_time", "name": "По дате обновления"},
+                    {"id": "salary_desc", "name": "По убыванию зарплаты"},
+                    {"id": "salary_asc", "name": "По возрастанию зарплаты"}
+                ],
+                "areas": areas
+            }
+
+        except Exception as e:
+            logger.error(f"Ошибка получения справочников: {e}")
+            raise HHIntegrationError(f"Не удалось получить справочники: {e}")
+
+    async def get_resume_views_history(self, resume_id: str) -> Dict[str, Any]:
+        """
+        Получение истории просмотров резюме работодателем
+
+        Args:
+            resume_id: ID резюме
+
+        Returns:
+            Dict: История просмотров
+        """
+        try:
+            if self.is_mock_mode:
+                return {"items": [], "found": 0}
+
+            return await self._make_request("GET", f"/resumes/{resume_id}/views")
+
+        except Exception as e:
+            logger.error(f"Ошибка получения истории просмотров резюме {resume_id}: {e}")
+            raise HHIntegrationError(f"Не удалось получить историю просмотров: {e}")
