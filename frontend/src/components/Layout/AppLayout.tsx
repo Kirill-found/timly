@@ -19,8 +19,8 @@ import {
   Shield,
   Brain,
   Loader2,
-  Search
-
+  Search,
+  Upload
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -68,6 +68,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       icon: Search,
       label: 'Поиск кандидатов',
       href: '/candidate-search',
+    },
+    {
+      key: '/upload-candidates',
+      icon: Upload,
+      label: 'Загрузка резюме',
+      href: '/upload-candidates',
     },
     {
       key: '/sync',

@@ -52,3 +52,7 @@ class BackgroundJobError(TimlyBaseException):
     def __init__(self, message: str, job_id: str = None, details: dict = None):
         self.job_id = job_id
         super().__init__(message, details)
+
+class FileParseError(TimlyBaseException):
+    """Ошибки парсинга файлов (PDF, Excel)"""
+    pass

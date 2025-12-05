@@ -25,6 +25,7 @@ import Checkout from '@/pages/Checkout';
 import Admin from '@/pages/Admin';
 import DemoResults from '@/pages/DemoResults';
 import CandidateSearch from '@/pages/CandidateSearch';
+import UploadCandidates from '@/pages/UploadCandidates';
 
 // Компоненты
 import ProtectedRoute from '@/components/Auth/ProtectedRoute';
