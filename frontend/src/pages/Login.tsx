@@ -1,6 +1,6 @@
 /**
- * Страница входа в систему Timly
- * Современный дизайн с анимациями и градиентами
+ * Login - Вход в систему
+ * Design: Dark Industrial - единый стиль
  */
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -10,9 +10,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -21,30 +19,20 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  AlertCircle,
-  ArrowRight,
-  Sparkles,
-  Shield,
-  Zap
-} from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/store/AuthContext';
 
 const formSchema = z.object({
   email: z
     .string()
-    .min(1, { message: 'Введите ваш email' })
-    .email({ message: 'Некорректный email адрес' }),
+    .min(1, { message: 'Введите email' })
+    .email({ message: 'Некорректный email' }),
   password: z
     .string()
-    .min(6, { message: 'Пароль должен содержать минимум 6 символов' }),
-})
+    .min(6, { message: 'Минимум 6 символов' }),
+});
 
-type LoginFormValues = z.infer<typeof formSchema>
+type LoginFormValues = z.infer<typeof formSchema>;
 
 const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -58,240 +46,70 @@ const Login: React.FC = () => {
       email: '',
       password: '',
     },
-  })
+  });
 
   const onSubmit = async (values: LoginFormValues) => {
     try {
       setLoading(true);
       clearError();
-
       await login(values);
-
-      // Перенаправление на dashboard после успешного входа
       navigate('/dashboard', { replace: true });
     } catch (error) {
-      // Ошибка уже обработана в AuthContext
+      // Ошибка обработана в AuthContext
     } finally {
       setLoading(false);
     }
   };
 
-  const fadeInUp = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-  };
-
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
-      {/* Анимированный градиентный фон */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600" />
-
-      {/* Декоративные плавающие элементы */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
         <motion.div
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3],
-            x: [0, 50, 0],
-            y: [0, -50, 0],
-          }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-          className="absolute top-20 left-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"
-        />
-        <motion.div
-          animate={{
-            scale: [1, 1.3, 1],
-            opacity: [0.2, 0.4, 0.2],
-            x: [0, -50, 0],
-            y: [0, 50, 0],
-          }}
-          transition={{
-            duration: 12,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: 1,
-          }}
-          className="absolute bottom-20 right-20 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl"
-        />
-        <motion.div
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.2, 0.3, 0.2],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: 2,
-          }}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-pink-400/10 rounded-full blur-3xl"
-        />
-      </div>
-
-      {/* Основной контент */}
-      <div className="relative w-full max-w-6xl mx-auto grid lg:grid-cols-2 gap-8 items-center">
-        {/* Левая часть - информация */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0, x: -50 },
-            visible: { opacity: 1, x: 0 },
-          }}
-          transition={{ duration: 0.6 }}
-          className="hidden lg:block text-white space-y-8 px-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
         >
-          <div className="space-y-4">
-            <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">
-              <Sparkles className="w-4 h-4 mr-2" />
-              AI-powered HR Platform
-            </Badge>
-
-            <h1 className="text-5xl font-bold leading-tight">
-              Добро пожаловать <br />
-              в <span className="bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">Timly</span>
-            </h1>
-
-            <p className="text-xl text-white/90 leading-relaxed">
-              Умная платформа для автоматизации рекрутинга с помощью искусственного интеллекта
-            </p>
+          {/* Header */}
+          <div className="text-center mb-8">
+            <Link to="/" className="inline-flex items-center gap-3 mb-6">
+              <img src="/logo.jpg" alt="Timly" className="h-10 w-10 rounded-xl" />
+              <span className="text-xl font-semibold text-zinc-100">Timly</span>
+            </Link>
+            <h1 className="text-2xl font-semibold text-zinc-100 mb-2">Вход в систему</h1>
+            <p className="text-sm text-zinc-500">Введите данные для входа в аккаунт</p>
           </div>
 
-          <div className="space-y-4">
-            {[
-              {
-                icon: Zap,
-                title: 'Мгновенный анализ',
-                description: '100 резюме за 15 минут',
-              },
-              {
-                icon: Shield,
-                title: 'Безопасность данных',
-                description: 'Шифрование на уровне банков',
-              },
-              {
-                icon: Sparkles,
-                title: 'AI-технологии',
-                description: 'Точность анализа 95%',
-              },
-            ].map((feature, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + i * 0.1 }}
-                className="flex items-start gap-4 bg-white/10 backdrop-blur-sm rounded-2xl p-4"
-              >
-                <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <feature.icon className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg">{feature.title}</h3>
-                  <p className="text-white/80 text-sm">{feature.description}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-8 text-sm text-white/80">
-            <div>
-              <div className="text-3xl font-bold text-white">10,000+</div>
-              <div>Проанализировано резюме</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-white">500+</div>
-              <div>Довольных клиентов</div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Правая часть - форма входа */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0, y: 20 },
-            visible: { opacity: 1, y: 0 },
-          }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-xl">
-            <CardHeader className="text-center space-y-6 pb-8">
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                className="flex justify-center"
-              >
-                <div className="relative">
-                  <motion.div
-                    animate={{
-                      boxShadow: [
-                        '0 0 20px rgba(59, 130, 246, 0.3)',
-                        '0 0 40px rgba(147, 51, 234, 0.4)',
-                        '0 0 20px rgba(59, 130, 246, 0.3)',
-                      ],
-                    }}
-                    transition={{ duration: 3, repeat: Infinity }}
-                    className="h-24 w-24 rounded-3xl overflow-hidden"
-                  >
-                    <img
-                      src="/logo.jpg"
-                      alt="Timly Logo"
-                      className="h-full w-full object-cover"
-                    />
-                  </motion.div>
-                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl opacity-20 blur-xl" />
-                </div>
-              </motion.div>
-
-              <div className="space-y-2">
-                <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Вход в систему
-                </CardTitle>
-                <CardDescription className="text-base text-gray-600">
-                  Введите свои данные для входа в аккаунт
-                </CardDescription>
-              </div>
-            </CardHeader>
-
-            <CardContent className="space-y-6">
+          {/* Form Card */}
+          <Card className="border-zinc-800 bg-zinc-900/50">
+            <CardContent className="p-6">
+              {/* Error */}
               {error && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
+                  className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm"
                 >
-                  <Alert variant="destructive" className="border-red-200">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
+                  {error}
                 </motion.div>
               )}
 
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField
                     control={form.control}
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-base font-semibold">Email</FormLabel>
+                        <FormLabel className="text-zinc-300">Email</FormLabel>
                         <FormControl>
-                          <div className="relative group">
-                            <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 group-focus-within:text-blue-600 transition-colors" />
-                            <Input
-                              placeholder="your@email.com"
-                              className="pl-12 h-12 text-base border-2 border-gray-200 focus:border-blue-600 transition-all"
-                              autoComplete="email"
-                              {...field}
-                            />
-                          </div>
+                          <Input
+                            placeholder="your@email.com"
+                            className="h-11 bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
+                            autoComplete="email"
+                            {...field}
+                          />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-red-400" />
                       </FormItem>
                     )}
                   />
@@ -301,31 +119,26 @@ const Login: React.FC = () => {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-base font-semibold">Пароль</FormLabel>
+                        <FormLabel className="text-zinc-300">Пароль</FormLabel>
                         <FormControl>
-                          <div className="relative group">
-                            <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 group-focus-within:text-blue-600 transition-colors" />
+                          <div className="relative">
                             <Input
                               type={showPassword ? 'text' : 'password'}
                               placeholder="Введите пароль"
-                              className="pl-12 pr-12 h-12 text-base border-2 border-gray-200 focus:border-blue-600 transition-all"
+                              className="h-11 bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 pr-10"
                               autoComplete="current-password"
                               {...field}
                             />
                             <button
                               type="button"
-                              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
                               onClick={() => setShowPassword(!showPassword)}
                             >
-                              {showPassword ? (
-                                <EyeOff className="h-5 w-5" />
-                              ) : (
-                                <Eye className="h-5 w-5" />
-                              )}
+                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                           </div>
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-red-400" />
                       </FormItem>
                     )}
                   />
@@ -333,85 +146,57 @@ const Login: React.FC = () => {
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="w-full h-12 text-base bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+                    className="w-full h-11 bg-zinc-100 text-zinc-900 hover:bg-white font-medium"
                   >
                     {loading ? (
                       <span className="flex items-center gap-2">
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                        >
-                          <Sparkles className="h-5 w-5" />
-                        </motion.div>
-                        Вход в систему...
+                        <div className="w-4 h-4 border-2 border-zinc-400 border-t-zinc-900 rounded-full animate-spin" />
+                        Вход...
                       </span>
                     ) : (
                       <span className="flex items-center gap-2">
-                        Войти в систему
-                        <ArrowRight className="h-5 w-5" />
+                        Войти
+                        <ArrowRight className="h-4 w-4" />
                       </span>
                     )}
                   </Button>
                 </form>
               </Form>
 
-              <div className="space-y-4">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200" />
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white text-gray-500">или</span>
-                  </div>
+              {/* Divider */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-zinc-800" />
                 </div>
-
-                <div className="text-center space-y-3">
-                  <p className="text-gray-600">
-                    Нет аккаунта?{' '}
-                    <Link
-                      to="/register"
-                      className="text-blue-600 hover:text-blue-800 font-semibold hover:underline transition-colors"
-                    >
-                      Зарегистрироваться бесплатно
-                    </Link>
-                  </p>
-
-                  <Link
-                    to="/"
-                    className="text-gray-500 hover:text-gray-700 text-sm hover:underline block transition-colors"
-                  >
-                    ← Вернуться на главную
-                  </Link>
+                <div className="relative flex justify-center">
+                  <span className="px-3 bg-zinc-900/50 text-xs text-zinc-600">или</span>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-gray-100">
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                  <Shield className="h-4 w-4" />
-                  <span>Безопасный вход с шифрованием данных</span>
-                </div>
+              {/* Links */}
+              <div className="text-center space-y-3">
+                <p className="text-sm text-zinc-500">
+                  Нет аккаунта?{' '}
+                  <Link to="/register" className="text-zinc-300 hover:text-white transition-colors">
+                    Зарегистрироваться
+                  </Link>
+                </p>
               </div>
             </CardContent>
           </Card>
+
+          {/* Back to home */}
+          <div className="mt-6 text-center">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-sm text-zinc-600 hover:text-zinc-400 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Вернуться на главную
+            </Link>
+          </div>
         </motion.div>
       </div>
-
-      {/* Мобильная версия статистики */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="lg:hidden absolute bottom-8 left-0 right-0 flex justify-center gap-8 text-white/90 text-sm px-4"
-      >
-        <div className="text-center">
-          <div className="text-2xl font-bold">10,000+</div>
-          <div className="text-white/70">Резюме</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold">500+</div>
-          <div className="text-white/70">Клиентов</div>
-        </div>
-      </motion.div>
     </div>
   );
 };

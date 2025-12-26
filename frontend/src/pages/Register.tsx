@@ -1,6 +1,6 @@
 /**
- * Страница регистрации Timly
- * Современный дизайн с анимациями и дополнительной информацией
+ * Register - Регистрация
+ * Design: Dark Industrial - единый стиль
  */
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -10,9 +10,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -21,44 +19,31 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Mail,
-  Lock,
-  User,
-  Eye,
-  EyeOff,
-  AlertCircle,
-  Building,
-  ArrowRight,
-  Sparkles,
-  CheckCircle2,
-  Gift,
-  Zap,
-} from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, ArrowLeft, Check } from 'lucide-react';
 import { useAuth } from '@/store/AuthContext';
 
 const formSchema = z.object({
   company_name: z
     .string()
-    .min(2, { message: 'Название должно содержать минимум 2 символа' })
-    .max(100, { message: 'Название слишком длинное' }),
+    .min(2, { message: 'Минимум 2 символа' })
+    .max(100, { message: 'Слишком длинное' }),
   full_name: z
     .string()
-    .min(2, { message: 'Имя должно содержать минимум 2 символа' })
-    .max(50, { message: 'Имя слишком длинное' }),
+    .min(2, { message: 'Минимум 2 символа' })
+    .max(50, { message: 'Слишком длинное' }),
   email: z
     .string()
-    .min(1, { message: 'Введите ваш email' })
-    .email({ message: 'Некорректный email адрес' }),
+    .min(1, { message: 'Введите email' })
+    .email({ message: 'Некорректный email' }),
   password: z
     .string()
-    .min(8, { message: 'Пароль должен содержать минимум 8 символов' })
+    .min(8, { message: 'Минимум 8 символов' })
     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
-      message: 'Пароль должен содержать строчные, заглавные буквы и цифры'
+      message: 'Нужны строчные, заглавные буквы и цифры'
     }),
-})
+});
 
-type RegisterFormValues = z.infer<typeof formSchema>
+type RegisterFormValues = z.infer<typeof formSchema>;
 
 const Register: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -74,226 +59,67 @@ const Register: React.FC = () => {
       email: '',
       password: '',
     },
-  })
+  });
 
   const onSubmit = async (values: RegisterFormValues) => {
     try {
       setLoading(true);
       clearError();
-
       await register(values);
-
-      // Перенаправление на dashboard после успешной регистрации
       navigate('/dashboard', { replace: true });
     } catch (error) {
-      // Ошибка уже обработана в AuthContext
+      // Ошибка обработана в AuthContext
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4 py-12">
-      {/* Анимированный градиентный фон */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-600" />
-
-      {/* Декоративные плавающие элементы */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 py-8">
+      <div className="w-full max-w-md">
         <motion.div
-          animate={{
-            scale: [1, 1.3, 1],
-            opacity: [0.3, 0.5, 0.3],
-            x: [0, -50, 0],
-            y: [0, 50, 0],
-          }}
-          transition={{
-            duration: 11,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-          className="absolute top-10 left-10 w-96 h-96 bg-white/10 rounded-full blur-3xl"
-        />
-        <motion.div
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.2, 0.4, 0.2],
-            x: [0, 50, 0],
-            y: [0, -50, 0],
-          }}
-          transition={{
-            duration: 13,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: 1.5,
-          }}
-          className="absolute bottom-10 right-10 w-96 h-96 bg-orange-400/20 rounded-full blur-3xl"
-        />
-        <motion.div
-          animate={{
-            scale: [1, 1.15, 1],
-            opacity: [0.2, 0.35, 0.2],
-          }}
-          transition={{
-            duration: 9,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: 2,
-          }}
-          className="absolute top-1/3 left-1/3 w-96 h-96 bg-pink-400/15 rounded-full blur-3xl"
-        />
-      </div>
-
-      {/* Основной контент */}
-      <div className="relative w-full max-w-6xl mx-auto grid lg:grid-cols-2 gap-8 items-center">
-        {/* Левая часть - информация */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0, x: -50 },
-            visible: { opacity: 1, x: 0 },
-          }}
-          transition={{ duration: 0.6 }}
-          className="hidden lg:block text-white space-y-8 px-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
         >
-          <div className="space-y-4">
-            <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">
-              <Gift className="w-4 h-4 mr-2" />
-              50 анализов бесплатно
-            </Badge>
-
-            <h1 className="text-5xl font-bold leading-tight">
-              Начните автоматизировать <br />
-              <span className="bg-gradient-to-r from-white to-orange-100 bg-clip-text text-transparent">
-                рекрутинг сегодня
-              </span>
-            </h1>
-
-            <p className="text-xl text-white/90 leading-relaxed">
-              Присоединяйтесь к 500+ компаниям, которые уже используют Timly для умного отбора кандидатов
-            </p>
+          {/* Header */}
+          <div className="text-center mb-6">
+            <Link to="/" className="inline-flex items-center gap-3 mb-4">
+              <img src="/logo.jpg" alt="Timly" className="h-10 w-10 rounded-xl" />
+              <span className="text-xl font-semibold text-zinc-100">Timly</span>
+            </Link>
+            <h1 className="text-2xl font-semibold text-zinc-100 mb-2">Создать аккаунт</h1>
+            <p className="text-sm text-zinc-500">Начните использовать Timly бесплатно</p>
           </div>
 
-          <div className="space-y-4">
-            {[
-              {
-                icon: Gift,
-                title: '50 бесплатных анализов',
-                description: 'Начните без оплаты и кредитной карты',
-              },
-              {
-                icon: Zap,
-                title: 'Готов за 2 минуты',
-                description: 'Простая настройка интеграции с HH.ru',
-              },
-              {
-                icon: Sparkles,
-                title: 'AI-анализ в один клик',
-                description: 'Автоматическая оценка всех кандидатов',
-              },
-            ].map((feature, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + i * 0.1 }}
-                className="flex items-start gap-4 bg-white/10 backdrop-blur-sm rounded-2xl p-4"
-              >
-                <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <feature.icon className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg">{feature.title}</h3>
-                  <p className="text-white/80 text-sm">{feature.description}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 space-y-3">
-            <h3 className="font-semibold text-lg">Что включено:</h3>
-            <div className="space-y-2">
+          {/* Benefits */}
+          <div className="mb-6 p-4 rounded-lg border border-zinc-800 bg-zinc-900/30">
+            <div className="grid grid-cols-2 gap-3">
               {[
-                '50 анализов резюме при регистрации',
-                'Полный AI-анализ по 15+ критериям',
-                'Экспорт результатов в Excel',
-                'Интеграция с HeadHunter',
-                'Техническая поддержка',
+                '50 анализов бесплатно',
+                'Без кредитной карты',
+                'Интеграция с HH.ru',
+                'Экспорт в Excel',
               ].map((item, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm">
-                  <CheckCircle2 className="h-4 w-4 text-green-300 flex-shrink-0" />
+                <div key={i} className="flex items-center gap-2 text-xs text-zinc-400">
+                  <Check className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
                   <span>{item}</span>
                 </div>
               ))}
             </div>
           </div>
-        </motion.div>
 
-        {/* Правая часть - форма регистрации */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0, y: 20 },
-            visible: { opacity: 1, y: 0 },
-          }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-xl">
-            <CardHeader className="text-center space-y-6 pb-8">
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                className="flex justify-center"
-              >
-                <div className="relative">
-                  <motion.div
-                    animate={{
-                      boxShadow: [
-                        '0 0 20px rgba(147, 51, 234, 0.3)',
-                        '0 0 40px rgba(236, 72, 153, 0.4)',
-                        '0 0 20px rgba(147, 51, 234, 0.3)',
-                      ],
-                    }}
-                    transition={{ duration: 3, repeat: Infinity }}
-                    className="h-24 w-24 rounded-3xl overflow-hidden"
-                  >
-                    <img
-                      src="/logo.jpg"
-                      alt="Timly Logo"
-                      className="h-full w-full object-cover"
-                    />
-                  </motion.div>
-                  <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-3xl opacity-20 blur-xl" />
-                </div>
-              </motion.div>
-
-              <div className="space-y-2">
-                <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  Создать аккаунт
-                </CardTitle>
-                <CardDescription className="text-base text-gray-600">
-                  Заполните форму и начните использовать Timly бесплатно
-                </CardDescription>
-              </div>
-
-              <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0">
-                <Gift className="w-4 h-4 mr-2" />
-                Первые 50 анализов в подарок
-              </Badge>
-            </CardHeader>
-
-            <CardContent className="space-y-6">
+          {/* Form Card */}
+          <Card className="border-zinc-800 bg-zinc-900/50">
+            <CardContent className="p-6">
+              {/* Error */}
               {error && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
+                  className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm"
                 >
-                  <Alert variant="destructive" className="border-red-200">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
+                  {error}
                 </motion.div>
               )}
 
@@ -304,21 +130,16 @@ const Register: React.FC = () => {
                     name="company_name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-base font-semibold">
-                          Название компании
-                        </FormLabel>
+                        <FormLabel className="text-zinc-300">Компания</FormLabel>
                         <FormControl>
-                          <div className="relative group">
-                            <Building className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 group-focus-within:text-purple-600 transition-colors" />
-                            <Input
-                              placeholder="ООО Рога и копыта"
-                              className="pl-12 h-12 text-base border-2 border-gray-200 focus:border-purple-600 transition-all"
-                              autoComplete="organization"
-                              {...field}
-                            />
-                          </div>
+                          <Input
+                            placeholder="Название компании"
+                            className="h-11 bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
+                            autoComplete="organization"
+                            {...field}
+                          />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-red-400" />
                       </FormItem>
                     )}
                   />
@@ -328,21 +149,16 @@ const Register: React.FC = () => {
                     name="full_name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-base font-semibold">
-                          Полное имя
-                        </FormLabel>
+                        <FormLabel className="text-zinc-300">Ваше имя</FormLabel>
                         <FormControl>
-                          <div className="relative group">
-                            <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 group-focus-within:text-purple-600 transition-colors" />
-                            <Input
-                              placeholder="Иван Иванов"
-                              className="pl-12 h-12 text-base border-2 border-gray-200 focus:border-purple-600 transition-all"
-                              autoComplete="name"
-                              {...field}
-                            />
-                          </div>
+                          <Input
+                            placeholder="Иван Иванов"
+                            className="h-11 bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
+                            autoComplete="name"
+                            {...field}
+                          />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-red-400" />
                       </FormItem>
                     )}
                   />
@@ -352,21 +168,16 @@ const Register: React.FC = () => {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-base font-semibold">
-                          Рабочий Email
-                        </FormLabel>
+                        <FormLabel className="text-zinc-300">Email</FormLabel>
                         <FormControl>
-                          <div className="relative group">
-                            <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 group-focus-within:text-purple-600 transition-colors" />
-                            <Input
-                              placeholder="hr@company.com"
-                              className="pl-12 h-12 text-base border-2 border-gray-200 focus:border-purple-600 transition-all"
-                              autoComplete="email"
-                              {...field}
-                            />
-                          </div>
+                          <Input
+                            placeholder="hr@company.com"
+                            className="h-11 bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
+                            autoComplete="email"
+                            {...field}
+                          />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-red-400" />
                       </FormItem>
                     )}
                   />
@@ -376,33 +187,28 @@ const Register: React.FC = () => {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-base font-semibold">Пароль</FormLabel>
+                        <FormLabel className="text-zinc-300">Пароль</FormLabel>
                         <FormControl>
-                          <div className="relative group">
-                            <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 group-focus-within:text-purple-600 transition-colors" />
+                          <div className="relative">
                             <Input
                               type={showPassword ? 'text' : 'password'}
-                              placeholder="Создайте надежный пароль"
-                              className="pl-12 pr-12 h-12 text-base border-2 border-gray-200 focus:border-purple-600 transition-all"
+                              placeholder="Минимум 8 символов"
+                              className="h-11 bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 pr-10"
                               autoComplete="new-password"
                               {...field}
                             />
                             <button
                               type="button"
-                              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
                               onClick={() => setShowPassword(!showPassword)}
                             >
-                              {showPassword ? (
-                                <EyeOff className="h-5 w-5" />
-                              ) : (
-                                <Eye className="h-5 w-5" />
-                              )}
+                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                           </div>
                         </FormControl>
-                        <FormMessage />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Минимум 8 символов: строчные, заглавные буквы и цифры
+                        <FormMessage className="text-red-400" />
+                        <p className="text-[11px] text-zinc-600 mt-1">
+                          Строчные, заглавные буквы и цифры
                         </p>
                       </FormItem>
                     )}
@@ -411,92 +217,62 @@ const Register: React.FC = () => {
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="w-full h-12 text-base bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+                    className="w-full h-11 bg-zinc-100 text-zinc-900 hover:bg-white font-medium"
                   >
                     {loading ? (
                       <span className="flex items-center gap-2">
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                        >
-                          <Sparkles className="h-5 w-5" />
-                        </motion.div>
-                        Создаем аккаунт...
+                        <div className="w-4 h-4 border-2 border-zinc-400 border-t-zinc-900 rounded-full animate-spin" />
+                        Создание...
                       </span>
                     ) : (
                       <span className="flex items-center gap-2">
-                        Создать бесплатный аккаунт
-                        <ArrowRight className="h-5 w-5" />
+                        Создать аккаунт
+                        <ArrowRight className="h-4 w-4" />
                       </span>
                     )}
                   </Button>
                 </form>
               </Form>
 
-              <div className="space-y-4">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200" />
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white text-gray-500">или</span>
-                  </div>
+              {/* Divider */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-zinc-800" />
                 </div>
-
-                <div className="text-center space-y-3">
-                  <p className="text-gray-600">
-                    Уже есть аккаунт?{' '}
-                    <Link
-                      to="/login"
-                      className="text-purple-600 hover:text-purple-800 font-semibold hover:underline transition-colors"
-                    >
-                      Войти
-                    </Link>
-                  </p>
-
-                  <Link
-                    to="/"
-                    className="text-gray-500 hover:text-gray-700 text-sm hover:underline block transition-colors"
-                  >
-                    ← Вернуться на главную
-                  </Link>
+                <div className="relative flex justify-center">
+                  <span className="px-3 bg-zinc-900/50 text-xs text-zinc-600">или</span>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-gray-100">
-                <p className="text-xs text-center text-gray-500 leading-relaxed">
-                  Регистрируясь, вы соглашаетесь с{' '}
-                  <a href="#" className="text-purple-600 hover:text-purple-800 hover:underline">
-                    условиями использования
-                  </a>
-                  {' '}и{' '}
-                  <a href="#" className="text-purple-600 hover:text-purple-800 hover:underline">
-                    политикой конфиденциальности
-                  </a>
+              {/* Links */}
+              <div className="text-center">
+                <p className="text-sm text-zinc-500">
+                  Уже есть аккаунт?{' '}
+                  <Link to="/login" className="text-zinc-300 hover:text-white transition-colors">
+                    Войти
+                  </Link>
                 </p>
               </div>
             </CardContent>
           </Card>
+
+          {/* Back to home */}
+          <div className="mt-6 text-center">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-sm text-zinc-600 hover:text-zinc-400 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Вернуться на главную
+            </Link>
+          </div>
+
+          {/* Terms */}
+          <p className="mt-4 text-[11px] text-center text-zinc-600">
+            Регистрируясь, вы соглашаетесь с условиями использования и политикой конфиденциальности
+          </p>
         </motion.div>
       </div>
-
-      {/* Мобильная версия преимуществ */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="lg:hidden absolute bottom-8 left-0 right-0 px-4"
-      >
-        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-white text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Gift className="h-5 w-5" />
-            <span className="font-semibold">50 анализов бесплатно</span>
-          </div>
-          <div className="text-sm text-white/80">
-            Без кредитной карты • Готов за 2 минуты
-          </div>
-        </div>
-      </motion.div>
     </div>
   );
 };
