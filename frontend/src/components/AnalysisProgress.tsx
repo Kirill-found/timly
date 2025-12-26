@@ -1,11 +1,10 @@
 /**
- * Компонент визуализации прогресса AI анализа
- * Показывает анимированный прогресс с particle effects
+ * AnalysisProgress - Прогресс AI анализа
+ * Design: Dark Industrial - минималистичный, информативный
  */
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Sparkles, Zap, TrendingUp } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import { Brain, Square, Clock, Zap } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -29,179 +28,108 @@ export const AnalysisProgress: React.FC<AnalysisProgressProps> = ({
   const remainingMs = remainingCount * avgTimePerResume;
   const minutes = Math.floor(remainingMs / 60000);
   const seconds = Math.floor((remainingMs % 60000) / 1000);
+  const speed = analyzed > 0 ? ((analyzed / (elapsed / 1000)) * 60).toFixed(1) : '0';
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="relative"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.3 }}
     >
-      <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 shadow-2xl overflow-hidden">
-        {/* Декоративные анимированные круги */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <motion.div
-            animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.3, 0.5, 0.3],
-            }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-            className="absolute top-0 right-0 w-64 h-64 bg-purple-300/30 rounded-full blur-3xl"
-          />
-          <motion.div
-            animate={{
-              scale: [1.2, 1, 1.2],
-              opacity: [0.3, 0.5, 0.3],
-            }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 1.5
-            }}
-            className="absolute bottom-0 left-0 w-64 h-64 bg-blue-300/30 rounded-full blur-3xl"
-          />
-        </div>
-
-        <CardContent className="p-8 relative z-10">
-          {/* Заголовок с иконкой AI */}
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <motion.div
-              animate={{
-                rotate: [0, 360],
-                scale: [1, 1.1, 1],
-              }}
-              transition={{
-                rotate: {
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "linear"
-                },
-                scale: {
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }
-              }}
-              className="p-3 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl shadow-lg"
-            >
-              <Brain className="h-8 w-8 text-white" />
-            </motion.div>
-            <div>
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                AI анализирует резюме
-              </h3>
-              <p className="text-sm text-gray-600">Пожалуйста, подождите...</p>
+      <Card className="border-zinc-800">
+        <CardContent className="p-0">
+          {/* Header */}
+          <div className="p-5 border-b border-zinc-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+                  <Brain className="h-5 w-5 text-zinc-400" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-zinc-200">
+                    Анализ выполняется
+                  </div>
+                  <div className="text-xs text-zinc-500 mt-0.5">
+                    {analyzed} из {total} резюме
+                  </div>
+                </div>
+              </div>
+              <div className="text-2xl font-semibold tabular-nums text-zinc-100">
+                {progress.toFixed(0)}%
+              </div>
             </div>
           </div>
 
-          {/* Статистика в карточках */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="bg-white/80 backdrop-blur-sm rounded-xl p-4 text-center border border-purple-100 shadow-sm"
-            >
-              <div className="text-3xl font-bold text-purple-600">{analyzed}</div>
-              <div className="text-xs text-gray-600 mt-1">Проанализировано</div>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="bg-white/80 backdrop-blur-sm rounded-xl p-4 text-center border border-blue-100 shadow-sm"
-            >
-              <div className="text-3xl font-bold text-blue-600">{total}</div>
-              <div className="text-xs text-gray-600 mt-1">Всего</div>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="bg-white/80 backdrop-blur-sm rounded-xl p-4 text-center border border-pink-100 shadow-sm"
-            >
-              <div className="text-3xl font-bold text-pink-600">{remainingCount}</div>
-              <div className="text-xs text-gray-600 mt-1">Осталось</div>
-            </motion.div>
-          </div>
-
-          {/* Прогресс-бар с анимацией */}
-          <div className="space-y-3 mb-6">
-            <div className="flex justify-between items-center text-sm font-medium">
-              <span className="text-gray-700">Прогресс</span>
-              <span className="text-purple-600 font-bold">{progress.toFixed(0)}%</span>
-            </div>
-
-            {/* Кастомный градиентный прогресс-бар */}
-            <div className="relative h-4 bg-gray-200 rounded-full overflow-hidden shadow-inner">
+          {/* Progress bar */}
+          <div className="px-5 py-4">
+            <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
-                className="h-full bg-gradient-to-r from-purple-500 via-blue-500 to-pink-500 rounded-full relative overflow-hidden"
+                className="h-full bg-zinc-400 rounded-full relative"
               >
-                {/* Анимированный блик */}
+                {/* Subtle shine animation */}
                 <motion.div
-                  animate={{
-                    x: ['-100%', '200%'],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "linear"
-                  }}
-                  className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12"
+                  animate={{ x: ['-100%', '200%'] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-zinc-300/20 to-transparent"
                 />
               </motion.div>
             </div>
+          </div>
 
-            {/* Информация о времени */}
-            <div className="flex justify-between items-center text-xs text-gray-600">
-              <div className="flex items-center gap-1">
-                <Zap className="h-3 w-3 text-yellow-500" />
-                <span>
-                  {analyzed === 0 ? 'Подсчет времени...' :
-                    minutes > 0 ? `≈ ${minutes} мин ${seconds} сек` : `≈ ${seconds} сек`}
-                </span>
+          {/* Stats */}
+          <div className="grid grid-cols-3 divide-x divide-zinc-800 border-t border-zinc-800">
+            <div className="p-4 text-center">
+              <div className="text-xl font-semibold tabular-nums text-zinc-200">
+                {analyzed}
               </div>
-              <div className="flex items-center gap-1">
-                <TrendingUp className="h-3 w-3 text-green-500" />
-                <span>{((analyzed / (elapsed / 1000)) * 60).toFixed(1)} резюме/мин</span>
+              <div className="text-[11px] text-zinc-500 mt-1">готово</div>
+            </div>
+            <div className="p-4 text-center">
+              <div className="text-xl font-semibold tabular-nums text-zinc-200">
+                {remainingCount}
               </div>
+              <div className="text-[11px] text-zinc-500 mt-1">осталось</div>
+            </div>
+            <div className="p-4 text-center">
+              <div className="text-xl font-semibold tabular-nums text-zinc-200">
+                {speed}
+              </div>
+              <div className="text-[11px] text-zinc-500 mt-1">в минуту</div>
             </div>
           </div>
 
-          {/* Анимированные частицы успеха */}
-          {analyzed > 0 && (
-            <div className="flex justify-center gap-1 mb-4">
-              {[...Array(Math.min(5, Math.floor(analyzed / (total / 10))))].map((_, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: i * 0.1, type: "spring" }}
-                >
-                  <Sparkles className="h-5 w-5 text-yellow-500" />
-                </motion.div>
-              ))}
+          {/* Time estimate & Stop button */}
+          <div className="p-4 border-t border-zinc-800 flex items-center justify-between">
+            <div className="flex items-center gap-4 text-xs text-zinc-500">
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                <span>
+                  {analyzed === 0 ? 'Расчёт...' :
+                    minutes > 0 ? `≈ ${minutes} мин ${seconds} сек` : `≈ ${seconds} сек`}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Zap className="h-3.5 w-3.5" />
+                <span>{speed} рез/мин</span>
+              </div>
             </div>
-          )}
 
-          {/* Кнопка остановки */}
-          {onStop && (
-            <Button
-              onClick={onStop}
-              variant="outline"
-              className="w-full border-2 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all"
-            >
-              <motion.div
-                animate={{ rotate: [0, 5, -5, 0] }}
-                transition={{ duration: 0.5, repeat: Infinity }}
+            {onStop && (
+              <Button
+                onClick={onStop}
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 border border-zinc-700"
               >
-                ⏹️
-              </motion.div>
-              <span className="ml-2">Остановить анализ</span>
-            </Button>
-          )}
+                <Square className="h-3 w-3 mr-1.5 fill-current" />
+                Остановить
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     </motion.div>
