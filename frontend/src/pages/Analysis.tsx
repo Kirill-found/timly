@@ -1,12 +1,10 @@
 /**
  * Analysis - Анализ резюме
- * Design: Dark Industrial - единый стиль с Dashboard
+ * Design: Tech Terminal + Data Visualization
  */
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Brain,
   Download,
   ExternalLink,
   Phone,
@@ -15,8 +13,7 @@ import {
   Zap,
   ChevronDown,
   ChevronUp,
-  Settings,
-  ArrowRight
+  Play,
 } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -57,25 +54,15 @@ const Analysis: React.FC = () => {
   const isAnalyzing = app.activeAnalysis !== null && app.activeAnalysis.vacancyId === selectedVacancy;
   const analysisProgress = app.activeAnalysis || { total: 0, analyzed: 0, startTime: 0, vacancyId: '' };
 
-  // Загрузка вакансий
-  useEffect(() => {
-    loadVacancies();
-  }, []);
+  useEffect(() => { loadVacancies(); }, []);
+  useEffect(() => { loadResults(); }, [selectedVacancy, recommendationFilter]);
 
-  // Загрузка результатов при изменении фильтров
-  useEffect(() => {
-    loadResults();
-  }, [selectedVacancy, recommendationFilter]);
-
-  // Polling для анализа
   useEffect(() => {
     if (!app.activeAnalysis) return;
-
     const pollStats = async () => {
       try {
         const stats = await apiClient.getApplicationsStats(app.activeAnalysis!.vacancyId);
         app.updateAnalysisProgress({ analyzed: stats.analyzed_applications });
-
         if (stats.unanalyzed_applications === 0 || stats.analyzed_applications >= app.activeAnalysis!.total) {
           app.stopAnalysis();
           loadResults();
@@ -86,11 +73,9 @@ const Analysis: React.FC = () => {
         console.error('[Analysis] Polling error:', err);
       }
     };
-
     app.startGlobalPolling(pollStats, 3000, 300000);
   }, [app.activeAnalysis?.vacancyId]);
 
-  // Загрузка статистики
   useEffect(() => {
     if (selectedVacancy !== 'all') {
       loadApplicationsStats();
@@ -106,7 +91,6 @@ const Analysis: React.FC = () => {
       const data = await apiClient.getVacancies({ active_only: true });
       setVacancies(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error loading vacancies:', err);
       setVacancies([]);
     }
   };
@@ -118,11 +102,9 @@ const Analysis: React.FC = () => {
       const filters: AnalysisFilter = { limit: 100 };
       if (selectedVacancy !== 'all') filters.vacancy_id = selectedVacancy;
       if (recommendationFilter !== 'all') filters.recommendation = recommendationFilter as any;
-
       const data = await apiClient.getAnalysisResults(filters);
       setResults(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      console.error('Error loading results:', err);
       setError(err.response?.data?.error?.message || 'Ошибка загрузки');
       setResults([]);
     } finally {
@@ -163,7 +145,6 @@ const Analysis: React.FC = () => {
       return;
     }
     setError(null);
-
     const toAnalyze = Math.ceil((applicationsStats?.unanalyzed_applications || 0) * analysisLimit / 100);
     app.startAnalysis({
       vacancyId: selectedVacancy,
@@ -171,7 +152,6 @@ const Analysis: React.FC = () => {
       analyzed: 0,
       startTime: Date.now()
     });
-
     try {
       await apiClient.startAnalysisNewApplications(selectedVacancy, undefined, toAnalyze);
     } catch (err: any) {
@@ -200,7 +180,7 @@ const Analysis: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (err: any) {
+    } catch (err) {
       setError('Ошибка скачивания');
     } finally {
       setIsDownloading(false);
@@ -214,13 +194,13 @@ const Analysis: React.FC = () => {
     setExpandedResults(newSet);
   };
 
-  const getRecommendationStyle = (rec?: string) => {
+  const getRecommendationColor = (rec?: string) => {
     switch (rec) {
-      case 'hire': return 'status-hire';
-      case 'interview': return 'bg-blue-500/15 text-blue-500';
-      case 'maybe': return 'bg-amber-500/15 text-amber-500';
-      case 'reject': return 'status-reject';
-      default: return 'bg-zinc-800 text-zinc-400';
+      case 'hire': return 'bg-emerald-500';
+      case 'interview': return 'bg-blue-500';
+      case 'maybe': return 'bg-amber-500';
+      case 'reject': return 'bg-red-500';
+      default: return 'bg-zinc-600';
     }
   };
 
@@ -234,12 +214,6 @@ const Analysis: React.FC = () => {
     }
   };
 
-  const fadeIn = {
-    initial: { opacity: 0, y: 8 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.3 }
-  };
-
   const statsData = dashboardStats ? {
     total: dashboardStats.total_analyzed || 0,
     hire: dashboardStats.hire_count || 0,
@@ -249,7 +223,6 @@ const Analysis: React.FC = () => {
     avgScore: Math.round(dashboardStats.avg_score || 0),
   } : { total: 0, hire: 0, interview: 0, maybe: 0, reject: 0, avgScore: 0 };
 
-  // Расчёт времени
   const getTimeRemaining = () => {
     if (analysisProgress.analyzed === 0) return 'Расчёт...';
     const elapsed = Date.now() - analysisProgress.startTime;
@@ -257,51 +230,56 @@ const Analysis: React.FC = () => {
     const remaining = (analysisProgress.total - analysisProgress.analyzed) * avg;
     const min = Math.floor(remaining / 60000);
     const sec = Math.floor((remaining % 60000) / 1000);
-    return min > 0 ? `≈ ${min} мин ${sec} сек` : `≈ ${sec} сек`;
+    return min > 0 ? `~${min}м ${sec}с` : `~${sec}с`;
   };
 
   const speed = analysisProgress.analyzed > 0
     ? ((analysisProgress.analyzed / ((Date.now() - analysisProgress.startTime) / 1000)) * 60).toFixed(1)
     : '0';
 
+  const progressPercent = analysisProgress.total > 0
+    ? Math.round((analysisProgress.analyzed / analysisProgress.total) * 100)
+    : 0;
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <motion.div {...fadeIn} className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-zinc-100">Анализ резюме</h1>
-          <p className="text-sm text-zinc-500 mt-1">AI оценка кандидатов</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Анализ</h1>
+          <p className="text-sm text-zinc-500 mt-1">AI-оценка кандидатов</p>
         </div>
         {selectedVacancy !== 'all' && applicationsStats?.analyzed_applications > 0 && (
           <Button
             onClick={handleDownloadExcel}
             disabled={isDownloading}
-            variant="ghost"
-            className="h-9 px-3 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 border border-zinc-700"
+            variant="outline"
+            size="sm"
+            className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
           >
             <Download className="h-4 w-4 mr-2" />
-            <span className="text-xs">Excel</span>
+            Excel
           </Button>
         )}
-      </motion.div>
+      </div>
 
       {/* Error */}
       {error && (
-        <motion.div {...fadeIn} className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-          <p className="text-sm text-red-400">{error}</p>
-        </motion.div>
+        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+          {error}
+        </div>
       )}
 
       {/* Limits */}
       <AnalysisLimitsDisplay />
 
       {/* Filters */}
-      <motion.div {...fadeIn} className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-          <SelectTrigger className="bg-card border-zinc-800 text-zinc-200">
+          <SelectTrigger className="h-12 bg-zinc-900/50 border-zinc-700 text-zinc-100 focus:border-zinc-500">
             <SelectValue placeholder="Выберите вакансию" />
           </SelectTrigger>
-          <SelectContent className="bg-zinc-900 border-zinc-800">
+          <SelectContent className="bg-zinc-900 border-zinc-700">
             <SelectItem value="all">Все вакансии</SelectItem>
             {vacancies.map(v => (
               <SelectItem key={v.id} value={v.id}>{v.title}</SelectItem>
@@ -310,86 +288,75 @@ const Analysis: React.FC = () => {
         </Select>
 
         <Select value={recommendationFilter} onValueChange={setRecommendationFilter}>
-          <SelectTrigger className="bg-card border-zinc-800 text-zinc-200">
-            <SelectValue placeholder="Рекомендация" />
+          <SelectTrigger className="h-12 bg-zinc-900/50 border-zinc-700 text-zinc-100 focus:border-zinc-500">
+            <SelectValue placeholder="Фильтр" />
           </SelectTrigger>
-          <SelectContent className="bg-zinc-900 border-zinc-800">
-            <SelectItem value="all">Все</SelectItem>
+          <SelectContent className="bg-zinc-900 border-zinc-700">
+            <SelectItem value="all">Все результаты</SelectItem>
             <SelectItem value="hire">Нанять</SelectItem>
             <SelectItem value="interview">Собеседование</SelectItem>
             <SelectItem value="maybe">Возможно</SelectItem>
             <SelectItem value="reject">Отклонить</SelectItem>
           </SelectContent>
         </Select>
-      </motion.div>
+      </div>
 
-      {/* No vacancy selected */}
-      {selectedVacancy === 'all' && (
-        <motion.div {...fadeIn} className="text-sm text-zinc-500">
-          Выберите вакансию для запуска анализа
-        </motion.div>
-      )}
-
-      {/* Analysis panel */}
+      {/* Analysis Panel */}
       {selectedVacancy !== 'all' && applicationsStats && (
-        <motion.div {...fadeIn}>
-          {/* Stats grid */}
-          <div className="grid grid-cols-3 gap-px bg-zinc-800 border border-zinc-800 rounded-lg overflow-hidden mb-4">
-            <div className="bg-card p-5">
-              <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
-                Всего
-              </div>
-              <div className="text-3xl font-semibold tabular-nums">
-                {applicationsStats.total_applications}
-              </div>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-6"
+        >
+          {/* Stats Cards */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="p-5 rounded-xl bg-gradient-to-br from-zinc-800/80 to-zinc-900 border border-zinc-700/50">
+              <div className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Всего</div>
+              <div className="text-4xl font-bold mt-2 tabular-nums">{applicationsStats.total_applications}</div>
             </div>
-            <div className="bg-card p-5">
-              <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
-                Проанализировано
-              </div>
-              <div className="text-3xl font-semibold tabular-nums">
-                {applicationsStats.analyzed_applications}
-              </div>
+            <div className="p-5 rounded-xl bg-gradient-to-br from-zinc-800/80 to-zinc-900 border border-zinc-700/50">
+              <div className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Обработано</div>
+              <div className="text-4xl font-bold mt-2 tabular-nums text-emerald-400">{applicationsStats.analyzed_applications}</div>
             </div>
-            <div className="bg-card p-5">
-              <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
-                Новых
-              </div>
-              <div className="text-3xl font-semibold tabular-nums">
-                {applicationsStats.unanalyzed_applications}
-              </div>
+            <div className="p-5 rounded-xl bg-gradient-to-br from-zinc-800/80 to-zinc-900 border border-zinc-700/50">
+              <div className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Ожидает</div>
+              <div className="text-4xl font-bold mt-2 tabular-nums text-amber-400">{applicationsStats.unanalyzed_applications}</div>
             </div>
           </div>
 
           {/* Slider */}
           {applicationsStats.unanalyzed_applications > 0 && !isAnalyzing && (
-            <div className="mb-4 p-4 bg-card border border-zinc-800 rounded-lg">
-              <div className="flex justify-between items-center mb-3">
+            <div className="p-5 rounded-xl bg-zinc-900/50 border border-zinc-800">
+              <div className="flex justify-between items-baseline mb-4">
                 <span className="text-sm text-zinc-400">
-                  Анализировать: {Math.ceil(applicationsStats.unanalyzed_applications * analysisLimit / 100)} из {applicationsStats.unanalyzed_applications}
+                  Анализировать <span className="text-zinc-100 font-semibold">{Math.ceil(applicationsStats.unanalyzed_applications * analysisLimit / 100)}</span> из {applicationsStats.unanalyzed_applications}
                 </span>
-                <span className="text-lg font-semibold tabular-nums">{analysisLimit}%</span>
+                <span className="text-3xl font-bold tabular-nums">{analysisLimit}%</span>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="5"
-                value={analysisLimit}
-                onChange={(e) => setAnalysisLimit(Number(e.target.value))}
-                className="w-full h-1.5 bg-zinc-800 rounded-full appearance-none cursor-pointer"
-                style={{
-                  background: `linear-gradient(to right, #a1a1a1 0%, #a1a1a1 ${analysisLimit}%, #27272a ${analysisLimit}%, #27272a 100%)`
-                }}
-              />
-              <div className="flex gap-2 mt-3">
+
+              <div className="relative mb-4">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={analysisLimit}
+                  onChange={(e) => setAnalysisLimit(Number(e.target.value))}
+                  className="w-full h-2 rounded-full appearance-none cursor-pointer bg-zinc-800"
+                  style={{
+                    background: `linear-gradient(to right, #10b981 0%, #10b981 ${analysisLimit}%, #27272a ${analysisLimit}%, #27272a 100%)`
+                  }}
+                />
+              </div>
+
+              <div className="flex gap-2">
                 {[25, 50, 75, 100].map(p => (
                   <button
                     key={p}
                     onClick={() => setAnalysisLimit(p)}
-                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
                       analysisLimit === p
-                        ? 'bg-zinc-100 text-zinc-900'
+                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
                         : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
                     }`}
                   >
@@ -400,67 +367,71 @@ const Analysis: React.FC = () => {
             </div>
           )}
 
-          {/* Start button */}
-          <Button
-            onClick={handleAnalyzeNew}
-            disabled={isAnalyzing || applicationsStats.unanalyzed_applications === 0}
-            className="w-full h-12 bg-zinc-100 text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
-          >
-            <Brain className="h-5 w-5 mr-2" />
-            {isAnalyzing
-              ? 'Анализирую...'
-              : applicationsStats.unanalyzed_applications > 0
-                ? `Проанализировать ${Math.ceil(applicationsStats.unanalyzed_applications * analysisLimit / 100)} резюме`
-                : 'Все проанализировано'}
-          </Button>
-
-          {/* Progress */}
-          {isAnalyzing && analysisProgress.total > 0 && (
-            <div className="mt-4 p-4 bg-card border border-zinc-800 rounded-lg">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center">
-                    <Brain className="h-4 w-4 text-zinc-400" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-zinc-200">
-                      {analysisProgress.analyzed} из {analysisProgress.total}
-                    </div>
-                    <div className="text-xs text-zinc-500">резюме</div>
+          {/* Start Button */}
+          {!isAnalyzing ? (
+            <button
+              onClick={handleAnalyzeNew}
+              disabled={applicationsStats.unanalyzed_applications === 0}
+              className={`w-full py-5 rounded-xl font-semibold text-lg transition-all relative overflow-hidden group ${
+                applicationsStats.unanalyzed_applications === 0
+                  ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-500/20'
+              }`}
+            >
+              <span className="relative z-10 flex items-center justify-center gap-3">
+                <Play className="h-5 w-5" />
+                {applicationsStats.unanalyzed_applications > 0
+                  ? `Запустить анализ ${Math.ceil(applicationsStats.unanalyzed_applications * analysisLimit / 100)} резюме`
+                  : 'Все резюме обработаны'}
+              </span>
+              {applicationsStats.unanalyzed_applications > 0 && (
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+              )}
+            </button>
+          ) : (
+            /* Progress Panel */
+            <div className="p-6 rounded-xl bg-gradient-to-br from-zinc-800/50 to-zinc-900 border border-zinc-700">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="text-lg font-semibold">Анализ выполняется</div>
+                  <div className="text-sm text-zinc-400 mt-1">
+                    {analysisProgress.analyzed} из {analysisProgress.total} резюме
                   </div>
                 </div>
-                <div className="text-2xl font-semibold tabular-nums">
-                  {Math.round((analysisProgress.analyzed / analysisProgress.total) * 100)}%
+                <div className="text-4xl font-bold tabular-nums text-emerald-400">
+                  {progressPercent}%
                 </div>
               </div>
 
-              <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden mb-3">
+              {/* Progress Bar */}
+              <div className="h-3 bg-zinc-800 rounded-full overflow-hidden mb-4">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${(analysisProgress.analyzed / analysisProgress.total) * 100}%` }}
-                  transition={{ duration: 0.5 }}
-                  className="h-full bg-zinc-400 rounded-full"
-                />
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full relative"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 animate-shimmer" />
+                </motion.div>
               </div>
 
-              <div className="flex items-center justify-between text-xs text-zinc-500 mb-3">
-                <div className="flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>{getTimeRemaining()}</span>
+              <div className="flex items-center justify-between text-sm text-zinc-400 mb-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  {getTimeRemaining()}
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Zap className="h-3.5 w-3.5" />
-                  <span>{speed} рез/мин</span>
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-amber-400" />
+                  {speed} рез/мин
                 </div>
               </div>
 
               <Button
                 onClick={handleStopAnalysis}
-                variant="ghost"
-                size="sm"
-                className="w-full h-8 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 border border-zinc-700"
+                variant="outline"
+                className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50"
               >
-                <Square className="h-3 w-3 mr-1.5 fill-current" />
+                <Square className="h-4 w-4 mr-2 fill-current" />
                 Остановить
               </Button>
             </div>
@@ -468,191 +439,220 @@ const Analysis: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Stats row */}
+      {/* No vacancy hint */}
+      {selectedVacancy === 'all' && (
+        <div className="text-center py-8 text-zinc-500">
+          Выберите вакансию для запуска анализа
+        </div>
+      )}
+
+      {/* Distribution Stats */}
       {selectedVacancy !== 'all' && statsData.total > 0 && (
-        <motion.div {...fadeIn} className="grid grid-cols-5 gap-px bg-zinc-800 border border-zinc-800 rounded-lg overflow-hidden">
-          <div className="bg-card p-4 text-center">
-            <div className="text-xl font-semibold tabular-nums">{statsData.avgScore}</div>
-            <div className="text-[10px] text-zinc-500 mt-1">ср. балл</div>
-          </div>
-          <div className="bg-card p-4 text-center">
-            <div className="text-xl font-semibold tabular-nums text-green-500">{statsData.hire}</div>
-            <div className="text-[10px] text-zinc-500 mt-1">нанять</div>
-          </div>
-          <div className="bg-card p-4 text-center">
-            <div className="text-xl font-semibold tabular-nums text-blue-500">{statsData.interview}</div>
-            <div className="text-[10px] text-zinc-500 mt-1">собесед.</div>
-          </div>
-          <div className="bg-card p-4 text-center">
-            <div className="text-xl font-semibold tabular-nums text-amber-500">{statsData.maybe}</div>
-            <div className="text-[10px] text-zinc-500 mt-1">возможно</div>
-          </div>
-          <div className="bg-card p-4 text-center">
-            <div className="text-xl font-semibold tabular-nums text-red-500">{statsData.reject}</div>
-            <div className="text-[10px] text-zinc-500 mt-1">отклонить</div>
-          </div>
-        </motion.div>
+        <div className="grid grid-cols-5 gap-3">
+          {[
+            { label: 'Средний балл', value: statsData.avgScore, color: 'text-zinc-100' },
+            { label: 'Нанять', value: statsData.hire, color: 'text-emerald-400' },
+            { label: 'Собеседование', value: statsData.interview, color: 'text-blue-400' },
+            { label: 'Возможно', value: statsData.maybe, color: 'text-amber-400' },
+            { label: 'Отклонить', value: statsData.reject, color: 'text-red-400' },
+          ].map((stat, i) => (
+            <div key={i} className="p-4 rounded-lg bg-zinc-900/50 border border-zinc-800 text-center">
+              <div className={`text-2xl font-bold tabular-nums ${stat.color}`}>{stat.value}</div>
+              <div className="text-[11px] text-zinc-500 mt-1 uppercase tracking-wide">{stat.label}</div>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Results */}
-      <motion.div {...fadeIn}>
-        <Card>
-          <CardContent className="p-0">
-            <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
-              <div className="text-[13px] font-medium uppercase tracking-wide text-zinc-400">
-                Результаты
-              </div>
-              <span className="text-xs text-zinc-500">{results.length}</span>
+      <Card className="border-zinc-800 bg-zinc-900/30">
+        <CardContent className="p-0">
+          <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
+            <span className="text-sm font-medium text-zinc-300">Результаты анализа</span>
+            <span className="text-xs text-zinc-500 tabular-nums">{results.length}</span>
+          </div>
+
+          {isLoading ? (
+            <div className="p-12 text-center text-zinc-500">Загрузка...</div>
+          ) : results.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="text-zinc-400 mb-1">Нет результатов</div>
+              <div className="text-xs text-zinc-600">Запустите анализ или измените фильтры</div>
             </div>
+          ) : (
+            <div className="divide-y divide-zinc-800/50">
+              {results.map((r) => (
+                <div key={r.id} className="hover:bg-zinc-800/30 transition-colors">
+                  <div
+                    className="px-5 py-4 flex items-center gap-4 cursor-pointer"
+                    onClick={() => toggleExpanded(r.id)}
+                  >
+                    {/* Color indicator */}
+                    <div className={`w-1 h-12 rounded-full ${getRecommendationColor(r.recommendation)}`} />
 
-            {isLoading ? (
-              <div className="p-12 text-center text-zinc-500 text-sm">
-                Загрузка...
-              </div>
-            ) : results.length === 0 ? (
-              <div className="p-12 text-center">
-                <div className="w-14 h-14 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center mx-auto mb-4">
-                  <Brain className="h-6 w-6 text-zinc-500" />
-                </div>
-                <p className="text-zinc-400 text-sm mb-1">Нет результатов</p>
-                <p className="text-zinc-600 text-xs">Запустите анализ или измените фильтры</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-zinc-800/50">
-                {results.map((r) => (
-                  <div key={r.id} className="hover:bg-zinc-900/50 transition-colors">
-                    {/* Main row */}
-                    <div
-                      className="px-5 py-4 flex items-center justify-between cursor-pointer"
-                      onClick={() => toggleExpanded(r.id)}
-                    >
-                      <div className="flex items-center gap-4 flex-1 min-w-0">
-                        <div className="w-8 h-8 rounded-md bg-zinc-800 flex items-center justify-center text-[10px] font-medium text-zinc-500 flex-shrink-0">
-                          {r.application?.candidate_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[13px] font-medium text-zinc-200 truncate">
-                              {r.application?.candidate_name || 'Без имени'}
-                            </span>
-                            {r.application?.resume_url && (
-                              <a
-                                href={r.application.resume_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-zinc-500 hover:text-zinc-300"
-                              >
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </a>
-                            )}
-                          </div>
-                          {r.application?.candidate_phone && (
-                            <div className="flex items-center gap-1 text-xs text-zinc-500 mt-0.5">
-                              <Phone className="h-3 w-3" />
-                              <span>{r.application.candidate_phone}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        <span className="text-lg font-semibold tabular-nums">{r.score || '—'}</span>
-                        <span className={`text-[11px] font-medium px-2 py-1 rounded ${getRecommendationStyle(r.recommendation)}`}>
-                          {getRecommendationText(r.recommendation)}
-                        </span>
-                        {expandedResults.has(r.id) ? (
-                          <ChevronUp className="h-4 w-4 text-zinc-500" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 text-zinc-500" />
-                        )}
-                      </div>
+                    {/* Avatar */}
+                    <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center text-xs font-medium text-zinc-400 flex-shrink-0">
+                      {r.application?.candidate_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
                     </div>
 
-                    {/* Expanded details */}
-                    {expandedResults.has(r.id) && (
-                      <div className="px-5 pb-4 space-y-3">
-                        {/* Metrics */}
-                        <div className="grid grid-cols-3 gap-4 text-xs">
-                          <div>
-                            <span className="text-zinc-500">Навыки:</span>
-                            <span className="ml-2 text-zinc-300">{r.skills_match || 0}%</span>
-                          </div>
-                          <div>
-                            <span className="text-zinc-500">Опыт:</span>
-                            <span className="ml-2 text-zinc-300">{r.experience_match || 0}%</span>
-                          </div>
-                          <div>
-                            <span className="text-zinc-500">Зарплата:</span>
-                            <span className="ml-2 text-zinc-300">
-                              {r.salary_match === 'match' ? 'ОК' : r.salary_match === 'higher' ? '↑' : r.salary_match === 'lower' ? '↓' : '—'}
-                            </span>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-zinc-100 truncate">
+                          {r.application?.candidate_name || 'Без имени'}
+                        </span>
+                        {r.application?.resume_url && (
+                          <a
+                            href={r.application.resume_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-zinc-500 hover:text-zinc-300"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        )}
+                      </div>
+                      {r.application?.candidate_phone && (
+                        <div className="flex items-center gap-1.5 text-xs text-zinc-500 mt-1">
+                          <Phone className="h-3 w-3" />
+                          {r.application.candidate_phone}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Score & Status */}
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="text-2xl font-bold tabular-nums">{r.score || '—'}</div>
+                        <div className="text-[10px] text-zinc-500">баллов</div>
+                      </div>
+                      <div className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                        r.recommendation === 'hire' ? 'bg-emerald-500/15 text-emerald-400' :
+                        r.recommendation === 'interview' ? 'bg-blue-500/15 text-blue-400' :
+                        r.recommendation === 'maybe' ? 'bg-amber-500/15 text-amber-400' :
+                        r.recommendation === 'reject' ? 'bg-red-500/15 text-red-400' :
+                        'bg-zinc-700 text-zinc-400'
+                      }`}>
+                        {getRecommendationText(r.recommendation)}
+                      </div>
+                      {expandedResults.has(r.id) ? (
+                        <ChevronUp className="h-5 w-5 text-zinc-500" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-zinc-500" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Expanded */}
+                  {expandedResults.has(r.id) && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="px-5 pb-5 ml-[60px]"
+                    >
+                      {/* Metrics */}
+                      <div className="grid grid-cols-3 gap-4 mb-4">
+                        <div className="p-3 rounded-lg bg-zinc-800/50">
+                          <div className="text-xs text-zinc-500 mb-1">Навыки</div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1.5 bg-zinc-700 rounded-full overflow-hidden">
+                              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${r.skills_match || 0}%` }} />
+                            </div>
+                            <span className="text-sm font-medium tabular-nums">{r.skills_match || 0}%</span>
                           </div>
                         </div>
+                        <div className="p-3 rounded-lg bg-zinc-800/50">
+                          <div className="text-xs text-zinc-500 mb-1">Опыт</div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1.5 bg-zinc-700 rounded-full overflow-hidden">
+                              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${r.experience_match || 0}%` }} />
+                            </div>
+                            <span className="text-sm font-medium tabular-nums">{r.experience_match || 0}%</span>
+                          </div>
+                        </div>
+                        <div className="p-3 rounded-lg bg-zinc-800/50">
+                          <div className="text-xs text-zinc-500 mb-1">Зарплата</div>
+                          <div className="text-sm font-medium">
+                            {r.salary_match === 'match' ? '✓ Совпадает' :
+                             r.salary_match === 'higher' ? '↑ Выше' :
+                             r.salary_match === 'lower' ? '↓ Ниже' : '— Не указана'}
+                          </div>
+                        </div>
+                      </div>
 
-                        {/* Strengths */}
+                      {/* Tags */}
+                      <div className="space-y-3">
                         {r.strengths && r.strengths.length > 0 && (
                           <div>
-                            <span className="text-[10px] uppercase tracking-wide text-green-500">Сильные стороны</span>
-                            <div className="flex flex-wrap gap-1 mt-1">
+                            <div className="text-xs text-emerald-400 mb-2 font-medium">Сильные стороны</div>
+                            <div className="flex flex-wrap gap-1.5">
                               {r.strengths.map((s, i) => (
-                                <span key={i} className="text-xs px-2 py-0.5 bg-green-500/10 text-green-400 rounded">
+                                <span key={i} className="px-2.5 py-1 text-xs bg-emerald-500/10 text-emerald-300 rounded-md border border-emerald-500/20">
                                   {s}
                                 </span>
                               ))}
                             </div>
                           </div>
                         )}
-
-                        {/* Weaknesses */}
                         {r.weaknesses && r.weaknesses.length > 0 && (
                           <div>
-                            <span className="text-[10px] uppercase tracking-wide text-amber-500">Слабые стороны</span>
-                            <div className="flex flex-wrap gap-1 mt-1">
+                            <div className="text-xs text-amber-400 mb-2 font-medium">Слабые стороны</div>
+                            <div className="flex flex-wrap gap-1.5">
                               {r.weaknesses.map((w, i) => (
-                                <span key={i} className="text-xs px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded">
+                                <span key={i} className="px-2.5 py-1 text-xs bg-amber-500/10 text-amber-300 rounded-md border border-amber-500/20">
                                   {w}
                                 </span>
                               ))}
                             </div>
                           </div>
                         )}
-
-                        {/* Red flags */}
                         {r.red_flags && r.red_flags.length > 0 && (
                           <div>
-                            <span className="text-[10px] uppercase tracking-wide text-red-500">Риски</span>
-                            <div className="flex flex-wrap gap-1 mt-1">
+                            <div className="text-xs text-red-400 mb-2 font-medium">Риски</div>
+                            <div className="flex flex-wrap gap-1.5">
                               {r.red_flags.map((f, i) => (
-                                <span key={i} className="text-xs px-2 py-0.5 bg-red-500/10 text-red-400 rounded">
+                                <span key={i} className="px-2.5 py-1 text-xs bg-red-500/10 text-red-300 rounded-md border border-red-500/20">
                                   {f}
                                 </span>
                               ))}
                             </div>
                           </div>
                         )}
-
-                        {/* Reasoning */}
-                        {r.reasoning && (
-                          <div className="text-xs text-zinc-400 p-3 bg-zinc-900 rounded">
-                            {r.reasoning}
-                          </div>
-                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
+
+                      {/* Reasoning */}
+                      {r.reasoning && (
+                        <div className="mt-4 p-4 rounded-lg bg-zinc-800/30 border border-zinc-700/50 text-sm text-zinc-300 leading-relaxed">
+                          {r.reasoning}
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <LimitExceededModal
         isOpen={limitModalOpen}
         onClose={() => setLimitModalOpen(false)}
         subscriptionInfo={limitExceededInfo}
       />
+
+      {/* Shimmer animation */}
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        .animate-shimmer {
+          animation: shimmer 2s infinite;
+        }
+      `}</style>
     </div>
   );
 };
