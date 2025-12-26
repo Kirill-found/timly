@@ -1,18 +1,27 @@
 /**
- * Страница анализа резюме
- * Таблица с результатами AI анализа откликов
+ * Analysis - Анализ резюме
+ * Design: Dark Industrial - единый стиль с Dashboard
  */
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Brain, Filter, Download, Search, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, XCircle, Clock, Loader2, StopCircle, ExternalLink, Phone, Sparkles } from 'lucide-react';
+import {
+  Brain,
+  Download,
+  ExternalLink,
+  Phone,
+  Square,
+  Clock,
+  Zap,
+  ChevronDown,
+  ChevronUp,
+  Settings,
+  ArrowRight
+} from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Progress } from '@/components/ui/progress';
 import { apiClient } from '@/services/api';
 import { Vacancy, AnalysisResult, AnalysisFilter } from '@/types';
 import { useApp } from '@/store/AppContext';
@@ -37,27 +46,18 @@ const Analysis: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recommendationFilter, setRecommendationFilter] = useState<string>('all');
-
-  // Новые состояния для инкрементального анализа
   const [applicationsStats, setApplicationsStats] = useState<any>(null);
-  const [dashboardStats, setDashboardStats] = useState<any>(null); // Статистика для дашборда (не зависит от фильтров)
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [isDownloading, setIsDownloading] = useState(false);
-
-  // Используем глобальное состояние анализа
-  // Показываем прогресс только если анализируем текущую выбранную вакансию
-  const isAnalyzing = app.activeAnalysis !== null && app.activeAnalysis.vacancyId === selectedVacancy;
-  // Но индикатор на странице показываем для любой активной вакансии
-  const hasActiveAnalysis = app.activeAnalysis !== null;
-  const analysisProgress = app.activeAnalysis || { total: 0, analyzed: 0, startTime: 0, vacancyId: '' };
-
-  // Состояние для слайдера квоты анализа
-  const [analysisLimit, setAnalysisLimit] = useState<number>(100); // % от новых откликов
-
-  // Состояние для модального окна лимита
+  const [analysisLimit, setAnalysisLimit] = useState<number>(100);
   const [limitModalOpen, setLimitModalOpen] = useState(false);
   const [limitExceededInfo, setLimitExceededInfo] = useState<any>(null);
+  const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
 
-  // Загрузка вакансий при монтировании
+  const isAnalyzing = app.activeAnalysis !== null && app.activeAnalysis.vacancyId === selectedVacancy;
+  const analysisProgress = app.activeAnalysis || { total: 0, analyzed: 0, startTime: 0, vacancyId: '' };
+
+  // Загрузка вакансий
   useEffect(() => {
     loadVacancies();
   }, []);
@@ -67,43 +67,30 @@ const Analysis: React.FC = () => {
     loadResults();
   }, [selectedVacancy, recommendationFilter]);
 
-  // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Polling который работает пока есть activeAnalysis
+  // Polling для анализа
   useEffect(() => {
-    if (!app.activeAnalysis) {
-      return; // Нет активного анализа - ничего не делаем
-    }
-
-    console.log('[Analysis] Starting polling for active analysis', app.activeAnalysis);
+    if (!app.activeAnalysis) return;
 
     const pollStats = async () => {
       try {
         const stats = await apiClient.getApplicationsStats(app.activeAnalysis!.vacancyId);
+        app.updateAnalysisProgress({ analyzed: stats.analyzed_applications });
 
-        // Обновляем прогресс
-        app.updateAnalysisProgress({
-          analyzed: stats.analyzed_applications
-        });
-
-        // Проверяем завершение
         if (stats.unanalyzed_applications === 0 || stats.analyzed_applications >= app.activeAnalysis!.total) {
-          console.log('[Analysis] Analysis completed!');
           app.stopAnalysis();
           loadResults();
           loadApplicationsStats();
           loadDashboardStats();
         }
       } catch (err) {
-        console.error('[Analysis] Error polling stats:', err);
+        console.error('[Analysis] Polling error:', err);
       }
     };
 
-    // Запускаем глобальный polling
     app.startGlobalPolling(pollStats, 3000, 300000);
+  }, [app.activeAnalysis?.vacancyId]);
 
-    // Cleanup НЕ нужен - polling глобальный
-  }, [app.activeAnalysis?.vacancyId]); // Перезапускаем только если изменилась vacancyId
-
-  // Загрузка статистики для выбранной вакансии (независимо от фильтров)
+  // Загрузка статистики
   useEffect(() => {
     if (selectedVacancy !== 'all') {
       loadApplicationsStats();
@@ -117,12 +104,8 @@ const Analysis: React.FC = () => {
   const loadVacancies = async () => {
     try {
       const data = await apiClient.getVacancies({ active_only: true });
-      if (data && Array.isArray(data)) {
-        setVacancies(data);
-      } else {
-        setVacancies([]);
-      }
-    } catch (err: any) {
+      setVacancies(Array.isArray(data) ? data : []);
+    } catch (err) {
       console.error('Error loading vacancies:', err);
       setVacancies([]);
     }
@@ -131,29 +114,16 @@ const Analysis: React.FC = () => {
   const loadResults = async () => {
     setIsLoading(true);
     setError(null);
-
     try {
-      const filters: AnalysisFilter = {
-        limit: 100,
-      };
-
-      if (selectedVacancy !== 'all') {
-        filters.vacancy_id = selectedVacancy;
-      }
-
-      if (recommendationFilter !== 'all') {
-        filters.recommendation = recommendationFilter as any;
-      }
+      const filters: AnalysisFilter = { limit: 100 };
+      if (selectedVacancy !== 'all') filters.vacancy_id = selectedVacancy;
+      if (recommendationFilter !== 'all') filters.recommendation = recommendationFilter as any;
 
       const data = await apiClient.getAnalysisResults(filters);
-      if (data && Array.isArray(data)) {
-        setResults(data);
-      } else {
-        setResults([]);
-      }
+      setResults(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      console.error('Error loading analysis results:', err);
-      setError(err.response?.data?.error?.message || 'Ошибка при загрузке результатов анализа');
+      console.error('Error loading results:', err);
+      setError(err.response?.data?.error?.message || 'Ошибка загрузки');
       setResults([]);
     } finally {
       setIsLoading(false);
@@ -162,30 +132,20 @@ const Analysis: React.FC = () => {
 
   const loadApplicationsStats = async () => {
     try {
-      if (selectedVacancy === 'all') {
-        setApplicationsStats(null);
-        return;
-      }
-
+      if (selectedVacancy === 'all') return setApplicationsStats(null);
       const stats = await apiClient.getApplicationsStats(selectedVacancy);
       setApplicationsStats(stats);
-    } catch (err: any) {
-      console.error('Error loading applications stats:', err);
+    } catch (err) {
       setApplicationsStats(null);
     }
   };
 
   const loadDashboardStats = async () => {
     try {
-      if (selectedVacancy === 'all') {
-        setDashboardStats(null);
-        return;
-      }
-
+      if (selectedVacancy === 'all') return setDashboardStats(null);
       const stats = await apiClient.getVacancyAnalysisStats(selectedVacancy);
       setDashboardStats(stats);
-    } catch (err: any) {
-      console.error('Error loading dashboard stats:', err);
+    } catch (err) {
       setDashboardStats(null);
     }
   };
@@ -199,622 +159,496 @@ const Analysis: React.FC = () => {
 
   const handleAnalyzeNew = async () => {
     if (selectedVacancy === 'all') {
-      setError('Выберите конкретную вакансию для анализа');
+      setError('Выберите вакансию');
       return;
     }
-
     setError(null);
 
-    const initialUnanalyzed = applicationsStats?.unanalyzed_applications || 0;
-    const initialAnalyzed = applicationsStats?.analyzed_applications || 0;
-    const applicationsToAnalyze = Math.ceil((initialUnanalyzed * analysisLimit) / 100);
-
+    const toAnalyze = Math.ceil((applicationsStats?.unanalyzed_applications || 0) * analysisLimit / 100);
     app.startAnalysis({
       vacancyId: selectedVacancy,
-      total: applicationsToAnalyze,
+      total: toAnalyze,
       analyzed: 0,
       startTime: Date.now()
     });
 
     try {
-      await apiClient.startAnalysisNewApplications(selectedVacancy, undefined, applicationsToAnalyze);
-      // Polling запустится автоматически из useEffect (строка 62-95)
+      await apiClient.startAnalysisNewApplications(selectedVacancy, undefined, toAnalyze);
     } catch (err: any) {
-      console.error('Error starting analysis:', err);
-
-      // Проверяем, является ли это ошибкой превышения лимита
       const errorDetail = err.response?.data?.detail;
       if (errorDetail?.error === 'LIMIT_EXCEEDED') {
-        // Показываем модальное окно с предложением обновить тариф
         setLimitExceededInfo(errorDetail.subscription);
         setLimitModalOpen(true);
       } else {
-        // Обычная ошибка
-        setError(errorDetail?.message || err.response?.data?.error?.message || 'Ошибка при запуске анализа');
+        setError(errorDetail?.message || 'Ошибка запуска анализа');
       }
-
       app.stopAnalysis();
     }
   };
 
   const handleDownloadExcel = async () => {
-    if (selectedVacancy === 'all') {
-      setError('Выберите конкретную вакансию для экспорта');
-      return;
-    }
-
+    if (selectedVacancy === 'all') return;
     setIsDownloading(true);
-    setError(null);
-
     try {
-      // Передаем текущий фильтр recommendation если он установлен
-      const filterToApply = recommendationFilter !== 'all' ? recommendationFilter : undefined;
-      const blob = await apiClient.downloadExcelReport(selectedVacancy, filterToApply);
-
-      // Создаем ссылку для скачивания
+      const filter = recommendationFilter !== 'all' ? recommendationFilter : undefined;
+      const blob = await apiClient.downloadExcelReport(selectedVacancy, filter);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const filterSuffix = filterToApply ? `_${filterToApply}` : '';
-      a.download = `analysis_report_${selectedVacancy}${filterSuffix}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.download = `analysis_${selectedVacancy}_${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err: any) {
-      console.error('Error downloading Excel:', err);
-      setError(err.response?.data?.error?.message || 'Ошибка при скачивании отчета');
+      setError('Ошибка скачивания');
     } finally {
       setIsDownloading(false);
     }
   };
 
-  const getRecommendationBadge = (recommendation?: string) => {
-    switch (recommendation) {
-      case 'hire':
-        return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" /> Нанять</Badge>;
-      case 'interview':
-        return <Badge className="bg-blue-500"><Clock className="h-3 w-3 mr-1" /> Собеседование</Badge>;
-      case 'maybe':
-        return <Badge variant="secondary"><AlertTriangle className="h-3 w-3 mr-1" /> Возможно</Badge>;
-      case 'reject':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" /> Отклонить</Badge>;
-      default:
-        return <Badge variant="outline">Нет рекомендации</Badge>;
+  const toggleExpanded = (id: string) => {
+    const newSet = new Set(expandedResults);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setExpandedResults(newSet);
+  };
+
+  const getRecommendationStyle = (rec?: string) => {
+    switch (rec) {
+      case 'hire': return 'status-hire';
+      case 'interview': return 'bg-blue-500/15 text-blue-500';
+      case 'maybe': return 'bg-amber-500/15 text-amber-500';
+      case 'reject': return 'status-reject';
+      default: return 'bg-zinc-800 text-zinc-400';
     }
   };
 
-  const getScoreColor = (score?: number) => {
-    if (!score) return 'text-gray-400';
-    if (score >= 80) return 'text-green-500';
-    if (score >= 60) return 'text-blue-500';
-    if (score >= 40) return 'text-yellow-500';
-    return 'text-red-500';
+  const getRecommendationText = (rec?: string) => {
+    switch (rec) {
+      case 'hire': return 'Нанять';
+      case 'interview': return 'Собеседование';
+      case 'maybe': return 'Возможно';
+      case 'reject': return 'Отклонить';
+      default: return '—';
+    }
   };
 
-  const getScoreIcon = (score?: number) => {
-    if (!score) return null;
-    if (score >= 60) return <TrendingUp className="h-4 w-4" />;
-    return <TrendingDown className="h-4 w-4" />;
+  const fadeIn = {
+    initial: { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.3 }
   };
 
-  const filteredResults = results;
-
-  // Статистика для дашборда (не зависит от фильтров)
   const statsData = dashboardStats ? {
-    total: dashboardStats.total_analyzed,
-    hire: dashboardStats.hire_count,
-    interview: dashboardStats.interview_count,
-    maybe: dashboardStats.maybe_count,
-    reject: dashboardStats.reject_count,
-    avgScore: dashboardStats.avg_score ? Math.round(dashboardStats.avg_score) : 0,
-  } : {
-    total: 0,
-    hire: 0,
-    interview: 0,
-    maybe: 0,
-    reject: 0,
-    avgScore: 0,
+    total: dashboardStats.total_analyzed || 0,
+    hire: dashboardStats.hire_count || 0,
+    interview: dashboardStats.interview_count || 0,
+    maybe: dashboardStats.maybe_count || 0,
+    reject: dashboardStats.reject_count || 0,
+    avgScore: Math.round(dashboardStats.avg_score || 0),
+  } : { total: 0, hire: 0, interview: 0, maybe: 0, reject: 0, avgScore: 0 };
+
+  // Расчёт времени
+  const getTimeRemaining = () => {
+    if (analysisProgress.analyzed === 0) return 'Расчёт...';
+    const elapsed = Date.now() - analysisProgress.startTime;
+    const avg = elapsed / analysisProgress.analyzed;
+    const remaining = (analysisProgress.total - analysisProgress.analyzed) * avg;
+    const min = Math.floor(remaining / 60000);
+    const sec = Math.floor((remaining % 60000) / 1000);
+    return min > 0 ? `≈ ${min} мин ${sec} сек` : `≈ ${sec} сек`;
   };
+
+  const speed = analysisProgress.analyzed > 0
+    ? ((analysisProgress.analyzed / ((Date.now() - analysisProgress.startTime) / 1000)) * 60).toFixed(1)
+    : '0';
 
   return (
-    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
-      {/* Заголовок с градиентом */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 via-blue-500 to-purple-500 p-4 sm:p-6 md:p-8 text-white"
-      >
-        <div className="absolute inset-0 bg-grid-white/10" />
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <Brain className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8" />
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Анализ резюме</h1>
-          </div>
-          <p className="text-white/90 text-sm sm:text-base md:text-lg">
-            Результаты AI анализа откликов кандидатов
-          </p>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <motion.div {...fadeIn} className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-zinc-100">Анализ резюме</h1>
+          <p className="text-sm text-zinc-500 mt-1">AI оценка кандидатов</p>
         </div>
-        {/* Декоративные элементы */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
+        {selectedVacancy !== 'all' && applicationsStats?.analyzed_applications > 0 && (
+          <Button
+            onClick={handleDownloadExcel}
+            disabled={isDownloading}
+            variant="ghost"
+            className="h-9 px-3 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 border border-zinc-700"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            <span className="text-xs">Excel</span>
+          </Button>
+        )}
       </motion.div>
 
-      {/* Ошибки */}
+      {/* Error */}
       {error && (
-        <Alert variant="destructive">
-          <XCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <motion.div {...fadeIn} className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+          <p className="text-sm text-red-400">{error}</p>
+        </motion.div>
       )}
 
-      {/* Отображение оставшихся анализов согласно тарифному плану */}
+      {/* Limits */}
       <AnalysisLimitsDisplay />
 
-      {/* Главная карточка анализа - для выбранной вакансии */}
-      {selectedVacancy !== 'all' && applicationsStats && (
-        <Card className="border-green-300 bg-gradient-to-br from-green-50 to-blue-50 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-2xl flex items-center gap-3">
-              <Brain className="h-7 w-7 text-green-600" />
-              AI Анализ Резюме
-            </CardTitle>
-            <CardDescription className="text-base">
-              {applicationsStats.unanalyzed_applications > 0
-                ? `У вас ${applicationsStats.unanalyzed_applications} новых резюме для анализа`
-                : 'Все резюме проанализированы'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {/* Статистика в одной строке */}
-              <div className="flex items-center justify-around bg-white rounded-xl p-6 shadow-sm">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600">
-                    {applicationsStats.total_applications}
-                  </div>
-                  <div className="text-sm text-muted-foreground mt-1">Всего резюме</div>
-                </div>
-                <div className="h-12 w-px bg-gray-200"></div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600">
-                    {applicationsStats.analyzed_applications}
-                  </div>
-                  <div className="text-sm text-muted-foreground mt-1">Проанализировано</div>
-                </div>
-                <div className="h-12 w-px bg-gray-200"></div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-orange-600">
-                    {applicationsStats.unanalyzed_applications}
-                  </div>
-                  <div className="text-sm text-muted-foreground mt-1">Новых</div>
-                </div>
-              </div>
+      {/* Filters */}
+      <motion.div {...fadeIn} className="grid grid-cols-2 gap-4">
+        <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+          <SelectTrigger className="bg-card border-zinc-800 text-zinc-200">
+            <SelectValue placeholder="Выберите вакансию" />
+          </SelectTrigger>
+          <SelectContent className="bg-zinc-900 border-zinc-800">
+            <SelectItem value="all">Все вакансии</SelectItem>
+            {vacancies.map(v => (
+              <SelectItem key={v.id} value={v.id}>{v.title}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-              {/* Слайдер выбора количества откликов для анализа */}
-              {applicationsStats.unanalyzed_applications > 0 && !isAnalyzing && (
-                <div className="bg-white rounded-xl p-6 shadow-sm space-y-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Выберите количество откликов для анализа</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Будет проанализировано: {Math.ceil((applicationsStats.unanalyzed_applications * analysisLimit) / 100)} из {applicationsStats.unanalyzed_applications} новых откликов
-                      </p>
-                    </div>
-                    <div className="text-3xl font-bold text-blue-600">
-                      {analysisLimit}%
-                    </div>
-                  </div>
+        <Select value={recommendationFilter} onValueChange={setRecommendationFilter}>
+          <SelectTrigger className="bg-card border-zinc-800 text-zinc-200">
+            <SelectValue placeholder="Рекомендация" />
+          </SelectTrigger>
+          <SelectContent className="bg-zinc-900 border-zinc-800">
+            <SelectItem value="all">Все</SelectItem>
+            <SelectItem value="hire">Нанять</SelectItem>
+            <SelectItem value="interview">Собеседование</SelectItem>
+            <SelectItem value="maybe">Возможно</SelectItem>
+            <SelectItem value="reject">Отклонить</SelectItem>
+          </SelectContent>
+        </Select>
+      </motion.div>
 
-                  {/* HTML Range Input Slider */}
-                  <div className="space-y-3">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="5"
-                      value={analysisLimit}
-                      onChange={(e) => setAnalysisLimit(Number(e.target.value))}
-                      className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      style={{
-                        background: `linear-gradient(to right, rgb(37 99 235) 0%, rgb(37 99 235) ${analysisLimit}%, rgb(229 231 235) ${analysisLimit}%, rgb(229 231 235) 100%)`
-                      }}
-                    />
-
-                    {/* Быстрые кнопки выбора процентов */}
-                    <div className="flex gap-2 justify-center">
-                      {[25, 50, 75, 100].map((percent) => (
-                        <button
-                          key={percent}
-                          onClick={() => setAnalysisLimit(percent)}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            analysisLimit === percent
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
-                          {percent}%
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Главная кнопка анализа */}
-              <div className="space-y-3">
-                <Button
-                  onClick={handleAnalyzeNew}
-                  disabled={isAnalyzing || applicationsStats.unanalyzed_applications === 0}
-                  className="w-full h-16 text-lg bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 shadow-lg transition-all"
-                  size="lg"
-                >
-                  {isAnalyzing ? (
-                    <Loader2 className="h-6 w-6 mr-3 animate-spin" />
-                  ) : (
-                    <Brain className="h-6 w-6 mr-3" />
-                  )}
-                  {isAnalyzing
-                    ? 'Анализирую резюме...'
-                    : applicationsStats.unanalyzed_applications > 0
-                      ? `Проанализировать ${Math.ceil((applicationsStats.unanalyzed_applications * analysisLimit) / 100)} ${analysisLimit < 100 ? `из ${applicationsStats.unanalyzed_applications}` : ''} новых резюме`
-                      : 'Все резюме проанализированы'}
-                </Button>
-
-                {/* Прогресс-бар анализа */}
-                {isAnalyzing && analysisProgress.total > 0 && (
-                  <div className="bg-white rounded-lg p-4 space-y-3 border-2 border-blue-200 shadow-sm">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="font-medium text-gray-700">
-                        Проанализировано: {analysisProgress.analyzed} из {analysisProgress.total}
-                      </span>
-                      <span className="text-blue-600 font-semibold">
-                        {analysisProgress.total > 0
-                          ? Math.round((analysisProgress.analyzed / analysisProgress.total) * 100)
-                          : 0}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={analysisProgress.total > 0
-                        ? (analysisProgress.analyzed / analysisProgress.total) * 100
-                        : 0
-                      }
-                      className="h-3"
-                    />
-                    <div className="flex justify-between items-center text-xs text-gray-500">
-                      <span>
-                        Осталось: {analysisProgress.total - analysisProgress.analyzed} резюме
-                      </span>
-                      <span>
-                        {(() => {
-                          if (analysisProgress.analyzed === 0) {
-                            return 'Подсчет времени...';
-                          }
-
-                          const elapsed = Date.now() - analysisProgress.startTime;
-                          const avgTimePerResume = elapsed / analysisProgress.analyzed;
-                          const remainingCount = analysisProgress.total - analysisProgress.analyzed;
-                          const remainingMs = remainingCount * avgTimePerResume;
-
-                          const minutes = Math.floor(remainingMs / 60000);
-                          const seconds = Math.floor((remainingMs % 60000) / 1000);
-
-                          return minutes > 0
-                            ? `≈ ${minutes} мин ${seconds} сек`
-                            : `≈ ${seconds} сек`;
-                        })()}
-                      </span>
-                    </div>
-
-                    {/* Кнопка остановки анализа */}
-                    <Button
-                      onClick={handleStopAnalysis}
-                      variant="destructive"
-                      size="sm"
-                      className="w-full mt-2"
-                    >
-                      <StopCircle className="h-4 w-4 mr-2" />
-                      Остановить анализ
-                    </Button>
-                  </div>
-                )}
-
-                {applicationsStats.analyzed_applications > 0 && (
-                  <Button
-                    onClick={handleDownloadExcel}
-                    disabled={isDownloading}
-                    variant="outline"
-                    className="w-full h-12"
-                    size="lg"
-                  >
-                    <Download className="h-5 w-5 mr-2" />
-                    {isDownloading
-                      ? 'Готовлю отчет...'
-                      : `Скачать Excel отчет (${applicationsStats.analyzed_applications} резюме)`}
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Подсказка если не выбрана вакансия */}
+      {/* No vacancy selected */}
       {selectedVacancy === 'all' && (
-        <Alert className="bg-blue-50 border-blue-200">
-          <Brain className="h-4 w-4 text-blue-600" />
-          <AlertDescription>
-            <span className="font-medium">Выберите конкретную вакансию</span> в фильтре ниже, чтобы начать анализ резюме
-          </AlertDescription>
-        </Alert>
+        <motion.div {...fadeIn} className="flex items-center gap-3 text-sm text-zinc-500">
+          <Brain className="h-4 w-4" />
+          <span>Выберите вакансию для запуска анализа</span>
+        </motion.div>
       )}
 
-      {/* Статистика */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Всего</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{statsData.total}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Средний балл</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${getScoreColor(statsData.avgScore)}`}>
-              {statsData.avgScore}
+      {/* Analysis panel */}
+      {selectedVacancy !== 'all' && applicationsStats && (
+        <motion.div {...fadeIn}>
+          {/* Stats grid */}
+          <div className="grid grid-cols-3 gap-px bg-zinc-800 border border-zinc-800 rounded-lg overflow-hidden mb-4">
+            <div className="bg-card p-5">
+              <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
+                Всего
+              </div>
+              <div className="text-3xl font-semibold tabular-nums">
+                {applicationsStats.total_applications}
+              </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="bg-card p-5">
+              <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
+                Проанализировано
+              </div>
+              <div className="text-3xl font-semibold tabular-nums">
+                {applicationsStats.analyzed_applications}
+              </div>
+            </div>
+            <div className="bg-card p-5">
+              <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
+                Новых
+              </div>
+              <div className="text-3xl font-semibold tabular-nums">
+                {applicationsStats.unanalyzed_applications}
+              </div>
+            </div>
+          </div>
 
-        <Card className="border-green-200 bg-green-50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-green-700">Нанять</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{statsData.hire}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-blue-700">Собеседование</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{statsData.interview}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-yellow-200 bg-yellow-50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-yellow-700">Возможно</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{statsData.maybe}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-red-200 bg-red-50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-red-700">Отклонить</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{statsData.reject}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Фильтры */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Фильтры
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Вакансия */}
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger>
-                <SelectValue placeholder="Выберите вакансию" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Все вакансии</SelectItem>
-                {vacancies.map(vacancy => (
-                  <SelectItem key={vacancy.id} value={vacancy.id}>
-                    {vacancy.title}
-                  </SelectItem>
+          {/* Slider */}
+          {applicationsStats.unanalyzed_applications > 0 && !isAnalyzing && (
+            <div className="mb-4 p-4 bg-card border border-zinc-800 rounded-lg">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-sm text-zinc-400">
+                  Анализировать: {Math.ceil(applicationsStats.unanalyzed_applications * analysisLimit / 100)} из {applicationsStats.unanalyzed_applications}
+                </span>
+                <span className="text-lg font-semibold tabular-nums">{analysisLimit}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={analysisLimit}
+                onChange={(e) => setAnalysisLimit(Number(e.target.value))}
+                className="w-full h-1.5 bg-zinc-800 rounded-full appearance-none cursor-pointer"
+                style={{
+                  background: `linear-gradient(to right, #a1a1a1 0%, #a1a1a1 ${analysisLimit}%, #27272a ${analysisLimit}%, #27272a 100%)`
+                }}
+              />
+              <div className="flex gap-2 mt-3">
+                {[25, 50, 75, 100].map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setAnalysisLimit(p)}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                      analysisLimit === p
+                        ? 'bg-zinc-100 text-zinc-900'
+                        : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                    }`}
+                  >
+                    {p}%
+                  </button>
                 ))}
-              </SelectContent>
-            </Select>
-
-            {/* Рекомендация */}
-            <Select value={recommendationFilter} onValueChange={setRecommendationFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Все рекомендации" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Все рекомендации</SelectItem>
-                <SelectItem value="hire">Нанять</SelectItem>
-                <SelectItem value="interview">Собеседование</SelectItem>
-                <SelectItem value="maybe">Возможно</SelectItem>
-                <SelectItem value="reject">Отклонить</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Таблица результатов */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Результаты анализа</CardTitle>
-            <CardDescription>
-              Найдено: {filteredResults.length} {filteredResults.length === 1 ? 'результат' : 'результатов'}
-            </CardDescription>
-          </div>
-          {filteredResults.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDownloadExcel}
-              disabled={isDownloading || selectedVacancy === 'all'}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              {isDownloading ? 'Готовлю отчет...' : 'Экспорт в Excel'}
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-12 text-muted-foreground">
-              Загрузка результатов...
+              </div>
             </div>
-          ) : filteredResults.length === 0 ? (
-            <div className="text-center py-12">
-              <Brain className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">Результаты анализа отсутствуют</h3>
-              <p className="text-muted-foreground mb-4">
-                Запустите синхронизацию и анализ откликов
-              </p>
-              <Button asChild>
-                <a href="/sync">Перейти к синхронизации</a>
+          )}
+
+          {/* Start button */}
+          <Button
+            onClick={handleAnalyzeNew}
+            disabled={isAnalyzing || applicationsStats.unanalyzed_applications === 0}
+            className="w-full h-12 bg-zinc-100 text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+          >
+            <Brain className="h-5 w-5 mr-2" />
+            {isAnalyzing
+              ? 'Анализирую...'
+              : applicationsStats.unanalyzed_applications > 0
+                ? `Проанализировать ${Math.ceil(applicationsStats.unanalyzed_applications * analysisLimit / 100)} резюме`
+                : 'Все проанализировано'}
+          </Button>
+
+          {/* Progress */}
+          {isAnalyzing && analysisProgress.total > 0 && (
+            <div className="mt-4 p-4 bg-card border border-zinc-800 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center">
+                    <Brain className="h-4 w-4 text-zinc-400" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-zinc-200">
+                      {analysisProgress.analyzed} из {analysisProgress.total}
+                    </div>
+                    <div className="text-xs text-zinc-500">резюме</div>
+                  </div>
+                </div>
+                <div className="text-2xl font-semibold tabular-nums">
+                  {Math.round((analysisProgress.analyzed / analysisProgress.total) * 100)}%
+                </div>
+              </div>
+
+              <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden mb-3">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(analysisProgress.analyzed / analysisProgress.total) * 100}%` }}
+                  transition={{ duration: 0.5 }}
+                  className="h-full bg-zinc-400 rounded-full"
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-zinc-500 mb-3">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{getTimeRemaining()}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Zap className="h-3.5 w-3.5" />
+                  <span>{speed} рез/мин</span>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleStopAnalysis}
+                variant="ghost"
+                size="sm"
+                className="w-full h-8 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 border border-zinc-700"
+              >
+                <Square className="h-3 w-3 mr-1.5 fill-current" />
+                Остановить
               </Button>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredResults.map((result) => (
-                <div
-                  key={result.id}
-                  className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
-                >
-                  {/* Шапка карточки */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-lg">
-                          {result.application?.candidate_name || 'Кандидат без имени'}
-                        </h3>
-                        {result.application?.resume_url && (
-                          <a
-                            href={result.application.resume_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 transition-colors"
-                            title="Открыть резюме на HH.ru"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                        {result.application?.candidate_email && (
-                          <p>{result.application.candidate_email}</p>
-                        )}
-                        {result.application?.candidate_phone && (
-                          <p className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {result.application.candidate_phone}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className={`flex items-center gap-1 ${getScoreColor(result.score)}`}>
-                        {getScoreIcon(result.score)}
-                        <span className="text-2xl font-bold">{result.score || '—'}</span>
-                      </div>
-                      {getRecommendationBadge(result.recommendation)}
-                    </div>
-                  </div>
-
-                  {/* Метрики */}
-                  <div className="grid grid-cols-3 gap-4 mb-3">
-                    <div>
-                      <div className="text-xs text-muted-foreground">Навыки</div>
-                      <div className="text-sm font-medium">{result.skills_match || 0}%</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Опыт</div>
-                      <div className="text-sm font-medium">{result.experience_match || 0}%</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Зарплата</div>
-                      <div className="text-sm font-medium">
-                        {result.salary_match === 'match' && 'Совпадает'}
-                        {result.salary_match === 'higher' && 'Выше'}
-                        {result.salary_match === 'lower' && 'Ниже'}
-                        {!result.salary_match && 'Не указана'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Сильные стороны */}
-                  {result.strengths && result.strengths.length > 0 && (
-                    <div className="mb-3">
-                      <div className="text-xs font-medium text-green-600 mb-1">Сильные стороны:</div>
-                      <div className="flex flex-wrap gap-1">
-                        {result.strengths.map((strength, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs border-green-200 text-green-700">
-                            {strength}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Слабые стороны */}
-                  {result.weaknesses && result.weaknesses.length > 0 && (
-                    <div className="mb-3">
-                      <div className="text-xs font-medium text-yellow-600 mb-1">Слабые стороны:</div>
-                      <div className="flex flex-wrap gap-1">
-                        {result.weaknesses.map((weakness, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs border-yellow-200 text-yellow-700">
-                            {weakness}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Тревожные сигналы */}
-                  {result.red_flags && result.red_flags.length > 0 && (
-                    <div className="mb-3">
-                      <div className="text-xs font-medium text-red-600 mb-1 flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        Тревожные сигналы:
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {result.red_flags.map((flag, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs border-red-200 text-red-700">
-                            {flag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Обоснование */}
-                  {result.reasoning && (
-                    <div className="text-sm text-muted-foreground bg-muted p-3 rounded">
-                      {result.reasoning}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
           )}
-        </CardContent>
-      </Card>
+        </motion.div>
+      )}
 
-      {/* Модальное окно при превышении лимита */}
+      {/* Stats row */}
+      {selectedVacancy !== 'all' && statsData.total > 0 && (
+        <motion.div {...fadeIn} className="grid grid-cols-5 gap-px bg-zinc-800 border border-zinc-800 rounded-lg overflow-hidden">
+          <div className="bg-card p-4 text-center">
+            <div className="text-xl font-semibold tabular-nums">{statsData.avgScore}</div>
+            <div className="text-[10px] text-zinc-500 mt-1">ср. балл</div>
+          </div>
+          <div className="bg-card p-4 text-center">
+            <div className="text-xl font-semibold tabular-nums text-green-500">{statsData.hire}</div>
+            <div className="text-[10px] text-zinc-500 mt-1">нанять</div>
+          </div>
+          <div className="bg-card p-4 text-center">
+            <div className="text-xl font-semibold tabular-nums text-blue-500">{statsData.interview}</div>
+            <div className="text-[10px] text-zinc-500 mt-1">собесед.</div>
+          </div>
+          <div className="bg-card p-4 text-center">
+            <div className="text-xl font-semibold tabular-nums text-amber-500">{statsData.maybe}</div>
+            <div className="text-[10px] text-zinc-500 mt-1">возможно</div>
+          </div>
+          <div className="bg-card p-4 text-center">
+            <div className="text-xl font-semibold tabular-nums text-red-500">{statsData.reject}</div>
+            <div className="text-[10px] text-zinc-500 mt-1">отклонить</div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Results */}
+      <motion.div {...fadeIn}>
+        <Card>
+          <CardContent className="p-0">
+            <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
+              <div className="text-[13px] font-medium uppercase tracking-wide text-zinc-400">
+                Результаты
+              </div>
+              <span className="text-xs text-zinc-500">{results.length}</span>
+            </div>
+
+            {isLoading ? (
+              <div className="p-12 text-center text-zinc-500 text-sm">
+                Загрузка...
+              </div>
+            ) : results.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="w-14 h-14 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center mx-auto mb-4">
+                  <Brain className="h-6 w-6 text-zinc-500" />
+                </div>
+                <p className="text-zinc-400 text-sm mb-1">Нет результатов</p>
+                <p className="text-zinc-600 text-xs">Запустите анализ или измените фильтры</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-800/50">
+                {results.map((r) => (
+                  <div key={r.id} className="hover:bg-zinc-900/50 transition-colors">
+                    {/* Main row */}
+                    <div
+                      className="px-5 py-4 flex items-center justify-between cursor-pointer"
+                      onClick={() => toggleExpanded(r.id)}
+                    >
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="w-8 h-8 rounded-md bg-zinc-800 flex items-center justify-center text-[10px] font-medium text-zinc-500 flex-shrink-0">
+                          {r.application?.candidate_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[13px] font-medium text-zinc-200 truncate">
+                              {r.application?.candidate_name || 'Без имени'}
+                            </span>
+                            {r.application?.resume_url && (
+                              <a
+                                href={r.application.resume_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-zinc-500 hover:text-zinc-300"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                            )}
+                          </div>
+                          {r.application?.candidate_phone && (
+                            <div className="flex items-center gap-1 text-xs text-zinc-500 mt-0.5">
+                              <Phone className="h-3 w-3" />
+                              <span>{r.application.candidate_phone}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <span className="text-lg font-semibold tabular-nums">{r.score || '—'}</span>
+                        <span className={`text-[11px] font-medium px-2 py-1 rounded ${getRecommendationStyle(r.recommendation)}`}>
+                          {getRecommendationText(r.recommendation)}
+                        </span>
+                        {expandedResults.has(r.id) ? (
+                          <ChevronUp className="h-4 w-4 text-zinc-500" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-zinc-500" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Expanded details */}
+                    {expandedResults.has(r.id) && (
+                      <div className="px-5 pb-4 space-y-3">
+                        {/* Metrics */}
+                        <div className="grid grid-cols-3 gap-4 text-xs">
+                          <div>
+                            <span className="text-zinc-500">Навыки:</span>
+                            <span className="ml-2 text-zinc-300">{r.skills_match || 0}%</span>
+                          </div>
+                          <div>
+                            <span className="text-zinc-500">Опыт:</span>
+                            <span className="ml-2 text-zinc-300">{r.experience_match || 0}%</span>
+                          </div>
+                          <div>
+                            <span className="text-zinc-500">Зарплата:</span>
+                            <span className="ml-2 text-zinc-300">
+                              {r.salary_match === 'match' ? 'ОК' : r.salary_match === 'higher' ? '↑' : r.salary_match === 'lower' ? '↓' : '—'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Strengths */}
+                        {r.strengths && r.strengths.length > 0 && (
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wide text-green-500">Сильные стороны</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {r.strengths.map((s, i) => (
+                                <span key={i} className="text-xs px-2 py-0.5 bg-green-500/10 text-green-400 rounded">
+                                  {s}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Weaknesses */}
+                        {r.weaknesses && r.weaknesses.length > 0 && (
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wide text-amber-500">Слабые стороны</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {r.weaknesses.map((w, i) => (
+                                <span key={i} className="text-xs px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded">
+                                  {w}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Red flags */}
+                        {r.red_flags && r.red_flags.length > 0 && (
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wide text-red-500">Риски</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {r.red_flags.map((f, i) => (
+                                <span key={i} className="text-xs px-2 py-0.5 bg-red-500/10 text-red-400 rounded">
+                                  {f}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Reasoning */}
+                        {r.reasoning && (
+                          <div className="text-xs text-zinc-400 p-3 bg-zinc-900 rounded">
+                            {r.reasoning}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
       <LimitExceededModal
         isOpen={limitModalOpen}
         onClose={() => setLimitModalOpen(false)}
