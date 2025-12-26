@@ -1,6 +1,6 @@
 /**
  * Sync - Синхронизация с HH.ru
- * Design: Dark Industrial / Control Panel
+ * Design: Dark Industrial - единый стиль с Dashboard
  */
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -13,7 +13,8 @@ import {
   Briefcase,
   Users,
   Settings,
-  ArrowRight
+  ArrowRight,
+  Clock
 } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -165,26 +166,6 @@ const Sync: React.FC = () => {
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'text-green-500';
-      case 'failed': return 'text-red-500';
-      case 'processing':
-      case 'running': return 'text-blue-500';
-      default: return 'text-zinc-500';
-    }
-  };
-
-  const getStatusBg = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-500/10';
-      case 'failed': return 'bg-red-500/10';
-      case 'processing':
-      case 'running': return 'bg-blue-500/10';
-      default: return 'bg-zinc-800';
-    }
-  };
-
   const getStatusText = (status: string) => {
     switch (status) {
       case 'completed': return 'Завершено';
@@ -272,108 +253,95 @@ const Sync: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Current Job */}
+      {/* Current Job - как stats row в dashboard */}
       {currentJob && (
         <motion.div {...fadeIn}>
-          <Card>
-            <CardContent className="p-0">
-              {/* Status header */}
-              <div className="p-5 border-b border-zinc-800">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {isJobRunning ? (
-                      <RefreshCw className="h-5 w-5 text-blue-500 animate-spin" />
-                    ) : currentJob.status === 'completed' ? (
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-red-500" />
-                    )}
-                    <div>
-                      <div className="text-sm font-medium text-zinc-200">
-                        {isJobRunning ? 'Синхронизация выполняется' :
-                         currentJob.status === 'completed' ? 'Синхронизация завершена' :
-                         'Ошибка синхронизации'}
-                      </div>
-                      <div className="text-xs text-zinc-500 mt-0.5">
-                        Начало: {formatTime(currentJob.started_at)}
-                        {currentJob.completed_at && ` • Завершение: ${formatTime(currentJob.completed_at)}`}
-                      </div>
-                    </div>
-                  </div>
-                  <span className={`text-[11px] font-medium px-2 py-1 rounded ${getStatusBg(currentJob.status)} ${getStatusColor(currentJob.status)}`}>
-                    {getStatusText(currentJob.status)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 divide-x divide-zinc-800">
-                <div className="p-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                      <Briefcase className="h-5 w-5 text-blue-500" />
-                    </div>
-                    <div>
-                      <div className="text-2xl font-semibold tabular-nums">
-                        {currentJob.vacancies_synced}
-                      </div>
-                      <div className="text-xs text-zinc-500">вакансий</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                      <Users className="h-5 w-5 text-green-500" />
-                    </div>
-                    <div>
-                      <div className="text-2xl font-semibold tabular-nums">
-                        {currentJob.applications_synced}
-                      </div>
-                      <div className="text-xs text-zinc-500">откликов</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Progress bar for running job */}
-              {isJobRunning && (
-                <div className="px-5 pb-5">
-                  <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full animate-pulse" style={{ width: '60%' }} />
-                  </div>
-                </div>
+          {/* Status bar */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              {isJobRunning ? (
+                <RefreshCw className="h-4 w-4 text-zinc-400 animate-spin" />
+              ) : currentJob.status === 'completed' ? (
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              ) : (
+                <XCircle className="h-4 w-4 text-red-500" />
               )}
-
-              {/* Errors */}
-              {currentJob.errors && currentJob.errors.length > 0 && (
-                <div className="p-4 mx-5 mb-5 rounded-lg bg-red-500/10 border border-red-500/20">
-                  <div className="text-xs font-medium text-red-400 mb-2">Ошибки:</div>
-                  <ul className="space-y-1">
-                    {currentJob.errors.map((err, idx) => (
-                      <li key={idx} className="text-xs text-red-300">{err}</li>
-                    ))}
-                  </ul>
-                </div>
+              <span className="text-sm text-zinc-300">
+                {isJobRunning ? 'Синхронизация выполняется' :
+                 currentJob.status === 'completed' ? 'Синхронизация завершена' :
+                 'Ошибка синхронизации'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-zinc-500">
+              <Clock className="h-3.5 w-3.5" />
+              <span>{formatTime(currentJob.started_at)}</span>
+              {currentJob.completed_at && (
+                <>
+                  <span>→</span>
+                  <span>{formatTime(currentJob.completed_at)}</span>
+                </>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+          {/* Stats как в dashboard - gap-px grid */}
+          <div className="grid grid-cols-2 gap-px bg-zinc-800 border border-zinc-800 rounded-lg overflow-hidden">
+            <div className="bg-card p-5">
+              <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
+                Вакансий
+              </div>
+              <div className="text-3xl font-semibold tracking-tight tabular-nums">
+                {currentJob.vacancies_synced}
+              </div>
+            </div>
+            <div className="bg-card p-5">
+              <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
+                Откликов
+              </div>
+              <div className="text-3xl font-semibold tracking-tight tabular-nums">
+                {currentJob.applications_synced}
+              </div>
+            </div>
+          </div>
+
+          {/* Progress bar for running job */}
+          {isJobRunning && (
+            <div className="mt-4">
+              <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-zinc-500 rounded-full"
+                  initial={{ width: '0%' }}
+                  animate={{ width: '100%' }}
+                  transition={{ duration: 30, ease: 'linear', repeat: Infinity }}
+                />
+              </div>
+              <p className="text-xs text-zinc-500 mt-2">Обновление каждые 2 секунды...</p>
+            </div>
+          )}
+
+          {/* Errors */}
+          {currentJob.errors && currentJob.errors.length > 0 && (
+            <div className="mt-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+              <div className="text-xs font-medium text-red-400 mb-2">Ошибки:</div>
+              <ul className="space-y-1">
+                {currentJob.errors.map((err, idx) => (
+                  <li key={idx} className="text-xs text-red-300">{err}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </motion.div>
       )}
 
       {/* Last sync info (when no current job) */}
       {!currentJob && syncHistory.length > 0 && syncHistory[0].status === 'completed' && (
         <motion.div {...fadeIn}>
-          <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-              <div>
-                <div className="text-sm font-medium text-green-400">Последняя синхронизация успешна</div>
-                <div className="text-xs text-green-500/70 mt-0.5">
-                  {formatDate(syncHistory[0].completed_at)} — {syncHistory[0].vacancies_synced} вакансий, {syncHistory[0].applications_synced} откликов
-                </div>
-              </div>
-            </div>
+          <div className="flex items-center gap-3 text-sm">
+            <CheckCircle className="h-4 w-4 text-green-500" />
+            <span className="text-zinc-400">
+              Последняя синхронизация: {formatDate(syncHistory[0].completed_at)} —
+              {' '}{syncHistory[0].vacancies_synced} вакансий, {syncHistory[0].applications_synced} откликов
+            </span>
           </div>
         </motion.div>
       )}
@@ -388,34 +356,42 @@ const Sync: React.FC = () => {
                   История синхронизаций
                 </div>
               </div>
+
+              {/* Table header */}
+              <div className="grid grid-cols-4 gap-4 px-5 py-3 border-b border-zinc-800 bg-background">
+                <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Дата</div>
+                <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Вакансий</div>
+                <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Откликов</div>
+                <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 text-right">Статус</div>
+              </div>
+
+              {/* Table rows */}
               <div className="divide-y divide-zinc-800/50">
                 {syncHistory.map((job) => (
                   <div
                     key={job.id}
-                    className="px-5 py-4 flex items-center justify-between hover:bg-zinc-900/50 transition-colors"
+                    className="grid grid-cols-4 gap-4 px-5 py-3 hover:bg-zinc-900/50 transition-colors items-center"
                   >
-                    <div className="flex items-center gap-3">
-                      {job.status === 'completed' ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                      ) : job.status === 'failed' ? (
-                        <XCircle className="h-4 w-4 text-red-500" />
-                      ) : ['processing', 'running'].includes(job.status) ? (
-                        <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />
-                      ) : (
-                        <AlertCircle className="h-4 w-4 text-zinc-500" />
-                      )}
-                      <div>
-                        <div className="text-[13px] font-medium text-zinc-300">
-                          {formatDate(job.created_at)}
-                        </div>
-                        <div className="text-xs text-zinc-500">
-                          {job.vacancies_synced} вакансий • {job.applications_synced} откликов
-                        </div>
-                      </div>
+                    <div className="text-[13px] text-zinc-300 tabular-nums">
+                      {formatDate(job.created_at)}
                     </div>
-                    <span className={`text-[11px] font-medium px-2 py-1 rounded ${getStatusBg(job.status)} ${getStatusColor(job.status)}`}>
-                      {getStatusText(job.status)}
-                    </span>
+                    <div className="text-[13px] text-zinc-300 tabular-nums">
+                      {job.vacancies_synced}
+                    </div>
+                    <div className="text-[13px] text-zinc-300 tabular-nums">
+                      {job.applications_synced}
+                    </div>
+                    <div className="text-right">
+                      {job.status === 'completed' ? (
+                        <span className="text-[11px] text-green-500">{getStatusText(job.status)}</span>
+                      ) : job.status === 'failed' ? (
+                        <span className="text-[11px] text-red-500">{getStatusText(job.status)}</span>
+                      ) : ['processing', 'running'].includes(job.status) ? (
+                        <span className="text-[11px] text-zinc-400">{getStatusText(job.status)}</span>
+                      ) : (
+                        <span className="text-[11px] text-zinc-500">{getStatusText(job.status)}</span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
