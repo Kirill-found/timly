@@ -1,10 +1,12 @@
 /**
- * Analysis - AI Resume Analysis Command Center
- * Design: Mission Control Terminal - data-dense, professional, with depth
+ * Analysis - Анализ резюме
+ * Design: Dark Industrial - единый стиль с Dashboard
  */
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, ExternalLink, Phone, Square, ChevronRight } from 'lucide-react';
+import { Download, ExternalLink, Phone, Square, Play, ChevronDown, ChevronUp } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiClient } from '@/services/api';
 import { Vacancy, AnalysisResult, AnalysisFilter } from '@/types';
@@ -193,11 +195,21 @@ const Analysis: React.FC = () => {
 
   const getRecommendationStyle = (rec?: string) => {
     switch (rec) {
-      case 'hire': return { bg: '#059669', text: '#34d399', label: 'Нанять' };
-      case 'interview': return { bg: '#2563eb', text: '#60a5fa', label: 'Интервью' };
-      case 'maybe': return { bg: '#d97706', text: '#fbbf24', label: 'Возможно' };
-      case 'reject': return { bg: '#dc2626', text: '#f87171', label: 'Отказ' };
-      default: return { bg: '#52525b', text: '#a1a1aa', label: '—' };
+      case 'hire': return 'status-hire';
+      case 'interview': return 'status-interview';
+      case 'maybe': return 'status-maybe';
+      case 'reject': return 'status-reject';
+      default: return 'bg-zinc-800 text-zinc-400';
+    }
+  };
+
+  const getRecommendationText = (rec?: string) => {
+    switch (rec) {
+      case 'hire': return 'Нанять';
+      case 'interview': return 'Собеседование';
+      case 'maybe': return 'Возможно';
+      case 'reject': return 'Отклонить';
+      default: return '—';
     }
   };
 
@@ -219,386 +231,351 @@ const Analysis: React.FC = () => {
     ? ((analysisProgress.analyzed / (elapsed / 1000)) * 60).toFixed(1)
     : '0';
 
-  const limitsUsagePercent = limits ? Math.round((limits.analyses_used / limits.analyses_limit) * 100) : 0;
+  const getTimeRemaining = () => {
+    if (analysisProgress.analyzed === 0) return 'Расчёт...';
+    const avg = elapsed / analysisProgress.analyzed;
+    const remaining = (analysisProgress.total - analysisProgress.analyzed) * avg;
+    const min = Math.floor(remaining / 60000);
+    const sec = Math.floor((remaining % 60000) / 1000);
+    return min > 0 ? `~${min} мин` : `~${sec} сек`;
+  };
+
+  const limitsUsed = limits ? limits.analyses_used : 0;
+  const limitsTotal = limits ? limits.analyses_limit : 0;
+  const limitsRemaining = limits ? limits.analyses_remaining : 0;
+
+  const fadeIn = {
+    initial: { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.3 }
+  };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 p-6">
-      {/* Scan line effect */}
-      <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.02]"
-        style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)'
-        }}
-      />
-
-      <div className="max-w-[1400px] mx-auto space-y-6">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-end justify-between"
-        >
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-500">
-                System Online
-              </span>
-            </div>
-            <h1 className="text-3xl font-light tracking-tight">
-              Анализ <span className="text-zinc-500">резюме</span>
-            </h1>
-          </div>
-          {selectedVacancy !== 'all' && applicationsStats?.analyzed_applications > 0 && (
-            <button
-              onClick={handleDownloadExcel}
-              disabled={isDownloading}
-              className="flex items-center gap-2 px-4 py-2 text-xs font-mono uppercase tracking-wider text-zinc-400 border border-zinc-800 hover:border-zinc-600 hover:text-zinc-200 transition-all"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Export
-            </button>
-          )}
-        </motion.div>
-
-        {/* Error */}
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="px-4 py-3 border-l-2 border-red-500 bg-red-500/5 text-red-400 text-sm font-mono"
-            >
-              {error}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Limits Gauge */}
-        {limits && !limits.is_unlimited && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="relative p-5 border border-zinc-800/80 bg-zinc-900/30"
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <motion.div {...fadeIn} className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-zinc-100">Анализ резюме</h1>
+          <p className="text-sm text-zinc-500 mt-1">AI-оценка кандидатов</p>
+        </div>
+        {selectedVacancy !== 'all' && applicationsStats?.analyzed_applications > 0 && (
+          <Button
+            onClick={handleDownloadExcel}
+            disabled={isDownloading}
+            variant="outline"
+            size="sm"
+            className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-4">
-                <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-zinc-600">
-                  Quota
+            <Download className="h-4 w-4 mr-2" />
+            Excel
+          </Button>
+        )}
+      </motion.div>
+
+      {/* Error */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm"
+          >
+            {error}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Limits - компактный блок */}
+      {limits && !limits.is_unlimited && (
+        <motion.div {...fadeIn}>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div>
+                    <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                      Лимит анализов
+                    </div>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-2xl font-semibold tabular-nums">{limitsRemaining}</span>
+                      <span className="text-sm text-zinc-500">из {limitsTotal}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-extralight tabular-nums tracking-tighter">
-                    {limits.analyses_remaining}
-                  </span>
-                  <span className="text-sm text-zinc-600">/ {limits.analyses_limit}</span>
+                <div className="flex-1 max-w-xs ml-8">
+                  <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        limitsRemaining < 10 ? 'bg-red-500' :
+                        limitsRemaining < limitsTotal * 0.2 ? 'bg-amber-500' :
+                        'bg-zinc-600'
+                      }`}
+                      style={{ width: `${(limitsUsed / limitsTotal) * 100}%` }}
+                    />
+                  </div>
+                  {limits.reset_date && (
+                    <div className="text-[11px] text-zinc-600 mt-1.5">
+                      Обновление: {new Date(limits.reset_date).toLocaleDateString('ru-RU')}
+                    </div>
+                  )}
                 </div>
               </div>
-              {limits.reset_date && (
-                <div className="text-[10px] font-mono text-zinc-600">
-                  Reset: {new Date(limits.reset_date).toLocaleDateString('ru-RU')}
-                </div>
-              )}
-            </div>
-
-            {/* Gauge bar */}
-            <div className="relative h-1 bg-zinc-800 overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${limitsUsagePercent}%` }}
-                transition={{ duration: 1, ease: 'easeOut' }}
-                className="absolute inset-y-0 left-0"
-                style={{
-                  background: limitsUsagePercent > 80
-                    ? 'linear-gradient(90deg, #ef4444, #f87171)'
-                    : limitsUsagePercent > 50
-                    ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
-                    : 'linear-gradient(90deg, #18181b, #3f3f46)'
-                }}
-              />
-              {/* Tick marks */}
-              {[25, 50, 75].map(tick => (
-                <div
-                  key={tick}
-                  className="absolute top-0 bottom-0 w-px bg-zinc-700"
-                  style={{ left: `${tick}%` }}
-                />
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Filters */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-2 gap-4"
-        >
-          <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-            <SelectTrigger className="h-12 bg-transparent border-zinc-800 hover:border-zinc-700 text-zinc-300 font-mono text-sm">
-              <SelectValue placeholder="Вакансия" />
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-800">
-              <SelectItem value="all" className="font-mono">Все вакансии</SelectItem>
-              {vacancies.map(v => (
-                <SelectItem key={v.id} value={v.id} className="font-mono">{v.title}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={recommendationFilter} onValueChange={setRecommendationFilter}>
-            <SelectTrigger className="h-12 bg-transparent border-zinc-800 hover:border-zinc-700 text-zinc-300 font-mono text-sm">
-              <SelectValue placeholder="Статус" />
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-800">
-              <SelectItem value="all" className="font-mono">Все статусы</SelectItem>
-              <SelectItem value="hire" className="font-mono">Нанять</SelectItem>
-              <SelectItem value="interview" className="font-mono">Интервью</SelectItem>
-              <SelectItem value="maybe" className="font-mono">Возможно</SelectItem>
-              <SelectItem value="reject" className="font-mono">Отказ</SelectItem>
-            </SelectContent>
-          </Select>
+            </CardContent>
+          </Card>
         </motion.div>
+      )}
 
-        {/* Stats + Control Panel */}
-        {selectedVacancy !== 'all' && applicationsStats && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="grid grid-cols-12 gap-4"
-          >
-            {/* Left: Stats Grid */}
-            <div className="col-span-8 grid grid-cols-4 gap-px bg-zinc-800/50">
-              {[
-                { label: 'Всего', value: applicationsStats.total_applications, color: '#a1a1aa' },
-                { label: 'Обработано', value: applicationsStats.analyzed_applications, color: '#34d399' },
-                { label: 'В очереди', value: applicationsStats.unanalyzed_applications, color: '#fbbf24' },
-                { label: 'Ср. балл', value: statsData.avgScore, color: '#60a5fa' },
-              ].map((stat, i) => (
-                <div key={i} className="bg-[#0f0f0f] p-5">
-                  <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-zinc-600 mb-2">
-                    {stat.label}
-                  </div>
-                  <div
-                    className="text-3xl font-extralight tabular-nums"
-                    style={{ color: stat.color }}
-                  >
-                    {stat.value}
-                  </div>
-                </div>
-              ))}
+      {/* Filters */}
+      <motion.div {...fadeIn} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+          <SelectTrigger className="h-11 bg-card border-zinc-800">
+            <SelectValue placeholder="Выберите вакансию" />
+          </SelectTrigger>
+          <SelectContent className="bg-zinc-900 border-zinc-800">
+            <SelectItem value="all">Все вакансии</SelectItem>
+            {vacancies.map(v => (
+              <SelectItem key={v.id} value={v.id}>{v.title}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={recommendationFilter} onValueChange={setRecommendationFilter}>
+          <SelectTrigger className="h-11 bg-card border-zinc-800">
+            <SelectValue placeholder="Фильтр по статусу" />
+          </SelectTrigger>
+          <SelectContent className="bg-zinc-900 border-zinc-800">
+            <SelectItem value="all">Все результаты</SelectItem>
+            <SelectItem value="hire">Нанять</SelectItem>
+            <SelectItem value="interview">Собеседование</SelectItem>
+            <SelectItem value="maybe">Возможно</SelectItem>
+            <SelectItem value="reject">Отклонить</SelectItem>
+          </SelectContent>
+        </Select>
+      </motion.div>
+
+      {/* Stats + Control */}
+      {selectedVacancy !== 'all' && applicationsStats && (
+        <motion.div {...fadeIn} className="space-y-4">
+          {/* Stats Row - как в Dashboard */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-px bg-zinc-800 border border-zinc-800 rounded-lg overflow-hidden">
+            <div className="bg-card p-5">
+              <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
+                Всего откликов
+              </div>
+              <div className="text-3xl font-semibold tracking-tight tabular-nums">
+                {applicationsStats.total_applications}
+              </div>
             </div>
+            <div className="bg-card p-5">
+              <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
+                Обработано
+              </div>
+              <div className="text-3xl font-semibold tracking-tight tabular-nums text-green-500">
+                {applicationsStats.analyzed_applications}
+              </div>
+            </div>
+            <div className="bg-card p-5">
+              <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
+                Ожидает анализа
+              </div>
+              <div className="text-3xl font-semibold tracking-tight tabular-nums text-amber-500">
+                {applicationsStats.unanalyzed_applications}
+              </div>
+            </div>
+            <div className="bg-card p-5">
+              <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
+                Средний балл
+              </div>
+              <div className="text-3xl font-semibold tracking-tight tabular-nums">
+                {statsData.avgScore}
+                <span className="text-lg text-zinc-500 font-normal">/100</span>
+              </div>
+            </div>
+          </div>
 
-            {/* Right: Control */}
-            <div className="col-span-4 bg-[#0f0f0f] border border-zinc-800/50 p-5 flex flex-col">
-              {!isAnalyzing ? (
-                <>
-                  {applicationsStats.unanalyzed_applications > 0 && (
-                    <>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-zinc-600">
-                          Batch Size
-                        </span>
-                        <span className="text-lg font-light tabular-nums">
+          {/* Analysis Control */}
+          {!isAnalyzing ? (
+            <Card>
+              <CardContent className="p-5">
+                {applicationsStats.unanalyzed_applications > 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-1">
+                          Количество для анализа
+                        </div>
+                        <div className="text-lg font-semibold">
                           {Math.ceil(applicationsStats.unanalyzed_applications * analysisLimit / 100)}
-                        </span>
-                      </div>
-
-                      <input
-                        type="range"
-                        min="10"
-                        max="100"
-                        step="10"
-                        value={analysisLimit}
-                        onChange={(e) => setAnalysisLimit(Number(e.target.value))}
-                        className="w-full h-1 mb-4 appearance-none cursor-pointer"
-                        style={{
-                          background: `linear-gradient(to right, #3f3f46 0%, #3f3f46 ${analysisLimit}%, #18181b ${analysisLimit}%, #18181b 100%)`
-                        }}
-                      />
-                    </>
-                  )}
-
-                  <button
-                    onClick={handleAnalyzeNew}
-                    disabled={applicationsStats.unanalyzed_applications === 0}
-                    className={`mt-auto py-4 font-mono text-sm uppercase tracking-[0.1em] transition-all ${
-                      applicationsStats.unanalyzed_applications === 0
-                        ? 'bg-zinc-900 text-zinc-700 cursor-not-allowed'
-                        : 'bg-zinc-100 text-zinc-900 hover:bg-white'
-                    }`}
-                  >
-                    {applicationsStats.unanalyzed_applications > 0 ? 'Запустить' : 'Очередь пуста'}
-                  </button>
-                </>
-              ) : (
-                /* Progress */
-                <div className="flex flex-col h-full">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-zinc-600">
-                      Processing
-                    </span>
-                    <span className="text-[10px] font-mono text-zinc-500">
-                      {speed}/min
-                    </span>
-                  </div>
-
-                  <div className="text-4xl font-extralight tabular-nums text-emerald-400 mb-3">
-                    {progressPercent}%
-                  </div>
-
-                  <div className="flex-1 flex items-center">
-                    <div className="w-full space-y-1">
-                      {/* Progress blocks */}
-                      <div className="flex gap-0.5">
-                        {Array.from({ length: 20 }).map((_, i) => (
-                          <motion.div
-                            key={i}
-                            initial={{ opacity: 0.2 }}
-                            animate={{
-                              opacity: i < Math.floor(progressPercent / 5) ? 1 : 0.2,
-                              backgroundColor: i < Math.floor(progressPercent / 5) ? '#34d399' : '#27272a'
-                            }}
-                            transition={{ duration: 0.3 }}
-                            className="flex-1 h-6"
-                          />
-                        ))}
-                      </div>
-                      <div className="flex justify-between text-[9px] font-mono text-zinc-600">
-                        <span>{analysisProgress.analyzed}</span>
-                        <span>{analysisProgress.total}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleStopAnalysis}
-                    className="mt-3 py-2 border border-zinc-700 text-zinc-400 hover:border-red-500/50 hover:text-red-400 font-mono text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2"
-                  >
-                    <Square className="h-3 w-3 fill-current" />
-                    Stop
-                  </button>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Distribution */}
-        {selectedVacancy !== 'all' && statsData.total > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="flex gap-px"
-          >
-            {[
-              { label: 'Hire', value: statsData.hire, total: statsData.total, color: '#059669' },
-              { label: 'Interview', value: statsData.interview, total: statsData.total, color: '#2563eb' },
-              { label: 'Maybe', value: statsData.maybe, total: statsData.total, color: '#d97706' },
-              { label: 'Reject', value: statsData.reject, total: statsData.total, color: '#dc2626' },
-            ].map((item, i) => {
-              const percent = item.total > 0 ? Math.round((item.value / item.total) * 100) : 0;
-              return (
-                <div
-                  key={i}
-                  className="flex-1 bg-[#0f0f0f] p-4 relative overflow-hidden group"
-                >
-                  <div
-                    className="absolute bottom-0 left-0 right-0 transition-all duration-500 opacity-20 group-hover:opacity-30"
-                    style={{
-                      height: `${percent}%`,
-                      backgroundColor: item.color
-                    }}
-                  />
-                  <div className="relative">
-                    <div className="text-[9px] font-mono uppercase tracking-[0.15em] text-zinc-600 mb-1">
-                      {item.label}
-                    </div>
-                    <div className="text-2xl font-extralight tabular-nums" style={{ color: item.color }}>
-                      {item.value}
-                    </div>
-                    <div className="text-[10px] font-mono text-zinc-600">
-                      {percent}%
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </motion.div>
-        )}
-
-        {/* No vacancy hint */}
-        {selectedVacancy === 'all' && (
-          <div className="py-20 text-center">
-            <div className="text-zinc-600 font-mono text-sm">
-              Выберите вакансию для анализа
-            </div>
-          </div>
-        )}
-
-        {/* Results */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="border border-zinc-800/50"
-        >
-          <div className="px-5 py-3 border-b border-zinc-800/50 flex items-center justify-between bg-[#0f0f0f]">
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-zinc-500">
-              Results
-            </span>
-            <span className="text-[10px] font-mono text-zinc-600 tabular-nums">
-              {results.length} records
-            </span>
-          </div>
-
-          {isLoading ? (
-            <div className="p-12 text-center">
-              <div className="inline-block w-4 h-4 border border-zinc-600 border-t-zinc-300 rounded-full animate-spin" />
-            </div>
-          ) : results.length === 0 ? (
-            <div className="p-12 text-center text-zinc-600 font-mono text-sm">
-              No data
-            </div>
-          ) : (
-            <div>
-              {results.map((r, idx) => {
-                const style = getRecommendationStyle(r.recommendation);
-                const isExpanded = expandedResults.has(r.id);
-
-                return (
-                  <motion.div
-                    key={r.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.02 }}
-                    className="border-b border-zinc-800/30 last:border-b-0"
-                  >
-                    <div
-                      className="px-5 py-4 flex items-center gap-5 cursor-pointer hover:bg-zinc-900/50 transition-colors group"
-                      onClick={() => toggleExpanded(r.id)}
-                    >
-                      {/* Score */}
-                      <div className="w-16 text-center">
-                        <div className="text-2xl font-extralight tabular-nums">
-                          {r.score || '—'}
+                          <span className="text-zinc-500 font-normal"> из {applicationsStats.unanalyzed_applications}</span>
                         </div>
                       </div>
+                      <div className="text-3xl font-semibold tabular-nums text-zinc-400">
+                        {analysisLimit}%
+                      </div>
+                    </div>
 
-                      {/* Status indicator */}
-                      <div
-                        className="w-1 h-10 rounded-full"
-                        style={{ backgroundColor: style.bg }}
-                      />
+                    <input
+                      type="range"
+                      min="10"
+                      max="100"
+                      step="10"
+                      value={analysisLimit}
+                      onChange={(e) => setAnalysisLimit(Number(e.target.value))}
+                      className="w-full h-2 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-zinc-400"
+                    />
 
-                      {/* Name & Contact */}
+                    <div className="flex gap-2">
+                      {[25, 50, 75, 100].map(p => (
+                        <button
+                          key={p}
+                          onClick={() => setAnalysisLimit(p)}
+                          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            analysisLimit === p
+                              ? 'bg-zinc-700 text-zinc-100'
+                              : 'bg-zinc-800/50 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'
+                          }`}
+                        >
+                          {p}%
+                        </button>
+                      ))}
+                    </div>
+
+                    <Button
+                      onClick={handleAnalyzeNew}
+                      className="w-full h-12 bg-zinc-100 text-zinc-900 hover:bg-white font-medium"
+                    >
+                      <Play className="h-4 w-4 mr-2" />
+                      Запустить анализ
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-zinc-500">
+                    Все резюме обработаны
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            /* Progress Card */
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <div className="text-sm font-medium text-zinc-200">Анализ выполняется</div>
+                    <div className="text-xs text-zinc-500 mt-0.5">
+                      {analysisProgress.analyzed} из {analysisProgress.total} резюме
+                    </div>
+                  </div>
+                  <div className="text-3xl font-semibold tabular-nums">
+                    {progressPercent}%
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="h-3 bg-zinc-800 rounded-full overflow-hidden mb-4">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPercent}%` }}
+                    className="h-full bg-zinc-400 rounded-full"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-zinc-500 mb-4">
+                  <span>Осталось: {getTimeRemaining()}</span>
+                  <span>{speed} рез/мин</span>
+                </div>
+
+                <Button
+                  onClick={handleStopAnalysis}
+                  variant="outline"
+                  className="w-full border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                >
+                  <Square className="h-4 w-4 mr-2 fill-current" />
+                  Остановить
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </motion.div>
+      )}
+
+      {/* Distribution - как в Dashboard */}
+      {selectedVacancy !== 'all' && statsData.total > 0 && (
+        <motion.div {...fadeIn}>
+          <Card>
+            <CardHeader className="pb-0">
+              <CardTitle className="text-[13px] font-medium uppercase tracking-wide">
+                Распределение
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="grid grid-cols-4 gap-4">
+                {[
+                  { label: 'Нанять', value: statsData.hire, color: 'bg-green-500' },
+                  { label: 'Собеседование', value: statsData.interview, color: 'bg-blue-500' },
+                  { label: 'Возможно', value: statsData.maybe, color: 'bg-amber-500' },
+                  { label: 'Отклонить', value: statsData.reject, color: 'bg-red-500' },
+                ].map((item) => (
+                  <div key={item.label} className="text-center">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <div className={`w-2 h-2 rounded-sm ${item.color}`} />
+                      <span className="text-xs text-zinc-500">{item.label}</span>
+                    </div>
+                    <div className="text-2xl font-semibold tabular-nums">{item.value}</div>
+                    <div className="text-[11px] text-zinc-600">
+                      {statsData.total > 0 ? Math.round((item.value / statsData.total) * 100) : 0}%
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* No vacancy hint */}
+      {selectedVacancy === 'all' && (
+        <motion.div {...fadeIn} className="text-center py-12">
+          <p className="text-zinc-500">Выберите вакансию для запуска анализа</p>
+        </motion.div>
+      )}
+
+      {/* Results Table - как в Dashboard */}
+      <motion.div {...fadeIn}>
+        <Card>
+          <CardHeader className="pb-0 flex flex-row items-center justify-between">
+            <CardTitle className="text-[13px] font-medium uppercase tracking-wide">
+              Результаты анализа
+            </CardTitle>
+            <span className="text-xs text-zinc-500 tabular-nums">{results.length}</span>
+          </CardHeader>
+          <CardContent className="pt-4 px-0">
+            {isLoading ? (
+              <div className="p-12 text-center text-zinc-500">Загрузка...</div>
+            ) : results.length === 0 ? (
+              <div className="p-12 text-center">
+                <p className="text-zinc-400 mb-1">Нет результатов</p>
+                <p className="text-xs text-zinc-600">Запустите анализ или измените фильтры</p>
+              </div>
+            ) : (
+              <div>
+                {results.map((r) => (
+                  <div key={r.id} className="border-b border-zinc-800/50 last:border-b-0">
+                    <div
+                      className="px-5 py-4 flex items-center gap-4 cursor-pointer hover:bg-zinc-900/50 transition-colors"
+                      onClick={() => toggleExpanded(r.id)}
+                    >
+                      {/* Avatar */}
+                      <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center text-[11px] font-medium text-zinc-500 flex-shrink-0">
+                        {r.application?.candidate_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
+                      </div>
+
+                      {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3">
-                          <span className="font-medium truncate">
-                            {r.application?.candidate_name || 'Unknown'}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13px] font-medium truncate">
+                            {r.application?.candidate_name || 'Без имени'}
                           </span>
                           {r.application?.resume_url && (
                             <a
@@ -606,90 +583,75 @@ const Analysis: React.FC = () => {
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="text-zinc-600 hover:text-zinc-400 transition-colors"
+                              className="text-zinc-600 hover:text-zinc-400"
                             >
                               <ExternalLink className="h-3.5 w-3.5" />
                             </a>
                           )}
                         </div>
                         {r.application?.candidate_phone && (
-                          <div className="flex items-center gap-1.5 text-xs text-zinc-600 mt-0.5 font-mono">
+                          <div className="flex items-center gap-1.5 text-xs text-zinc-500 mt-0.5">
                             <Phone className="h-3 w-3" />
                             {r.application.candidate_phone}
                           </div>
                         )}
                       </div>
 
-                      {/* Status badge */}
-                      <div
-                        className="px-3 py-1 text-[10px] font-mono uppercase tracking-wider"
-                        style={{
-                          backgroundColor: `${style.bg}15`,
-                          color: style.text
-                        }}
-                      >
-                        {style.label}
+                      {/* Score */}
+                      <div className="text-right mr-2">
+                        <div className="text-lg font-semibold tabular-nums">{r.score || '—'}</div>
+                        <div className="text-[10px] text-zinc-500">баллов</div>
                       </div>
 
-                      {/* Expand icon */}
-                      <ChevronRight
-                        className={`h-4 w-4 text-zinc-600 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                      />
+                      {/* Status */}
+                      <span className={`px-2.5 py-1 rounded text-[11px] font-medium ${getRecommendationStyle(r.recommendation)}`}>
+                        {getRecommendationText(r.recommendation)}
+                      </span>
+
+                      {/* Chevron */}
+                      {expandedResults.has(r.id) ? (
+                        <ChevronUp className="h-4 w-4 text-zinc-500" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-zinc-500" />
+                      )}
                     </div>
 
-                    {/* Expanded content */}
+                    {/* Expanded */}
                     <AnimatePresence>
-                      {isExpanded && (
+                      {expandedResults.has(r.id) && (
                         <motion.div
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: 'auto', opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
                           className="overflow-hidden"
                         >
-                          <div className="px-5 pb-5 ml-[84px] border-l border-zinc-800/50">
+                          <div className="px-5 pb-5 pt-2 ml-[52px] space-y-4">
                             {/* Metrics */}
-                            <div className="grid grid-cols-3 gap-4 mb-4">
-                              <div className="p-3 bg-zinc-900/50">
-                                <div className="text-[9px] font-mono uppercase tracking-wider text-zinc-600 mb-2">
-                                  Skills Match
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <div className="flex-1 h-0.5 bg-zinc-800">
-                                    <div
-                                      className="h-full bg-emerald-500"
-                                      style={{ width: `${r.skills_match || 0}%` }}
-                                    />
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="p-3 rounded-lg bg-zinc-800/50">
+                                <div className="text-[11px] text-zinc-500 mb-1">Навыки</div>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-1.5 bg-zinc-700 rounded-full overflow-hidden">
+                                    <div className="h-full bg-green-500 rounded-full" style={{ width: `${r.skills_match || 0}%` }} />
                                   </div>
-                                  <span className="text-sm font-mono tabular-nums">
-                                    {r.skills_match || 0}%
-                                  </span>
+                                  <span className="text-sm font-medium tabular-nums">{r.skills_match || 0}%</span>
                                 </div>
                               </div>
-                              <div className="p-3 bg-zinc-900/50">
-                                <div className="text-[9px] font-mono uppercase tracking-wider text-zinc-600 mb-2">
-                                  Experience
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <div className="flex-1 h-0.5 bg-zinc-800">
-                                    <div
-                                      className="h-full bg-blue-500"
-                                      style={{ width: `${r.experience_match || 0}%` }}
-                                    />
+                              <div className="p-3 rounded-lg bg-zinc-800/50">
+                                <div className="text-[11px] text-zinc-500 mb-1">Опыт</div>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-1.5 bg-zinc-700 rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${r.experience_match || 0}%` }} />
                                   </div>
-                                  <span className="text-sm font-mono tabular-nums">
-                                    {r.experience_match || 0}%
-                                  </span>
+                                  <span className="text-sm font-medium tabular-nums">{r.experience_match || 0}%</span>
                                 </div>
                               </div>
-                              <div className="p-3 bg-zinc-900/50">
-                                <div className="text-[9px] font-mono uppercase tracking-wider text-zinc-600 mb-2">
-                                  Salary
-                                </div>
-                                <div className="text-sm font-mono">
-                                  {r.salary_match === 'match' ? 'Match' :
-                                   r.salary_match === 'higher' ? 'Above' :
-                                   r.salary_match === 'lower' ? 'Below' : 'N/A'}
+                              <div className="p-3 rounded-lg bg-zinc-800/50">
+                                <div className="text-[11px] text-zinc-500 mb-1">Зарплата</div>
+                                <div className="text-sm font-medium">
+                                  {r.salary_match === 'match' ? 'Совпадает' :
+                                   r.salary_match === 'higher' ? 'Выше' :
+                                   r.salary_match === 'lower' ? 'Ниже' : 'Не указана'}
                                 </div>
                               </div>
                             </div>
@@ -698,15 +660,10 @@ const Analysis: React.FC = () => {
                             <div className="space-y-3">
                               {r.strengths && r.strengths.length > 0 && (
                                 <div>
-                                  <div className="text-[9px] font-mono uppercase tracking-wider text-emerald-500/70 mb-2">
-                                    Strengths
-                                  </div>
-                                  <div className="flex flex-wrap gap-1">
+                                  <div className="text-[11px] text-green-500 mb-2">Сильные стороны</div>
+                                  <div className="flex flex-wrap gap-1.5">
                                     {r.strengths.map((s, i) => (
-                                      <span
-                                        key={i}
-                                        className="px-2 py-0.5 text-[11px] font-mono bg-emerald-500/10 text-emerald-400/80"
-                                      >
+                                      <span key={i} className="px-2 py-0.5 text-xs bg-green-500/10 text-green-400 rounded">
                                         {s}
                                       </span>
                                     ))}
@@ -715,15 +672,10 @@ const Analysis: React.FC = () => {
                               )}
                               {r.weaknesses && r.weaknesses.length > 0 && (
                                 <div>
-                                  <div className="text-[9px] font-mono uppercase tracking-wider text-amber-500/70 mb-2">
-                                    Weaknesses
-                                  </div>
-                                  <div className="flex flex-wrap gap-1">
+                                  <div className="text-[11px] text-amber-500 mb-2">Слабые стороны</div>
+                                  <div className="flex flex-wrap gap-1.5">
                                     {r.weaknesses.map((w, i) => (
-                                      <span
-                                        key={i}
-                                        className="px-2 py-0.5 text-[11px] font-mono bg-amber-500/10 text-amber-400/80"
-                                      >
+                                      <span key={i} className="px-2 py-0.5 text-xs bg-amber-500/10 text-amber-400 rounded">
                                         {w}
                                       </span>
                                     ))}
@@ -732,15 +684,10 @@ const Analysis: React.FC = () => {
                               )}
                               {r.red_flags && r.red_flags.length > 0 && (
                                 <div>
-                                  <div className="text-[9px] font-mono uppercase tracking-wider text-red-500/70 mb-2">
-                                    Red Flags
-                                  </div>
-                                  <div className="flex flex-wrap gap-1">
+                                  <div className="text-[11px] text-red-500 mb-2">Риски</div>
+                                  <div className="flex flex-wrap gap-1.5">
                                     {r.red_flags.map((f, i) => (
-                                      <span
-                                        key={i}
-                                        className="px-2 py-0.5 text-[11px] font-mono bg-red-500/10 text-red-400/80"
-                                      >
+                                      <span key={i} className="px-2 py-0.5 text-xs bg-red-500/10 text-red-400 rounded">
                                         {f}
                                       </span>
                                     ))}
@@ -751,11 +698,9 @@ const Analysis: React.FC = () => {
 
                             {/* Reasoning */}
                             {r.reasoning && (
-                              <div className="mt-4 p-4 bg-zinc-900/30 border-l-2 border-zinc-700">
-                                <div className="text-[9px] font-mono uppercase tracking-wider text-zinc-600 mb-2">
-                                  Analysis
-                                </div>
-                                <p className="text-sm text-zinc-400 leading-relaxed">
+                              <div className="p-4 rounded-lg bg-zinc-800/30 border border-zinc-700/50">
+                                <div className="text-[11px] text-zinc-500 mb-2">Обоснование</div>
+                                <p className="text-sm text-zinc-300 leading-relaxed">
                                   {r.reasoning}
                                 </p>
                               </div>
@@ -764,37 +709,19 @@ const Analysis: React.FC = () => {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
-        </motion.div>
-      </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
       <LimitExceededModal
         isOpen={limitModalOpen}
         onClose={() => setLimitModalOpen(false)}
         subscriptionInfo={limitExceededInfo}
       />
-
-      {/* Custom range slider styles */}
-      <style>{`
-        input[type="range"]::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          width: 12px;
-          height: 12px;
-          background: #fafafa;
-          cursor: pointer;
-        }
-        input[type="range"]::-moz-range-thumb {
-          width: 12px;
-          height: 12px;
-          background: #fafafa;
-          cursor: pointer;
-          border: none;
-        }
-      `}</style>
     </div>
   );
 };
