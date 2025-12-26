@@ -1,11 +1,9 @@
 /**
- * Компонент для отображения оставшихся анализов согласно тарифному плану
+ * AnalysisLimitsDisplay - Отображение лимитов анализа
+ * Design: Dark Industrial - минималистичный
  */
 import React, { useEffect, useState } from 'react';
 import { apiClient } from '@/services/api';
-import { Card, CardContent } from '@/components/ui/card';
-import { Brain, TrendingUp, AlertTriangle } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
 import { useApp } from '@/store/AppContext';
 
 interface LimitsCheck {
@@ -23,12 +21,10 @@ export const AnalysisLimitsDisplay: React.FC = () => {
 
   useEffect(() => {
     loadLimits();
-    // Обновляем каждые 10 секунд (быстрее для отслеживания анализа)
     const interval = setInterval(loadLimits, 10000);
     return () => clearInterval(interval);
   }, []);
 
-  // Обновляем лимиты при изменении прогресса анализа
   useEffect(() => {
     if (app.activeAnalysis) {
       loadLimits();
@@ -50,116 +46,67 @@ export const AnalysisLimitsDisplay: React.FC = () => {
     return null;
   }
 
+  // Безлимитный тариф
   if (limits.is_unlimited) {
     return (
-      <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Brain className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <div className="font-semibold text-purple-900">Безлимитный анализ</div>
-                <div className="text-sm text-purple-700">
-                  Использовано: {limits.analyses_used} анализов
-                </div>
-              </div>
-            </div>
-            <TrendingUp className="h-6 w-6 text-purple-600" />
+      <div className="flex items-center justify-between p-4 bg-card border border-zinc-800 rounded-lg">
+        <div>
+          <div className="text-sm font-medium text-zinc-200">Безлимитный тариф</div>
+          <div className="text-xs text-zinc-500 mt-0.5">
+            Использовано: {limits.analyses_used}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="text-xs text-green-500">∞</div>
+      </div>
     );
   }
 
-  const usagePercent = (limits.analyses_used / limits.analyses_limit) * 100;
-  const isLowRemaining = limits.analyses_remaining < limits.analyses_limit * 0.2;
-  const isAlmostOut = limits.analyses_remaining < 10;
+  const usagePercent = Math.round((limits.analyses_used / limits.analyses_limit) * 100);
+  const isLow = limits.analyses_remaining < limits.analyses_limit * 0.2;
+  const isCritical = limits.analyses_remaining < 10;
 
   return (
-    <Card className={`${
-      isAlmostOut
-        ? 'border-red-200 bg-gradient-to-r from-red-50 to-orange-50'
-        : isLowRemaining
-        ? 'border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50'
-        : 'border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50'
+    <div className={`p-4 rounded-lg border ${
+      isCritical
+        ? 'bg-red-500/5 border-red-500/20'
+        : isLow
+        ? 'bg-amber-500/5 border-amber-500/20'
+        : 'bg-card border-zinc-800'
     }`}>
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${
-                isAlmostOut
-                  ? 'bg-red-100'
-                  : isLowRemaining
-                  ? 'bg-yellow-100'
-                  : 'bg-blue-100'
-              }`}>
-                {isAlmostOut || isLowRemaining ? (
-                  <AlertTriangle className={`h-5 w-5 ${
-                    isAlmostOut ? 'text-red-600' : 'text-yellow-600'
-                  }`} />
-                ) : (
-                  <Brain className="h-5 w-5 text-blue-600" />
-                )}
-              </div>
-              <div>
-                <div className={`font-semibold ${
-                  isAlmostOut
-                    ? 'text-red-900'
-                    : isLowRemaining
-                    ? 'text-yellow-900'
-                    : 'text-blue-900'
-                }`}>
-                  Анализов осталось: {limits.analyses_remaining}
-                </div>
-                <div className={`text-sm ${
-                  isAlmostOut
-                    ? 'text-red-700'
-                    : isLowRemaining
-                    ? 'text-yellow-700'
-                    : 'text-blue-700'
-                }`}>
-                  Использовано: {limits.analyses_used} из {limits.analyses_limit}
-                </div>
-              </div>
-            </div>
-            <div className={`text-2xl font-bold ${
-              isAlmostOut
-                ? 'text-red-600'
-                : isLowRemaining
-                ? 'text-yellow-600'
-                : 'text-blue-600'
-            }`}>
-              {Math.round(usagePercent)}%
-            </div>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <div className={`text-sm font-medium ${
+            isCritical ? 'text-red-400' : isLow ? 'text-amber-400' : 'text-zinc-200'
+          }`}>
+            Осталось: {limits.analyses_remaining}
           </div>
-
-          <Progress
-            value={usagePercent}
-            className={`h-2 ${
-              isAlmostOut
-                ? '[&>div]:bg-red-500'
-                : isLowRemaining
-                ? '[&>div]:bg-yellow-500'
-                : '[&>div]:bg-blue-500'
-            }`}
-          />
-
-          {limits.reset_date && (
-            <div className="text-xs text-gray-600 text-center">
-              Лимит обновится: {new Date(limits.reset_date).toLocaleDateString('ru-RU')}
-            </div>
-          )}
-
-          {isAlmostOut && (
-            <div className="text-xs text-red-600 font-medium text-center">
-              ⚠️ Анализы заканчиваются! Рассмотрите обновление тарифного плана
-            </div>
-          )}
+          <div className="text-xs text-zinc-500 mt-0.5">
+            {limits.analyses_used} / {limits.analyses_limit}
+          </div>
         </div>
-      </CardContent>
-    </Card>
+        <div className={`text-lg font-semibold tabular-nums ${
+          isCritical ? 'text-red-400' : isLow ? 'text-amber-400' : 'text-zinc-400'
+        }`}>
+          {usagePercent}%
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${
+            isCritical ? 'bg-red-500' : isLow ? 'bg-amber-500' : 'bg-zinc-500'
+          }`}
+          style={{ width: `${usagePercent}%` }}
+        />
+      </div>
+
+      {/* Reset date */}
+      {limits.reset_date && (
+        <div className="text-[11px] text-zinc-600 mt-2">
+          Обновление: {new Date(limits.reset_date).toLocaleDateString('ru-RU')}
+        </div>
+      )}
+    </div>
   );
 };

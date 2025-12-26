@@ -325,9 +325,8 @@ const Analysis: React.FC = () => {
 
       {/* No vacancy selected */}
       {selectedVacancy === 'all' && (
-        <motion.div {...fadeIn} className="flex items-center gap-3 text-sm text-zinc-500">
-          <Brain className="h-4 w-4" />
-          <span>Выберите вакансию для запуска анализа</span>
+        <motion.div {...fadeIn} className="text-sm text-zinc-500">
+          Выберите вакансию для запуска анализа
         </motion.div>
       )}
 
