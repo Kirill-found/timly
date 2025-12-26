@@ -1,15 +1,23 @@
 /**
- * Страница синхронизации с HH.ru
- * Запуск и отслеживание синхронизации вакансий и откликов
+ * Sync - Синхронизация с HH.ru
+ * Design: Dark Industrial / Control Panel
  */
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { RefreshCw, CheckCircle, XCircle, AlertCircle, Briefcase, Users, Sparkles } from 'lucide-react';
+import {
+  RefreshCw,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Briefcase,
+  Users,
+  Settings,
+  ArrowRight
+} from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/services/api';
 import { useAuth } from '@/store/AuthContext';
 import { SyncJob } from '@/types';
@@ -17,16 +25,13 @@ import { SyncJob } from '@/types';
 const Sync: React.FC = () => {
   const { user } = useAuth();
   const [currentJob, setCurrentJob] = useState<SyncJob | null>(() => {
-    // Восстанавливаем состояние из sessionStorage при монтировании
     try {
       const saved = sessionStorage.getItem('currentSyncJob');
       if (saved) {
-        const job = JSON.parse(saved);
-        console.log('[SYNC] Restored job from sessionStorage:', job.id, job.status);
-        return job;
+        return JSON.parse(saved);
       }
     } catch (err) {
-      console.error('[SYNC] Error restoring job from sessionStorage:', err);
+      console.error('[SYNC] Error restoring job:', err);
     }
     return null;
   });
@@ -34,120 +39,77 @@ const Sync: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [syncHistory, setSyncHistory] = useState<SyncJob[]>([]);
 
-  // Сохраняем currentJob в sessionStorage при каждом обновлении
+  // Сохраняем currentJob в sessionStorage
   useEffect(() => {
     if (currentJob) {
-      console.log('[SYNC] Saving job to sessionStorage:', currentJob.id, currentJob.status);
       sessionStorage.setItem('currentSyncJob', JSON.stringify(currentJob));
-
-      // Если задача завершена или провалена, очищаем через 1 минуту
       if (currentJob.status === 'completed' || currentJob.status === 'failed') {
         setTimeout(() => {
-          console.log('[SYNC] Clearing completed job from sessionStorage');
           sessionStorage.removeItem('currentSyncJob');
-        }, 60000); // 1 минута
+        }, 60000);
       }
     } else {
-      console.log('[SYNC] Removing job from sessionStorage');
       sessionStorage.removeItem('currentSyncJob');
     }
   }, [currentJob]);
 
   // Polling для отслеживания прогресса
   useEffect(() => {
-    console.log('[SYNC POLLING] useEffect triggered, currentJob:', currentJob?.status);
-
     if (!currentJob || currentJob.status === 'completed' || currentJob.status === 'failed') {
-      console.log('[SYNC POLLING] Not starting polling - job is null or finished');
       return;
     }
 
-    console.log('[SYNC POLLING] Starting polling for job:', currentJob.id);
-
     const pollStatus = async () => {
-      console.log('[SYNC POLLING] Polling sync status...');
       try {
         const updatedJob = await apiClient.getSyncStatus(currentJob.id);
-        console.log('[SYNC POLLING] Got updated job:', updatedJob.status, 'vacancies:', updatedJob.vacancies_synced, 'apps:', updatedJob.applications_synced);
         setCurrentJob(updatedJob);
-
-        // Если завершилась, останавливаем polling и обновляем историю
         if (updatedJob.status === 'completed' || updatedJob.status === 'failed') {
-          console.log('[SYNC POLLING] Job finished, loading history');
           await loadSyncHistory();
         }
       } catch (err) {
-        console.error('[SYNC POLLING] Error polling sync status:', err);
+        console.error('[SYNC] Polling error:', err);
       }
     };
 
-    const interval = setInterval(pollStatus, 2000); // Проверяем каждые 2 секунды
-    console.log('[SYNC POLLING] Interval started');
+    const interval = setInterval(pollStatus, 2000);
 
-    // Добавляем обработчик для Page Visibility API
-    // Когда пользователь возвращается на вкладку - сразу обновляем
     const handleVisibilityChange = async () => {
-      console.log('[SYNC POLLING] Visibility changed, hidden:', document.hidden);
       if (!document.hidden) {
-        console.log('[SYNC POLLING] Tab became visible, polling immediately...');
-        await pollStatus(); // Немедленно обновляем при возврате на вкладку
+        await pollStatus();
       }
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      console.log('[SYNC POLLING] Cleaning up interval and listener');
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [currentJob]);
 
-  // Загрузка истории синхронизаций при монтировании и при возврате на страницу
+  // Загрузка истории
   useEffect(() => {
-    console.log('[SYNC HISTORY] useEffect triggered, currentJob:', currentJob?.status);
     loadSyncHistory();
+    const interval = setInterval(loadSyncHistory, 10000);
 
-    // Обновляем каждые 10 секунд, чтобы всегда показывать актуальную информацию
-    const interval = setInterval(() => {
-      console.log('[SYNC HISTORY] Interval tick - loading history');
-      loadSyncHistory();
-    }, 10000);
-
-    // Добавляем обработчик для Page Visibility API
-    // Когда пользователь возвращается на вкладку - сразу обновляем историю И проверяем активную синхронизацию
     const handleVisibilityChange = async () => {
-      console.log('[SYNC HISTORY] Visibility changed, hidden:', document.hidden, 'currentJob:', currentJob?.status);
       if (!document.hidden) {
-        console.log('[SYNC HISTORY] Tab became visible, updating sync history...');
-        await loadSyncHistory(); // Немедленно обновляем при возврате на вкладку
-
-        // Если есть текущая задача, проверяем её статус
-        if (currentJob && (currentJob.status === 'processing' || currentJob.status === 'pending' || currentJob.status === 'running')) {
-          console.log('[SYNC HISTORY] Checking current job status...', currentJob.id);
+        await loadSyncHistory();
+        if (currentJob && ['processing', 'pending', 'running'].includes(currentJob.status)) {
           try {
             const updatedJob = await apiClient.getSyncStatus(currentJob.id);
-            console.log('[SYNC HISTORY] Updated job status:', updatedJob.status);
             setCurrentJob(updatedJob);
-
-            // Если завершилась пока мы были на другой вкладке, обновляем историю
             if (updatedJob.status === 'completed' || updatedJob.status === 'failed') {
-              console.log('[SYNC HISTORY] Job completed, reloading history');
               await loadSyncHistory();
             }
           } catch (err) {
-            console.error('[SYNC HISTORY] Error checking job status on tab visible:', err);
+            console.error('[SYNC] Status check error:', err);
           }
-        } else {
-          console.log('[SYNC HISTORY] No active job to check');
         }
       }
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      console.log('[SYNC HISTORY] Cleaning up interval and listener');
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
@@ -156,11 +118,7 @@ const Sync: React.FC = () => {
   const loadSyncHistory = async () => {
     try {
       const jobs = await apiClient.getSyncHistory(10);
-      if (jobs && Array.isArray(jobs)) {
-        setSyncHistory(jobs);
-      } else {
-        setSyncHistory([]);
-      }
+      setSyncHistory(Array.isArray(jobs) ? jobs : []);
     } catch (err) {
       console.error('Error loading sync history:', err);
       setSyncHistory([]);
@@ -170,68 +128,21 @@ const Sync: React.FC = () => {
   const startSync = async () => {
     setIsLoading(true);
     setError(null);
-
     try {
       const job = await apiClient.startSync({
         sync_vacancies: true,
         sync_applications: true,
         force_full_sync: false
       });
-
-      if (job) {
-        setCurrentJob(job);
-      }
+      if (job) setCurrentJob(job);
     } catch (err: any) {
-      console.error('Sync error:', err);
       setError(err.response?.data?.error?.message || 'Ошибка при запуске синхронизации');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'failed':
-        return <XCircle className="h-5 w-5 text-red-500" />;
-      case 'processing':
-      case 'running':
-        return <RefreshCw className="h-5 w-5 text-blue-500 animate-spin" />;
-      default:
-        return <AlertCircle className="h-5 w-5 text-gray-500" />;
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'Завершено';
-      case 'failed':
-        return 'Ошибка';
-      case 'processing':
-      case 'running':
-        return 'Выполняется';
-      case 'pending':
-        return 'В очереди';
-      default:
-        return status;
-    }
-  };
-
-  const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
-    switch (status) {
-      case 'completed':
-        return 'default';
-      case 'failed':
-        return 'destructive';
-      case 'processing':
-      case 'running':
-        return 'secondary';
-      default:
-        return 'outline';
-    }
-  };
+  const isJobRunning = currentJob?.status === 'processing' || currentJob?.status === 'running' || currentJob?.status === 'pending';
 
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return '—';
@@ -239,243 +150,288 @@ const Sync: React.FC = () => {
     return date.toLocaleString('ru-RU', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
   };
 
+  const formatTime = (dateString: string | null | undefined) => {
+    if (!dateString) return '—';
+    const date = new Date(dateString);
+    return date.toLocaleString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'text-green-500';
+      case 'failed': return 'text-red-500';
+      case 'processing':
+      case 'running': return 'text-blue-500';
+      default: return 'text-zinc-500';
+    }
+  };
+
+  const getStatusBg = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-500/10';
+      case 'failed': return 'bg-red-500/10';
+      case 'processing':
+      case 'running': return 'bg-blue-500/10';
+      default: return 'bg-zinc-800';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'completed': return 'Завершено';
+      case 'failed': return 'Ошибка';
+      case 'processing':
+      case 'running': return 'Выполняется';
+      case 'pending': return 'В очереди';
+      default: return status;
+    }
+  };
+
+  // Fade in animation
+  const fadeIn = {
+    initial: { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.3 }
+  };
+
+  // Нет токена HH.ru
   if (!user?.has_hh_token) {
     return (
-      <div className="p-6">
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="mt-2">
-            <h3 className="font-semibold mb-2">HH.ru токен не настроен</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Для синхронизации вакансий необходимо подключить ваш аккаунт HH.ru.
-            </p>
-            <Button asChild>
-              <a href="/settings">Настроить интеграцию</a>
-            </Button>
-          </AlertDescription>
-        </Alert>
+      <div className="p-6 flex items-center justify-center min-h-[60vh]">
+        <motion.div {...fadeIn} className="max-w-md w-full">
+          <Card className="border-dashed border-zinc-700">
+            <CardContent className="pt-8 pb-8 text-center">
+              <div className="w-14 h-14 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center mx-auto mb-6">
+                <Settings className="h-6 w-6 text-zinc-400" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">HH.ru не подключён</h2>
+              <p className="text-zinc-500 mb-6 text-sm">
+                Для синхронизации вакансий подключите аккаунт HH.ru
+              </p>
+              <Button asChild>
+                <Link to="/settings">
+                  Подключить HH.ru
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
-      {/* Заголовок с градиентом */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-500 p-8 text-white"
-      >
-        <div className="absolute inset-0 bg-grid-white/10" />
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-2">
-            <RefreshCw className="h-8 w-8" />
-            <h1 className="text-3xl font-bold">Синхронизация с HH.ru</h1>
-          </div>
-          <p className="text-white/90 text-lg">
-            Получение вакансий и откликов из вашего аккаунта работодателя
-          </p>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <motion.div {...fadeIn} className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-zinc-100">Синхронизация</h1>
+          <p className="text-sm text-zinc-500 mt-1">Получение данных из HH.ru</p>
         </div>
-        {/* Декоративные элементы */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
+        <Button
+          onClick={startSync}
+          disabled={isLoading || isJobRunning}
+          className="h-9 px-4 bg-zinc-100 text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+        >
+          {isLoading ? (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              Запуск...
+            </>
+          ) : isJobRunning ? (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              Выполняется...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Синхронизировать
+            </>
+          )}
+        </Button>
       </motion.div>
 
-      {/* Ошибки */}
+      {/* Error */}
       {error && (
-        <Alert variant="destructive">
-          <XCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Текущая синхронизация */}
-      {currentJob && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-        >
-          <Card className="border-2 hover:shadow-xl transition-all duration-300">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  {getStatusIcon(currentJob.status)}
-                  Текущая синхронизация
-                </CardTitle>
-                <CardDescription>
-                  Статус: <Badge variant={getStatusVariant(currentJob.status)}>{getStatusText(currentJob.status)}</Badge>
-                </CardDescription>
-              </div>
-              {(currentJob.status === 'processing' || currentJob.status === 'running') && (
-                <div className="text-sm text-muted-foreground">
-                  Обновление каждые 2 секунды...
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Прогресс */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-                <Briefcase className="h-8 w-8 text-blue-500" />
-                <div>
-                  <div className="text-2xl font-bold">{currentJob.vacancies_synced}</div>
-                  <div className="text-sm text-muted-foreground">Вакансий</div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-                <Users className="h-8 w-8 text-green-500" />
-                <div>
-                  <div className="text-2xl font-bold">{currentJob.applications_synced}</div>
-                  <div className="text-sm text-muted-foreground">Откликов</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Временные метки */}
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <div className="text-muted-foreground">Создано</div>
-                <div className="font-medium">{formatDate(currentJob.created_at)}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Начало</div>
-                <div className="font-medium">{formatDate(currentJob.started_at)}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Завершено</div>
-                <div className="font-medium">{formatDate(currentJob.completed_at)}</div>
-              </div>
-            </div>
-
-            {/* Ошибки */}
-            {currentJob.errors && currentJob.errors.length > 0 && (
-              <Alert variant="destructive">
-                <XCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <div className="font-semibold mb-2">Обнаружены ошибки:</div>
-                  <ul className="list-disc list-inside space-y-1 text-sm">
-                    {currentJob.errors.map((err, idx) => (
-                      <li key={idx}>{err}</li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Успешное завершение */}
-            {currentJob.status === 'completed' && (
-              <Alert>
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <AlertDescription>
-                  Синхронизация успешно завершена! Синхронизировано {currentJob.vacancies_synced} вакансий
-                  и {currentJob.applications_synced} откликов.
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
+        <motion.div {...fadeIn} className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+          <div className="flex items-center gap-3">
+            <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+            <p className="text-sm text-red-400">{error}</p>
+          </div>
         </motion.div>
       )}
 
-      {/* Кнопка запуска */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-      >
-        <Card className="border-2 hover:shadow-xl transition-all duration-300">
-        <CardHeader>
-          <CardTitle>Запустить синхронизацию</CardTitle>
-          <CardDescription>
-            Получить актуальные данные о вакансиях и откликах из HH.ru
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Информация о последней синхронизации */}
-          {syncHistory.length > 0 && syncHistory[0].status === 'completed' && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-green-700 font-medium mb-2">
-                <CheckCircle className="h-4 w-4" />
-                Последняя синхронизация успешно завершена
-              </div>
-              <div className="text-sm text-green-600">
-                {formatDate(syncHistory[0].completed_at)} — синхронизировано{' '}
-                {syncHistory[0].vacancies_synced} вакансий и {syncHistory[0].applications_synced} откликов
-              </div>
-            </div>
-          )}
-
-          <Button
-            onClick={startSync}
-            disabled={isLoading || (currentJob?.status === 'processing' || currentJob?.status === 'running' || currentJob?.status === 'pending')}
-            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Запуск...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Синхронизировать с HH.ru
-              </>
-            )}
-          </Button>
-
-          {(currentJob?.status === 'processing' || currentJob?.status === 'running') && (
-            <p className="text-sm text-muted-foreground mt-2">
-              Синхронизация уже выполняется. Дождитесь её завершения.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-      </motion.div>
-
-      {/* История синхронизаций */}
-      {syncHistory.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          <Card className="border-2 hover:shadow-xl transition-all duration-300">
-          <CardHeader>
-            <CardTitle>История синхронизаций</CardTitle>
-            <CardDescription>Последние 10 задач</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {syncHistory.map((job) => (
-                <div key={job.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+      {/* Current Job */}
+      {currentJob && (
+        <motion.div {...fadeIn}>
+          <Card>
+            <CardContent className="p-0">
+              {/* Status header */}
+              <div className="p-5 border-b border-zinc-800">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {getStatusIcon(job.status)}
+                    {isJobRunning ? (
+                      <RefreshCw className="h-5 w-5 text-blue-500 animate-spin" />
+                    ) : currentJob.status === 'completed' ? (
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-500" />
+                    )}
                     <div>
-                      <div className="font-medium">{formatDate(job.created_at)}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {job.vacancies_synced} вакансий, {job.applications_synced} откликов
+                      <div className="text-sm font-medium text-zinc-200">
+                        {isJobRunning ? 'Синхронизация выполняется' :
+                         currentJob.status === 'completed' ? 'Синхронизация завершена' :
+                         'Ошибка синхронизации'}
+                      </div>
+                      <div className="text-xs text-zinc-500 mt-0.5">
+                        Начало: {formatTime(currentJob.started_at)}
+                        {currentJob.completed_at && ` • Завершение: ${formatTime(currentJob.completed_at)}`}
                       </div>
                     </div>
                   </div>
-                  <Badge variant={getStatusVariant(job.status)}>
-                    {getStatusText(job.status)}
-                  </Badge>
+                  <span className={`text-[11px] font-medium px-2 py-1 rounded ${getStatusBg(currentJob.status)} ${getStatusColor(currentJob.status)}`}>
+                    {getStatusText(currentJob.status)}
+                  </span>
                 </div>
-              ))}
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 divide-x divide-zinc-800">
+                <div className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                      <Briefcase className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <div className="text-2xl font-semibold tabular-nums">
+                        {currentJob.vacancies_synced}
+                      </div>
+                      <div className="text-xs text-zinc-500">вакансий</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-green-500" />
+                    </div>
+                    <div>
+                      <div className="text-2xl font-semibold tabular-nums">
+                        {currentJob.applications_synced}
+                      </div>
+                      <div className="text-xs text-zinc-500">откликов</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress bar for running job */}
+              {isJobRunning && (
+                <div className="px-5 pb-5">
+                  <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full animate-pulse" style={{ width: '60%' }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Errors */}
+              {currentJob.errors && currentJob.errors.length > 0 && (
+                <div className="p-4 mx-5 mb-5 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <div className="text-xs font-medium text-red-400 mb-2">Ошибки:</div>
+                  <ul className="space-y-1">
+                    {currentJob.errors.map((err, idx) => (
+                      <li key={idx} className="text-xs text-red-300">{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Last sync info (when no current job) */}
+      {!currentJob && syncHistory.length > 0 && syncHistory[0].status === 'completed' && (
+        <motion.div {...fadeIn}>
+          <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+              <div>
+                <div className="text-sm font-medium text-green-400">Последняя синхронизация успешна</div>
+                <div className="text-xs text-green-500/70 mt-0.5">
+                  {formatDate(syncHistory[0].completed_at)} — {syncHistory[0].vacancies_synced} вакансий, {syncHistory[0].applications_synced} откликов
+                </div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </motion.div>
+      )}
+
+      {/* History */}
+      {syncHistory.length > 0 && (
+        <motion.div {...fadeIn}>
+          <Card>
+            <CardContent className="p-0">
+              <div className="px-5 py-4 border-b border-zinc-800">
+                <div className="text-[13px] font-medium uppercase tracking-wide text-zinc-400">
+                  История синхронизаций
+                </div>
+              </div>
+              <div className="divide-y divide-zinc-800/50">
+                {syncHistory.map((job) => (
+                  <div
+                    key={job.id}
+                    className="px-5 py-4 flex items-center justify-between hover:bg-zinc-900/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      {job.status === 'completed' ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : job.status === 'failed' ? (
+                        <XCircle className="h-4 w-4 text-red-500" />
+                      ) : ['processing', 'running'].includes(job.status) ? (
+                        <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-zinc-500" />
+                      )}
+                      <div>
+                        <div className="text-[13px] font-medium text-zinc-300">
+                          {formatDate(job.created_at)}
+                        </div>
+                        <div className="text-xs text-zinc-500">
+                          {job.vacancies_synced} вакансий • {job.applications_synced} откликов
+                        </div>
+                      </div>
+                    </div>
+                    <span className={`text-[11px] font-medium px-2 py-1 rounded ${getStatusBg(job.status)} ${getStatusColor(job.status)}`}>
+                      {getStatusText(job.status)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Empty state */}
+      {syncHistory.length === 0 && !currentJob && (
+        <motion.div {...fadeIn} className="text-center py-12">
+          <div className="w-14 h-14 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center mx-auto mb-4">
+            <RefreshCw className="h-6 w-6 text-zinc-500" />
+          </div>
+          <p className="text-zinc-400 text-sm mb-1">Синхронизаций пока нет</p>
+          <p className="text-zinc-600 text-xs">Нажмите кнопку выше чтобы начать</p>
         </motion.div>
       )}
     </div>
