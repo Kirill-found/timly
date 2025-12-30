@@ -57,6 +57,7 @@ const ForgotPassword: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
 
   const emailForm = useForm<EmailFormValues>({
     resolver: zodResolver(emailSchema),
@@ -226,29 +227,24 @@ const ForgotPassword: React.FC = () => {
 
           <Form {...codeForm}>
             <form onSubmit={codeForm.handleSubmit(onCodeSubmit)} className="space-y-4">
-              <FormField
-                control={codeForm.control}
-                name="code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-zinc-300">Код восстановления</FormLabel>
-                    <FormControl>
-                      <input
-                        type="text"
-                        placeholder="000000"
-                        maxLength={6}
-                        className="flex h-11 w-full rounded-md border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none text-center text-xl tracking-[0.5em] font-mono"
-                        autoFocus
-                        value={field.value}
-                        onChange={(e) => field.onChange(e.target.value)}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-red-400" />
-                  </FormItem>
-                )}
-              />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-300">Код восстановления</label>
+                <input
+                  type="text"
+                  id="reset-code"
+                  autoComplete="one-time-code"
+                  placeholder="000000"
+                  maxLength={6}
+                  className="flex h-11 w-full rounded-md border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none text-center text-xl tracking-[0.5em] font-mono"
+                  autoFocus
+                  value={code}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    setCode(val);
+                    codeForm.setValue('code', val);
+                  }}
+                />
+              </div>
 
               <FormField
                 control={codeForm.control}
