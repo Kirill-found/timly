@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/form';
 import { ArrowLeft, Mail, CheckCircle, AlertCircle, Loader2, KeyRound } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://timly-hr.ru/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || 'https://timly-hr.ru/api';
 
 const emailSchema = z.object({
   email: z
