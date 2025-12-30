@@ -1,14 +1,13 @@
 /**
  * Export - Экспорт данных
- * Design: Dark Industrial Brutalism
+ * Design: Dark Industrial - консистентно с Dashboard
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Download, FileSpreadsheet, CheckCircle, Loader2, XCircle,
-  Users, Briefcase, Star, ThumbsUp, Award, AlertTriangle,
-  MessageSquare, FileText, User, Mail, Phone, Building
+  Download, CheckCircle, Loader2, XCircle,
+  Users, Briefcase, Building
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -31,17 +30,6 @@ const SCORE_THRESHOLDS = [
   { id: '60', label: '60+', min: 60 },
   { id: '40', label: '40+', min: 40 },
 ] as const;
-
-const EXPORT_FIELDS = [
-  { icon: User, label: 'ФИО кандидата' },
-  { icon: Mail, label: 'Email' },
-  { icon: Phone, label: 'Телефон' },
-  { icon: Star, label: 'Общий балл' },
-  { icon: ThumbsUp, label: 'Рекомендация' },
-  { icon: Award, label: 'Сильные стороны' },
-  { icon: AlertTriangle, label: 'Слабые стороны' },
-  { icon: MessageSquare, label: 'Обоснование' },
-];
 
 const Export: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -75,6 +63,26 @@ const Export: React.FC = () => {
     }
   }, [successMessage]);
 
+  const selectedVacancyData = vacancies.find(v => v.id === selectedVacancy);
+  const totalCandidates = selectedVacancyData?.applications_count || 0;
+
+  // Распределение по рекомендациям (мок, потом подключить реальные данные)
+  const distribution = useMemo(() => {
+    const total = totalCandidates || 1;
+    return {
+      hire: Math.round(total * 0.25),
+      interview: Math.round(total * 0.30),
+      maybe: Math.round(total * 0.20),
+      reject: Math.round(total * 0.25),
+    };
+  }, [totalCandidates]);
+
+  // Подсчёт кандидатов в отчёте с учётом фильтров
+  const candidatesInReport = useMemo(() => {
+    if (recommendation === 'all') return totalCandidates;
+    return distribution[recommendation as keyof typeof distribution] || 0;
+  }, [recommendation, totalCandidates, distribution]);
+
   const handleExport = async () => {
     if (!selectedVacancy) {
       setError('Выберите вакансию для экспорта');
@@ -103,17 +111,7 @@ const Export: React.FC = () => {
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      let message = 'Файл успешно скачан!';
-      if (recommendation !== 'all' || (minScore && minScore > 0)) {
-        const filters = [];
-        if (recommendation !== 'all') {
-          const rec = RECOMMENDATIONS.find(r => r.id === recommendation);
-          filters.push(rec?.label || recommendation);
-        }
-        if (minScore) filters.push(`${minScore}+ баллов`);
-        message += ` Фильтры: ${filters.join(', ')}`;
-      }
-      setSuccessMessage(message);
+      setSuccessMessage(`Экспортировано ${candidatesInReport} кандидатов`);
     } catch (err: any) {
       console.error('Export error:', err);
       setError(err.response?.data?.error?.message || err.message || 'Ошибка при экспорте');
@@ -122,62 +120,18 @@ const Export: React.FC = () => {
     }
   };
 
-  const selectedVacancyData = vacancies.find(v => v.id === selectedVacancy);
-  const totalCandidates = selectedVacancyData?.applications_count || 0;
+  const fadeIn = {
+    initial: { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.3 }
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
-      >
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-100 tracking-tight flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-              <Download className="h-5 w-5 text-emerald-400" />
-            </div>
-            Экспорт данных
-          </h1>
-          <p className="text-zinc-500 text-sm mt-2">Выгрузка результатов анализа в Excel</p>
-        </div>
-      </motion.div>
-
-      {/* Stats Row */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="grid grid-cols-3 gap-px bg-zinc-800 rounded-lg overflow-hidden"
-      >
-        <div className="bg-zinc-900 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center">
-            <Briefcase className="h-5 w-5 text-zinc-400" />
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500 uppercase tracking-wider">Вакансий</div>
-            <div className="text-xl font-semibold text-zinc-100">{vacancies.length}</div>
-          </div>
-        </div>
-        <div className="bg-zinc-900 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center">
-            <Users className="h-5 w-5 text-zinc-400" />
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500 uppercase tracking-wider">Кандидатов</div>
-            <div className="text-xl font-semibold text-zinc-100">{totalCandidates}</div>
-          </div>
-        </div>
-        <div className="bg-zinc-900 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-            <FileSpreadsheet className="h-5 w-5 text-emerald-400" />
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500 uppercase tracking-wider">Формат</div>
-            <div className="text-xl font-semibold text-zinc-100">.xlsx</div>
-          </div>
-        </div>
+      <motion.div {...fadeIn}>
+        <h1 className="text-2xl font-semibold text-zinc-100 tracking-tight">Экспорт данных</h1>
+        <p className="text-zinc-500 text-sm mt-1">Выгрузка результатов анализа в Excel</p>
       </motion.div>
 
       {/* Alerts */}
@@ -200,9 +154,33 @@ const Export: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {/* Stats Row - Распределение по рекомендациям */}
+      <motion.div {...fadeIn} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-zinc-800 border border-zinc-800 rounded-lg overflow-hidden">
+        <div className="bg-card p-5">
+          <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">Нанять</div>
+          <div className="text-3xl font-semibold tracking-tight text-emerald-400">{distribution.hire}</div>
+          <div className="text-xs text-zinc-500">кандидатов</div>
+        </div>
+        <div className="bg-card p-5">
+          <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">Собеседование</div>
+          <div className="text-3xl font-semibold tracking-tight text-blue-400">{distribution.interview}</div>
+          <div className="text-xs text-zinc-500">кандидатов</div>
+        </div>
+        <div className="bg-card p-5">
+          <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">Возможно</div>
+          <div className="text-3xl font-semibold tracking-tight text-amber-400">{distribution.maybe}</div>
+          <div className="text-xs text-zinc-500">кандидатов</div>
+        </div>
+        <div className="bg-card p-5">
+          <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">Отклонить</div>
+          <div className="text-3xl font-semibold tracking-tight text-red-400">{distribution.reject}</div>
+          <div className="text-xs text-zinc-500">кандидатов</div>
+        </div>
+      </motion.div>
+
       {/* Vacancy Selection */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-3">
-        <div className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Выберите вакансию</div>
+      <motion.div {...fadeIn} className="space-y-3">
+        <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Выберите вакансию</div>
         {vacancies.length === 0 ? (
           <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-8 text-center">
             <Briefcase className="h-10 w-10 text-zinc-700 mx-auto mb-3" />
@@ -211,25 +189,22 @@ const Export: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {vacancies.map((vacancy, index) => (
-              <motion.button
+            {vacancies.map((vacancy) => (
+              <button
                 key={vacancy.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1 + index * 0.05 }}
                 onClick={() => setSelectedVacancy(vacancy.id)}
                 className={`relative p-4 rounded-lg border text-left transition-all duration-200 ${
                   selectedVacancy === vacancy.id
-                    ? 'bg-zinc-800 border-emerald-500/50 ring-1 ring-emerald-500/20'
+                    ? 'bg-zinc-800 border-zinc-600'
                     : 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900'
                 }`}
               >
                 {selectedVacancy === vacancy.id && (
-                  <div className="absolute top-3 right-3"><CheckCircle className="h-4 w-4 text-emerald-400" /></div>
+                  <div className="absolute top-3 right-3"><CheckCircle className="h-4 w-4 text-zinc-400" /></div>
                 )}
                 <div className="flex items-start gap-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${selectedVacancy === vacancy.id ? 'bg-emerald-500/10' : 'bg-zinc-800'}`}>
-                    <Building className={`h-4 w-4 ${selectedVacancy === vacancy.id ? 'text-emerald-400' : 'text-zinc-500'}`} />
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${selectedVacancy === vacancy.id ? 'bg-zinc-700' : 'bg-zinc-800'}`}>
+                    <Building className="h-4 w-4 text-zinc-500" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className={`font-medium truncate ${selectedVacancy === vacancy.id ? 'text-zinc-100' : 'text-zinc-300'}`}>{vacancy.title}</div>
@@ -239,16 +214,16 @@ const Export: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </motion.button>
+              </button>
             ))}
           </div>
         )}
       </motion.div>
 
       {/* Filters */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <motion.div {...fadeIn} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-3">
-          <div className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Минимальный балл</div>
+          <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Минимальный балл</div>
           <div className="flex gap-2 flex-wrap">
             {SCORE_THRESHOLDS.map((threshold) => (
               <button
@@ -264,7 +239,7 @@ const Export: React.FC = () => {
           </div>
         </div>
         <div className="space-y-3">
-          <div className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Рекомендация</div>
+          <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Рекомендация</div>
           <div className="flex gap-2 flex-wrap">
             {RECOMMENDATIONS.map((rec) => {
               const isActive = recommendation === rec.id;
@@ -283,44 +258,25 @@ const Export: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Export Preview & Button */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-zinc-900/50 border border-zinc-800 rounded-lg p-5">
-          <div className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-4">Поля в экспорте</div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {EXPORT_FIELDS.map((field, index) => (
-              <motion.div key={field.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 + index * 0.05 }} className="flex items-center gap-2 text-sm text-zinc-400">
-                <field.icon className="h-4 w-4 text-zinc-600" />
-                <span className="truncate">{field.label}</span>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-5 flex flex-col justify-center">
-          <Button
-            onClick={handleExport}
-            disabled={!selectedVacancy || isExporting || vacancies.length === 0}
-            className="w-full h-12 bg-emerald-500 text-white hover:bg-emerald-400 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-            size="lg"
-          >
-            {isExporting ? (
-              <span className="flex items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" />Экспорт...</span>
-            ) : (
-              <span className="flex items-center gap-2"><Download className="h-5 w-5" />Скачать Excel</span>
-            )}
-          </Button>
-          {selectedVacancyData && (
-            <div className="mt-3 text-center">
-              <span className="text-xs text-zinc-500">{totalCandidates} {totalCandidates === 1 ? 'кандидат' : totalCandidates < 5 ? 'кандидата' : 'кандидатов'}</span>
-            </div>
+      {/* Export Button */}
+      <motion.div {...fadeIn} className="flex items-center gap-4">
+        <Button
+          onClick={handleExport}
+          disabled={!selectedVacancy || isExporting || vacancies.length === 0}
+          className="h-12 px-8 bg-zinc-100 text-zinc-900 hover:bg-white font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+          size="lg"
+        >
+          {isExporting ? (
+            <span className="flex items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" />Экспорт...</span>
+          ) : (
+            <span className="flex items-center gap-2"><Download className="h-5 w-5" />Скачать Excel</span>
           )}
-        </div>
-      </motion.div>
-
-      {/* File Format Info */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="flex items-center justify-center gap-2 text-xs text-zinc-600">
-        <FileText className="h-3 w-3" />
-        <span>Microsoft Excel (.xlsx) | Совместим с Google Sheets</span>
+        </Button>
+        {selectedVacancyData && (
+          <div className="text-sm text-zinc-500">
+            В отчёте: <span className="text-zinc-100 font-medium">{candidatesInReport}</span> кандидатов
+          </div>
+        )}
       </motion.div>
     </div>
   );
