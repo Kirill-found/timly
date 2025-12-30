@@ -15,7 +15,6 @@ import {
   CreditCard,
   Shield,
   Loader2,
-  Search,
   Upload,
   ChevronUp,
   ChevronDown
@@ -48,7 +47,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Дашборд' },
     { href: '/analysis', icon: BarChart3, label: 'Анализ' },
-    { href: '/candidate-search', icon: Search, label: 'Кандидаты' },
     { href: '/manual-analysis', icon: Upload, label: 'Ручной анализ' },
   ];
 
@@ -209,7 +207,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <span className="text-sm font-medium text-zinc-300 hidden sm:block">
               {location.pathname === '/dashboard' && 'Панель управления'}
               {location.pathname === '/analysis' && 'Анализ резюме'}
-              {location.pathname === '/candidate-search' && 'Поиск кандидатов'}
+              {location.pathname === '/manual-analysis' && 'Ручной анализ'}
               {location.pathname === '/sync' && 'Синхронизация'}
               {location.pathname === '/settings' && 'Настройки'}
             </span>
