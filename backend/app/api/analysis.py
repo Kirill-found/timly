@@ -597,7 +597,7 @@ async def export_analysis_to_excel(
 
         # ========== БРЕНДИРОВАННЫЙ ЗАГОЛОВОК ==========
         # Логотип и название компании (строки 1-3)
-        ws.merge_cells('A1:O3')
+        ws.merge_cells('A1:S3')
         logo_cell = ws.cell(row=1, column=1, value="TIMLY\nAI-Powered HR Analytics")
         logo_cell.font = Font(bold=True, size=20, color="FFFFFF", name="Arial")
         logo_cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
@@ -607,7 +607,7 @@ async def export_analysis_to_excel(
         ws.row_dimensions[3].height = 25
 
         # Название вакансии (строка 4)
-        ws.merge_cells('A4:O4')
+        ws.merge_cells('A4:S4')
         title_cell = ws.cell(row=4, column=1, value=f"📋 Вакансия: {vacancy.title}")
         title_cell.font = Font(bold=True, size=16, color="1F2937", name="Arial")
         title_cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -615,7 +615,7 @@ async def export_analysis_to_excel(
         ws.row_dimensions[4].height = 30
 
         # Информация о дате экспорта (строка 5)
-        ws.merge_cells('A5:O5')
+        ws.merge_cells('A5:S5')
         date_cell = ws.cell(row=5, column=1, value=f"📅 Дата экспорта: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
         date_cell.font = Font(size=11, color="6B7280", italic=True)
         date_cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -623,10 +623,11 @@ async def export_analysis_to_excel(
 
         # Заголовок таблицы (строка 7 - после брендинга)
         header = [
-            "№", "Кандидат", "Email", "Телефон", "Ссылка на резюме",
-            "Оценка", "Навыки", "Опыт", "Зарплата", "Рекомендация",
+            "№", "Кандидат", "Оценка", "Рекомендация", "Кратко",
+            "Опыт (лет)", "Должность", "Компания", "ЗП ожид.",
+            "Совпадающие навыки", "Недостающие навыки",
             "Сильные стороны", "Слабые стороны", "Красные флаги",
-            "Обоснование", "Дата анализа"
+            "Обоснование", "Email", "Телефон", "Ссылка", "Дата"
         ]
 
         # Современный градиентный стиль заголовков
@@ -667,52 +668,106 @@ async def export_analysis_to_excel(
             'reject': '❌ Отклонить'
         }
 
-        # Данные (начинаем с 8-й строки, т.к. строки 1-7 заняты брендингом и заголовками)
+        # Данные (начинаем с 8-й строки)
         for idx, (analysis, application) in enumerate(results, 8):
-            ws.cell(row=idx, column=1, value=idx-7)  # Номер строки (idx-7 т.к. начинаем с 8)
-            ws.cell(row=idx, column=2, value=application.candidate_name or "Не указано")
-            ws.cell(row=idx, column=3, value=application.candidate_email or "Не указан")
-            ws.cell(row=idx, column=4, value=application.candidate_phone or "Не указан")
-
-            # Ссылка на резюме
-            if application.resume_url:
-                cell = ws.cell(row=idx, column=5, value="Открыть резюме")
-                cell.hyperlink = application.resume_url
-                cell.font = Font(color="0563C1", underline="single")
-            else:
-                ws.cell(row=idx, column=5, value="Н/Д")
-
-            # Оценки
-            ws.cell(row=idx, column=6, value=analysis.score or 0)
-            ws.cell(row=idx, column=7, value=analysis.skills_match or 0)
-            ws.cell(row=idx, column=8, value=analysis.experience_match or 0)
-
-            # Зарплата
-            salary_text = {
-                'match': 'Совпадает',
-                'higher': 'Выше ожиданий',
-                'lower': 'Ниже ожиданий',
-                'unknown': 'Не указана'
-            }.get(analysis.salary_match, 'Н/Д')
-            ws.cell(row=idx, column=9, value=salary_text)
-
-            # Рекомендация с цветом, эмодзи и переводом на русский
+            col = 1
+            
+            # 1. № 
+            ws.cell(row=idx, column=col, value=idx-7)
+            col += 1
+            
+            # 2. Кандидат
+            ws.cell(row=idx, column=col, value=application.candidate_name or "Не указано")
+            col += 1
+            
+            # 3. Оценка
+            ws.cell(row=idx, column=col, value=analysis.score or 0)
+            col += 1
+            
+            # 4. Рекомендация с цветом
             rec_text = rec_translations.get(analysis.recommendation, analysis.recommendation or "N/A")
-            rec_cell = ws.cell(row=idx, column=10, value=rec_text)
+            rec_cell = ws.cell(row=idx, column=col, value=rec_text)
             if analysis.recommendation and analysis.recommendation in rec_colors:
                 rec_cell.fill = rec_colors[analysis.recommendation]
                 rec_cell.font = Font(bold=True, size=11, color=rec_font_colors.get(analysis.recommendation, "000000"))
             rec_cell.alignment = Alignment(horizontal="center", vertical="center")
-
-            ws.cell(row=idx, column=11, value=", ".join(analysis.strengths or []))
-            ws.cell(row=idx, column=12, value=", ".join(analysis.weaknesses or []))
-            ws.cell(row=idx, column=13, value=", ".join(analysis.red_flags or []))
-            ws.cell(row=idx, column=14, value=analysis.reasoning or "")
-            ws.cell(row=idx, column=15, value=analysis.created_at.strftime("%Y-%m-%d %H:%M") if analysis.created_at else "N/A")
+            col += 1
+            
+            # 5. Кратко (summary_one_line) - новое поле из AI
+            analysis_data = analysis.raw_result or {}
+            ws.cell(row=idx, column=col, value=analysis_data.get('summary_one_line', '') or '')
+            col += 1
+            
+            # 6. Опыт (лет) - новое поле из AI
+            exp_years = analysis_data.get('experience_years', 0)
+            ws.cell(row=idx, column=col, value=exp_years if exp_years else '')
+            col += 1
+            
+            # 7. Должность - новое поле из AI
+            ws.cell(row=idx, column=col, value=analysis_data.get('last_position', '') or '')
+            col += 1
+            
+            # 8. Компания - новое поле из AI
+            ws.cell(row=idx, column=col, value=analysis_data.get('last_company', '') or '')
+            col += 1
+            
+            # 9. ЗП ожид. - новое поле из AI
+            salary = analysis_data.get('candidate_salary', 0)
+            if salary and salary > 0:
+                ws.cell(row=idx, column=col, value=f"{salary:,}".replace(',', ' '))
+            else:
+                ws.cell(row=idx, column=col, value='')
+            col += 1
+            
+            # 10. Совпадающие навыки - новое поле из AI
+            matching = analysis_data.get('matching_skills', [])
+            ws.cell(row=idx, column=col, value=", ".join(matching) if matching else '')
+            col += 1
+            
+            # 11. Недостающие навыки - новое поле из AI  
+            gaps = analysis_data.get('skill_gaps', [])
+            ws.cell(row=idx, column=col, value=", ".join(gaps) if gaps else '')
+            col += 1
+            
+            # 12. Сильные стороны
+            ws.cell(row=idx, column=col, value=", ".join(analysis.strengths or []))
+            col += 1
+            
+            # 13. Слабые стороны
+            ws.cell(row=idx, column=col, value=", ".join(analysis.weaknesses or []))
+            col += 1
+            
+            # 14. Красные флаги
+            ws.cell(row=idx, column=col, value=", ".join(analysis.red_flags or []))
+            col += 1
+            
+            # 15. Обоснование
+            ws.cell(row=idx, column=col, value=analysis.reasoning or "")
+            col += 1
+            
+            # 16. Email
+            ws.cell(row=idx, column=col, value=application.candidate_email or "")
+            col += 1
+            
+            # 17. Телефон
+            ws.cell(row=idx, column=col, value=application.candidate_phone or "")
+            col += 1
+            
+            # 18. Ссылка на резюме
+            if application.resume_url:
+                cell = ws.cell(row=idx, column=col, value="Открыть")
+                cell.hyperlink = application.resume_url
+                cell.font = Font(color="0563C1", underline="single")
+            else:
+                ws.cell(row=idx, column=col, value="")
+            col += 1
+            
+            # 19. Дата
+            ws.cell(row=idx, column=col, value=analysis.created_at.strftime("%d.%m.%Y") if analysis.created_at else "")
 
         # ========== АВТОФИЛЬТР ==========
         # Включаем автофильтр для заголовков (строка 7)
-        ws.auto_filter.ref = f"A7:O{len(results) + 7}"
+        ws.auto_filter.ref = f"A7:S{len(results) + 7}"
 
         # ========== УСЛОВНОЕ ФОРМАТИРОВАНИЕ ДЛЯ ОЦЕНОК ==========
         from openpyxl.styles import Color
@@ -724,7 +779,7 @@ async def export_analysis_to_excel(
             mid_type='num', mid_value=50, mid_color='FFEB9C',  # Желтый для средних
             end_type='num', end_value=100, end_color='C6EFCE'  # Зеленый для высоких
         )
-        ws.conditional_formatting.add(f"F8:F{len(results) + 7}", score_rule)
+        ws.conditional_formatting.add(f"C8:C{len(results) + 7}", score_rule)
 
         # Градиентная раскраска для колонки "Навыки" (G)
         skills_rule = ColorScaleRule(

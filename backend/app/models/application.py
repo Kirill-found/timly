@@ -59,6 +59,9 @@ class Application(Base):
     # Статус обработки
     is_duplicate = Column(Boolean, default=False, nullable=False, index=True)
     analyzed_at = Column(DateTime, nullable=True)
+    # Полный JSON ответ AI для дополнительных полей (v3.0)
+    raw_result = Column(JSON, nullable=True)  # summary_one_line, experience_years, etc.
+    
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     # Отношения
@@ -116,6 +119,9 @@ class AnalysisResult(Base):
     ai_cost_rub = Column(Numeric(6, 2), nullable=True)  # Стоимость в рублях (DECIMAL(6,2))
     processing_time_ms = Column(Integer, nullable=True) # Время обработки
 
+    # Полный JSON ответ AI для дополнительных полей (v3.0)
+    raw_result = Column(JSON, nullable=True)  # summary_one_line, experience_years, etc.
+    
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     # Отношения
@@ -163,6 +169,9 @@ class SyncJob(Base):
 
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
+    # Полный JSON ответ AI для дополнительных полей (v3.0)
+    raw_result = Column(JSON, nullable=True)  # summary_one_line, experience_years, etc.
+    
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     # Отношения

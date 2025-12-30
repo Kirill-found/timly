@@ -98,7 +98,8 @@ async def analyze_vacancy(vacancy_id: str, vacancy_title: str):
                     ai_model=ai_result.get("ai_model"),
                     ai_tokens_used=ai_result.get("ai_tokens_used"),
                     ai_cost_rub=ai_result.get("ai_cost_rub"),
-                    processing_time_ms=ai_result.get("processing_time_ms")
+                    processing_time_ms=ai_result.get("processing_time_ms"),
+                    raw_result=ai_result
                 )
 
                 db.add(analysis_result)
