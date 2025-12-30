@@ -1,10 +1,8 @@
 """
 API endpoints для аутентификации
-Регистрация, логин, профиль пользователя
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -16,9 +14,7 @@ from app.schemas.auth import (
 from app.schemas.base import APIResponse
 from app.services.auth_service import AuthService
 from app.utils.exceptions import AuthenticationError, ValidationError
-from app.utils.response import (
-    success, created, bad_request, unauthorized, not_found, internal_error
-)
+from app.utils.response import success, created
 
 router = APIRouter()
 security = HTTPBearer()
@@ -161,9 +157,19 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
         db.add(reset_code)
         db.commit()
 
+        # Отправляем код на email
+        email_sent = False
+        try:
+            from app.services.email_service import send_password_reset_email
+            email_sent = await send_password_reset_email(user.email, code)
+        except Exception as e:
+            logging.error(f"Failed to send email: {e}")
+
+        # Также уведомляем в Telegram
         try:
             from app.services.telegram_service import send_admin_notification
-            msg = "Password reset request\n\nEmail: " + user.email + "\nCode: " + code + "\nValid for 15 minutes"
+            status_msg = "Email sent" if email_sent else "Email FAILED"
+            msg = "Password reset\nEmail: " + user.email + "\nCode: " + code + "\n" + status_msg
             await send_admin_notification(msg)
         except Exception as e:
             logging.error(f"Failed to send Telegram notification: {e}")
@@ -203,7 +209,7 @@ async def reset_password(request: ResetPasswordRequest, db: Session = Depends(ge
 
         try:
             from app.services.telegram_service import send_admin_notification
-            msg = "Password changed successfully\n\nEmail: " + user.email
+            msg = "Password changed\nEmail: " + user.email
             await send_admin_notification(msg)
         except Exception:
             pass

@@ -65,6 +65,14 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str = ""  # Токен Telegram бота
     TELEGRAM_ADMIN_CHAT_ID: str = ""  # Chat ID администратора для уведомлений
 
+    # Email SMTP (Timeweb)
+    SMTP_HOST: str = "smtp.timeweb.ru"
+    SMTP_PORT: int = 465
+    SMTP_USER: str = ""  # timly-hr@timly-hr.ru
+    SMTP_PASSWORD: str = ""  # Пароль от почты
+    SMTP_FROM_EMAIL: str = "timly-hr@timly-hr.ru"
+    SMTP_FROM_NAME: str = "Timly"
+
     @validator('CORS_ORIGINS')
     def parse_cors_origins(cls, v: str) -> List[str]:
         """Парсинг CORS origins из строки"""
