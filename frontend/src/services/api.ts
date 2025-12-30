@@ -219,6 +219,11 @@ class ApiClient {
     return response.data;
   }
 
+  async disconnectHH(): Promise<ApiResponse> {
+    const response = await this.client.delete<ApiResponse>('/api/settings/hh-token');
+    return response.data;
+  }
+
   // Вакансии
   async getVacancies(params?: {
     limit?: number;

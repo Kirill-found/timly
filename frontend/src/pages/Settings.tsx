@@ -9,6 +9,9 @@ import {
   XCircle,
   ExternalLink,
   Loader2,
+  RefreshCw,
+  Unlink,
+  AlertTriangle,
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +22,8 @@ import { useAuth } from '@/store/AuthContext';
 const Settings: React.FC = () => {
   const { user, refreshProfile } = useAuth();
   const [isConnectingHH, setIsConnectingHH] = useState(false);
+  const [isDisconnectingHH, setIsDisconnectingHH] = useState(false);
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -28,6 +33,21 @@ const Settings: React.FC = () => {
     const redirectUri = 'https://timly-hr.ru/auth/hh-callback';
     const authUrl = `https://hh.ru/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
     window.location.href = authUrl;
+  };
+
+  const handleDisconnectHH = async () => {
+    try {
+      setIsDisconnectingHH(true);
+      setError(null);
+      await apiClient.disconnectHH();
+      setSuccessMessage('HH.ru отключён');
+      setShowDisconnectConfirm(false);
+      await refreshProfile();
+    } catch (err: any) {
+      setError(err.response?.data?.detail?.message || 'Ошибка отключения HH.ru');
+    } finally {
+      setIsDisconnectingHH(false);
+    }
   };
 
   useEffect(() => {
@@ -111,6 +131,44 @@ const Settings: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {/* Disconnect Confirmation Modal */}
+      <AnimatePresence>
+        {showDisconnectConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowDisconnectConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-2xl"
+            >
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-zinc-100">Отключить HH.ru?</h3>
+                  <p className="text-sm text-zinc-500">Это действие можно отменить</p>
+                </div>
+              </div>
+              <p className="text-sm text-zinc-400 mb-6">После отключения вы не сможете загружать отклики с HH.ru. Вы сможете переподключить аккаунт в любой момент.</p>
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1 h-11 border-zinc-700 text-zinc-300 hover:bg-zinc-800" onClick={() => setShowDisconnectConfirm(false)}>Отмена</Button>
+                <Button className="flex-1 h-11 bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20" onClick={handleDisconnectHH} disabled={isDisconnectingHH}>
+                  {isDisconnectingHH ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Unlink className="w-4 h-4 mr-2" />Отключить</>}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Profile Stats - как в Dashboard */}
       <motion.div {...fadeIn} className="grid grid-cols-1 md:grid-cols-4 gap-px bg-zinc-800 border border-zinc-800 rounded-lg overflow-hidden">
         <div className="bg-card p-5">
@@ -160,50 +218,26 @@ const Settings: React.FC = () => {
           </CardHeader>
           <CardContent className="pt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* HH.ru */}
-              <div className={`p-5 rounded-lg border transition-colors ${
-                user?.has_hh_token
-                  ? 'border-green-500/30 bg-green-500/5'
-                  : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold ${
-                      user?.has_hh_token
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-red-500/10 text-red-500'
-                    }`}>
-                      hh
+              {/* HH.ru - Enhanced */}
+              <div className={`p-5 rounded-xl border transition-all duration-300 ${user?.has_hh_token ? 'border-green-500/30 bg-gradient-to-br from-green-500/5 to-transparent' : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700'}`}>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold transition-all ${user?.has_hh_token ? 'bg-green-500/20 text-green-400 shadow-lg shadow-green-500/10' : 'bg-red-500/10 text-red-500'}`}>hh</div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[15px] font-semibold text-zinc-100">HeadHunter</span>
+                      {user?.has_hh_token && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-500/10 text-green-400 border border-green-500/20"><span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />Активен</span>}
                     </div>
-                    <div>
-                      <div className="text-[13px] font-medium text-zinc-100">HeadHunter</div>
-                      <div className="text-xs text-zinc-500 mt-0.5">Вакансии и отклики</div>
-                    </div>
+                    <div className="text-xs text-zinc-500 mt-0.5">{user?.has_hh_token ? 'Вакансии и отклики синхронизируются' : 'Подключите для загрузки откликов'}</div>
                   </div>
-
-                  {user?.has_hh_token ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium bg-green-500/10 text-green-400">
-                      <CheckCircle className="h-3 w-3" />
-                      Подключено
-                    </span>
-                  ) : (
-                    <Button
-                      onClick={handleOAuthConnect}
-                      disabled={isConnectingHH}
-                      size="sm"
-                      className="h-9 px-4 bg-zinc-100 text-zinc-900 hover:bg-white font-medium"
-                    >
-                      {isConnectingHH ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <ExternalLink className="h-3.5 w-3.5 mr-2" />
-                          Подключить
-                        </>
-                      )}
-                    </Button>
-                  )}
                 </div>
+                {user?.has_hh_token ? (
+                  <div className="flex gap-2">
+                    <Button onClick={handleOAuthConnect} disabled={isConnectingHH} size="sm" className="flex-1 h-9 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border border-zinc-700 font-medium">{isConnectingHH ? <Loader2 className="h-4 w-4 animate-spin" /> : <><RefreshCw className="h-3.5 w-3.5 mr-2" />Переподключить</>}</Button>
+                    <Button onClick={() => setShowDisconnectConfirm(true)} size="sm" variant="ghost" className="h-9 px-3 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"><Unlink className="h-4 w-4" /></Button>
+                  </div>
+                ) : (
+                  <Button onClick={handleOAuthConnect} disabled={isConnectingHH} className="w-full h-10 bg-zinc-100 text-zinc-900 hover:bg-white font-medium">{isConnectingHH ? <Loader2 className="h-4 w-4 animate-spin" /> : <><ExternalLink className="h-4 w-4 mr-2" />Подключить HH.ru</>}</Button>
+                )}
               </div>
 
               {/* Telegram */}
