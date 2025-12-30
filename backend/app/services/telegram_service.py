@@ -282,3 +282,10 @@ async def notify_error(error_message: str, context: Optional[str] = None):
     """Отправить уведомление об ошибке"""
     service = get_telegram_service()
     await service.notify_error(error_message, context)
+
+
+async def send_admin_notification(message: str):
+    """Отправить произвольное уведомление администратору"""
+    service = get_telegram_service()
+    await service._send_message(message)
+

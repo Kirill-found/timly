@@ -19,7 +19,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, ArrowLeft, BarChart3, Users, Download, Zap } from 'lucide-react';
 import { useAuth } from '@/store/AuthContext';
 
 const formSchema = z.object({
@@ -62,22 +62,61 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          {/* Header */}
-          <div className="text-center mb-8">
-            <Link to="/" className="inline-flex items-center gap-3 mb-6">
-              <img src="/logo.jpg" alt="Timly" className="h-10 w-10 rounded-xl" />
-              <span className="text-xl font-semibold text-zinc-100">Timly</span>
-            </Link>
-            <h1 className="text-2xl font-semibold text-zinc-100 mb-2">Вход в систему</h1>
-            <p className="text-sm text-zinc-500">Введите данные для входа в аккаунт</p>
+    <div className="min-h-screen bg-[#0a0a0a] flex">
+      {/* Left side - Features */}
+      <div className="hidden lg:flex lg:w-1/2 bg-[#0f0f0f] border-r border-zinc-800 flex-col justify-between p-12">
+        <div>
+          <Link to="/" className="inline-flex items-center gap-2.5 mb-12">
+            <img src="/logo.jpg" alt="timly" className="h-10 w-10 rounded-xl" />
+            <span className="text-xl font-semibold text-zinc-100 tracking-tight">timly<span className="text-zinc-500">.</span></span>
+          </Link>
+
+          <h2 className="text-3xl font-semibold text-zinc-100 mb-4 leading-tight">
+            Автоматизируйте<br />скрининг резюме
+          </h2>
+          <p className="text-zinc-500 mb-10 max-w-sm">
+            AI анализирует отклики с HH.ru и выдаёт топ-кандидатов за минуты вместо часов.
+          </p>
+
+          <div className="space-y-4">
+            {[
+              { icon: BarChart3, text: 'AI-оценка по 15+ критериям' },
+              { icon: Users, text: 'Интеграция с HeadHunter' },
+              { icon: Download, text: 'Экспорт отчётов в Excel' },
+              { icon: Zap, text: '100 резюме за 10 минут' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center">
+                  <item.icon className="h-4 w-4 text-zinc-400" />
+                </div>
+                <span className="text-sm text-zinc-400">{item.text}</span>
+              </div>
+            ))}
           </div>
+        </div>
+
+        <div className="text-xs text-zinc-600">
+          © 2024 timly. AI-скрининг резюме.
+        </div>
+      </div>
+
+      {/* Right side - Form */}
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="w-full max-w-md">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            {/* Mobile header */}
+            <div className="text-center mb-8">
+              <Link to="/" className="lg:hidden inline-flex items-center gap-2.5 mb-6">
+                <img src="/logo.jpg" alt="timly" className="h-10 w-10 rounded-xl" />
+                <span className="text-xl font-semibold text-zinc-100 tracking-tight">timly<span className="text-zinc-500">.</span></span>
+              </Link>
+              <h1 className="text-2xl font-semibold text-zinc-100 mb-2">Вход в систему</h1>
+              <p className="text-sm text-zinc-500">Введите данные для входа в аккаунт</p>
+            </div>
 
           {/* Form Card */}
           <Card className="border-zinc-800 bg-zinc-900/50">
@@ -175,6 +214,12 @@ const Login: React.FC = () => {
 
               {/* Links */}
               <div className="text-center space-y-3">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  Забыли пароль?
+                </Link>
                 <p className="text-sm text-zinc-500">
                   Нет аккаунта?{' '}
                   <Link to="/register" className="text-zinc-300 hover:text-white transition-colors">
@@ -195,7 +240,8 @@ const Login: React.FC = () => {
               Вернуться на главную
             </Link>
           </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
     </div>
   );

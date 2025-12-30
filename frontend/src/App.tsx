@@ -12,6 +12,7 @@ import { AppProvider } from '@/store/AppContext';
 import Landing from '@/pages/Landing';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
+import ForgotPassword from '@/pages/ForgotPassword';
 import Dashboard from '@/pages/Dashboard';
 import Sync from '@/pages/Sync';
 import Analysis from '@/pages/Analysis';
@@ -26,6 +27,7 @@ import Admin from '@/pages/Admin';
 import DemoResults from '@/pages/DemoResults';
 import CandidateSearch from '@/pages/CandidateSearch';
 import UploadCandidates from '@/pages/UploadCandidates';
+import ManualAnalysis from '@/pages/ManualAnalysis';
 
 // Компоненты
 import ProtectedRoute from '@/components/Auth/ProtectedRoute';
@@ -43,6 +45,7 @@ const App: React.FC = () => {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/auth/hh-callback" element={<HHCallbackPublic />} />
 
             {/* Демо страница для скриншота */}
@@ -163,6 +166,17 @@ const App: React.FC = () => {
                 <ProtectedRoute>
                   <AppLayout>
                     <UploadCandidates />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/manual-analysis"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <ManualAnalysis />
                   </AppLayout>
                 </ProtectedRoute>
               }

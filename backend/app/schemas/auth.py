@@ -145,3 +145,41 @@ class RefreshTokenRequest(BaseModel):
                 "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
             }
         }
+
+class ForgotPasswordRequest(BaseModel):
+    """Схема запроса восстановления пароля"""
+    email: EmailStr = Field(..., description="Email адрес пользователя")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "email": "hr@company.ru"
+            }
+        }
+
+
+class ResetPasswordRequest(BaseModel):
+    """Схема сброса пароля по коду"""
+    email: EmailStr = Field(..., description="Email адрес")
+    code: str = Field(..., min_length=6, max_length=6, description="Код восстановления")
+    new_password: str = Field(..., min_length=8, max_length=100, description="Новый пароль")
+
+    @validator('new_password')
+    def validate_new_password(cls, v):
+        """Валидация нового пароля"""
+        if not re.search(r"[A-Z]", v):
+            raise ValueError('Новый пароль должен содержать заглавную букву')
+        if not re.search(r"[a-z]", v):
+            raise ValueError('Новый пароль должен содержать строчную букву')
+        if not re.search(r"\d", v):
+            raise ValueError('Новый пароль должен содержать цифру')
+        return v
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "email": "hr@company.ru",
+                "code": "123456",
+                "new_password": "NewSecurePass456"
+            }
+        }
