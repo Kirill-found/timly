@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timly - AI Анализ</title>
+
+    <style>
+        @font-face {
+            font-family: 'Geist Mono';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-mono/GeistMono-Regular.woff2') format('woff2');
+            font-weight: 400;
+        }
+        @font-face {
+            font-family: 'Geist Mono';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-mono/GeistMono-Medium.woff2') format('woff2');
+            font-weight: 500;
+        }
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/Geist-Regular.woff2') format('woff2');
+            font-weight: 400;
+        }
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/Geist-Medium.woff2') format('woff2');
+            font-weight: 500;
+        }
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/Geist-SemiBold.woff2') format('woff2');
+            font-weight: 600;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-tertiary: #191919;
+            --border: #262626;
+            --border-subtle: #1a1a1a;
+
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1a1;
+            --text-muted: #525252;
+
+            --accent: #22c55e;
+            --accent-dim: rgba(34, 197, 94, 0.15);
+            --accent-glow: rgba(34, 197, 94, 0.4);
+
+            --scan-line: rgba(34, 197, 94, 0.6);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Geist', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Layout */
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar - simplified */
+        .sidebar {
+            width: 220px;
+            background: var(--bg-primary);
+            border-right: 1px solid var(--border);
+            position: fixed;
+            height: 100vh;
+            padding: 16px 8px;
+        }
+
+        .sidebar-header {
+            padding: 0 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 450;
+            transition: all 0.15s;
+            margin-bottom: 2px;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--accent-dim);
+            color: var(--accent);
+        }
+
+        .nav-item svg {
+            width: 16px;
+            height: 16px;
+            opacity: 0.7;
+        }
+
+        .nav-item.active svg {
+            opacity: 1;
+        }
+
+        /* Main */
+        .main {
+            flex: 1;
+            margin-left: 220px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            height: 52px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            background: var(--bg-primary);
+        }
+
+        .header-title {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 1px solid transparent;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border-color: var(--border);
+            color: var(--text-secondary);
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        /* Content */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+        }
+
+        /* Analysis Container */
+        .analysis-container {
+            flex: 1;
+            display: flex;
+            gap: 24px;
+        }
+
+        /* Left Panel - Analysis Progress */
+        .analysis-panel {
+            flex: 1;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 48px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Scanning effect background */
+        .scan-bg {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            opacity: 0.5;
+        }
+
+        .scan-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--scan-line), transparent);
+            animation: scanDown 3s linear infinite;
+        }
+
+        @keyframes scanDown {
+            0% { top: -2px; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        .grid-overlay {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(var(--border-subtle) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.3;
+        }
+
+        /* Main Progress Circle */
+        .progress-container {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin-bottom: 40px;
+        }
+
+        .progress-ring {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-bg {
+            fill: none;
+            stroke: var(--border);
+            stroke-width: 2;
+        }
+
+        .progress-ring-fill {
+            fill: none;
+            stroke: var(--accent);
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-dasharray: 880;
+            stroke-dashoffset: 880;
+            animation: progressFill 4s ease-out forwards;
+            filter: drop-shadow(0 0 8px var(--accent-glow));
+        }
+
+        @keyframes progressFill {
+            to {
+                stroke-dashoffset: 220; /* 75% progress */
+            }
+        }
+
+        /* Outer ring - dots */
+        .progress-dots {
+            position: absolute;
+            inset: -20px;
+            border-radius: 50%;
+        }
+
+        .progress-dot {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 50%;
+            opacity: 0;
+            animation: dotPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes dotPulse {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.5); }
+        }
+
+        /* Center content */
+        .progress-center {
+            position: absolute;
+            inset: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .progress-value {
+            font-family: 'Geist Mono', monospace;
+            font-size: 56px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            animation: valueCount 4s ease-out forwards;
+        }
+
+        @keyframes valueCount {
+            0% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .progress-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-top: 8px;
+        }
+
+        /* Pulse rings */
+        .pulse-ring {
+            position: absolute;
+            inset: 20px;
+            border: 1px solid var(--accent);
+            border-radius: 50%;
+            opacity: 0;
+            animation: pulseOut 2s ease-out infinite;
+        }
+
+        .pulse-ring:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+
+        .pulse-ring:nth-child(3) {
+            animation-delay: 1s;
+        }
+
+        @keyframes pulseOut {
+            0% {
+                transform: scale(0.8);
+                opacity: 0.6;
+            }
+            100% {
+                transform: scale(1.3);
+                opacity: 0;
+            }
+        }
+
+        /* Status text */
+        .analysis-status {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .status-main {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .status-main .dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .status-sub {
+            font-family: 'Geist Mono', monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .status-sub span {
+            color: var(--accent);
+        }
+
+        /* Current candidate being analyzed */
+        .current-candidate {
+            margin-top: 32px;
+            padding: 16px 24px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            animation: fadeSlideUp 0.5s ease-out;
+        }
+
+        @keyframes fadeSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .candidate-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .candidate-info h4 {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .candidate-info p {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .candidate-spinner {
+            margin-left: auto;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Right Panel - Results Queue */
+        .results-panel {
+            width: 380px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .results-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .results-title {
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .results-count {
+            font-family: 'Geist Mono', monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .results-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .result-item {
+            padding: 14px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            opacity: 0;
+            transform: translateX(20px);
+            animation: resultSlideIn 0.4s ease-out forwards;
+        }
+
+        .result-item:nth-child(1) { animation-delay: 0.1s; }
+        .result-item:nth-child(2) { animation-delay: 0.2s; }
+        .result-item:nth-child(3) { animation-delay: 0.3s; }
+        .result-item:nth-child(4) { animation-delay: 0.4s; }
+        .result-item:nth-child(5) { animation-delay: 0.5s; }
+
+        @keyframes resultSlideIn {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .result-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: var(--bg-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .result-info {
+            flex: 1;
+        }
+
+        .result-name {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .result-vacancy {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .result-score {
+            font-family: 'Geist Mono', monospace;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .result-score.high { color: var(--accent); }
+        .result-score.medium { color: #f59e0b; }
+        .result-score.low { color: #ef4444; }
+
+        /* Score bar */
+        .score-bar {
+            height: 3px;
+            background: var(--bg-primary);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            border-radius: 2px;
+            animation: scoreFill 0.6s ease-out forwards;
+            animation-delay: inherit;
+        }
+
+        .score-fill.high { background: var(--accent); }
+        .score-fill.medium { background: #f59e0b; }
+        .score-fill.low { background: #ef4444; }
+
+        @keyframes scoreFill {
+            from { width: 0; }
+        }
+
+        .result-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .result-badge {
+            font-size: 10px;
+            font-weight: 500;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .result-badge.hire {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+        }
+
+        .result-badge.interview {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+
+        .result-badge.maybe {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        .result-badge.reject {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
+        .result-time {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        /* Metrics mini chart */
+        .result-metrics {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+        }
+
+        .metric-item {
+            flex: 1;
+        }
+
+        .metric-label {
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .metric-bar {
+            height: 2px;
+            background: var(--bg-primary);
+            border-radius: 1px;
+            overflow: hidden;
+        }
+
+        .metric-fill {
+            height: 100%;
+            background: var(--text-muted);
+            border-radius: 1px;
+        }
+
+        /* Bottom controls */
+        .analysis-controls {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-primary);
+        }
+
+        .control-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .control-stat {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .control-stat span {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .analysis-container {
+                flex-direction: column;
+            }
+            .results-panel {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            .main {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="logo">Timly</span>
+            </div>
+            <nav>
+                <a href="#" class="nav-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <rect x="3" y="3" width="7" height="7" rx="1" stroke-width="1.5"/>
+                        <rect x="14" y="3" width="7" height="7" rx="1" stroke-width="1.5"/>
+                        <rect x="3" y="14" width="7" height="7" rx="1" stroke-width="1.5"/>
+                        <rect x="14" y="14" width="7" height="7" rx="1" stroke-width="1.5"/>
+                    </svg>
+                    Дашборд
+                </a>
+                <a href="#" class="nav-item active">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    Анализ
+                </a>
+                <a href="#" class="nav-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    Кандидаты
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main -->
+        <main class="main">
+            <!-- Header -->
+            <header class="header">
+                <span class="header-title">AI Анализ резюме</span>
+                <button class="btn btn-ghost">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
+                    Добавить вакансию
+                </button>
+            </header>
+
+            <!-- Content -->
+            <div class="content">
+                <div class="analysis-container">
+                    <!-- Analysis Panel -->
+                    <div class="analysis-panel">
+                        <!-- Background effects -->
+                        <div class="scan-bg">
+                            <div class="grid-overlay"></div>
+                            <div class="scan-line"></div>
+                        </div>
+
+                        <!-- Progress Circle -->
+                        <div class="progress-container">
+                            <!-- Pulse rings -->
+                            <div class="pulse-ring"></div>
+                            <div class="pulse-ring"></div>
+                            <div class="pulse-ring"></div>
+
+                            <!-- Dots around circle -->
+                            <div class="progress-dots">
+                                <script>
+                                    // Generate dots around circle
+                                    document.write(Array.from({length: 24}, (_, i) => {
+                                        const angle = (i / 24) * 360;
+                                        const rad = angle * Math.PI / 180;
+                                        const x = 50 + 48 * Math.cos(rad);
+                                        const y = 50 + 48 * Math.sin(rad);
+                                        return `<div class="progress-dot" style="left: ${x}%; top: ${y}%; animation-delay: ${i * 0.08}s;"></div>`;
+                                    }).join(''));
+                                </script>
+                            </div>
+
+                            <!-- SVG Ring -->
+                            <svg class="progress-ring" viewBox="0 0 280 280">
+                                <circle class="progress-ring-bg" cx="140" cy="140" r="130"/>
+                                <circle class="progress-ring-fill" cx="140" cy="140" r="130"/>
+                            </svg>
+
+                            <!-- Center -->
+                            <div class="progress-center">
+                                <div class="progress-value" id="progressValue">0%</div>
+                                <div class="progress-label">Обработано</div>
+                            </div>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="analysis-status">
+                            <div class="status-main">
+                                <span class="dot"></span>
+                                Анализ в процессе
+                            </div>
+                            <div class="status-sub">
+                                Обработано <span id="processedCount">15</span> из <span>23</span> резюме
+                            </div>
+                        </div>
+
+                        <!-- Current candidate -->
+                        <div class="current-candidate">
+                            <div class="candidate-avatar">МИ</div>
+                            <div class="candidate-info">
+                                <h4>Мария Иванова</h4>
+                                <p>Backend Developer (Middle)</p>
+                            </div>
+                            <div class="candidate-spinner"></div>
+                        </div>
+                    </div>
+
+                    <!-- Results Panel -->
+                    <div class="results-panel">
+                        <div class="results-header">
+                            <span class="results-title">Результаты</span>
+                            <span class="results-count">15 / 23</span>
+                        </div>
+                        <div class="results-list">
+                            <!-- Result 1 -->
+                            <div class="result-item">
+                                <div class="result-header">
+                                    <div class="result-avatar">АП</div>
+                                    <div class="result-info">
+                                        <div class="result-name">Александр Петров</div>
+                                        <div class="result-vacancy">Frontend Developer</div>
+                                    </div>
+                                    <div class="result-score high">94</div>
+                                </div>
+                                <div class="score-bar">
+                                    <div class="score-fill high" style="width: 94%; animation-delay: 0.2s;"></div>
+                                </div>
+                                <div class="result-metrics">
+                                    <div class="metric-item">
+                                        <div class="metric-label">Опыт</div>
+                                        <div class="metric-bar"><div class="metric-fill" style="width: 90%;"></div></div>
+                                    </div>
+                                    <div class="metric-item">
+                                        <div class="metric-label">Навыки</div>
+                                        <div class="metric-bar"><div class="metric-fill" style="width: 95%;"></div></div>
+                                    </div>
+                                    <div class="metric-item">
+                                        <div class="metric-label">Релевантность</div>
+                                        <div class="metric-bar"><div class="metric-fill" style="width: 92%;"></div></div>
+                                    </div>
+                                </div>
+                                <div class="result-footer">
+                                    <span class="result-badge hire">Нанять</span>
+                                    <span class="result-time">только что</span>
+                                </div>
+                            </div>
+
+                            <!-- Result 2 -->
+                            <div class="result-item">
+                                <div class="result-header">
+                                    <div class="result-avatar">ДС</div>
+                                    <div class="result-info">
+                                        <div class="result-name">Дмитрий Смирнов</div>
+                                        <div class="result-vacancy">DevOps Engineer</div>
+                                    </div>
+                                    <div class="result-score high">87</div>
+                                </div>
+                                <div class="score-bar">
+                                    <div class="score-fill high" style="width: 87%; animation-delay: 0.3s;"></div>
+                                </div>
+                                <div class="result-footer">
+                                    <span class="result-badge interview">Собеседование</span>
+                                    <span class="result-time">1 мин назад</span>
+                                </div>
+                            </div>
+
+                            <!-- Result 3 -->
+                            <div class="result-item">
+                                <div class="result-header">
+                                    <div class="result-avatar">ЕК</div>
+                                    <div class="result-info">
+                                        <div class="result-name">Елена Козлова</div>
+                                        <div class="result-vacancy">Product Manager</div>
+                                    </div>
+                                    <div class="result-score medium">72</div>
+                                </div>
+                                <div class="score-bar">
+                                    <div class="score-fill medium" style="width: 72%; animation-delay: 0.4s;"></div>
+                                </div>
+                                <div class="result-footer">
+                                    <span class="result-badge maybe">Возможно</span>
+                                    <span class="result-time">2 мин назад</span>
+                                </div>
+                            </div>
+
+                            <!-- Result 4 -->
+                            <div class="result-item">
+                                <div class="result-header">
+                                    <div class="result-avatar">АН</div>
+                                    <div class="result-info">
+                                        <div class="result-name">Андрей Новиков</div>
+                                        <div class="result-vacancy">QA Engineer</div>
+                                    </div>
+                                    <div class="result-score low">45</div>
+                                </div>
+                                <div class="score-bar">
+                                    <div class="score-fill low" style="width: 45%; animation-delay: 0.5s;"></div>
+                                </div>
+                                <div class="result-footer">
+                                    <span class="result-badge reject">Отклонить</span>
+                                    <span class="result-time">3 мин назад</span>
+                                </div>
+                            </div>
+
+                            <!-- Result 5 -->
+                            <div class="result-item">
+                                <div class="result-header">
+                                    <div class="result-avatar">ОП</div>
+                                    <div class="result-info">
+                                        <div class="result-name">Ольга Павлова</div>
+                                        <div class="result-vacancy">UI/UX Designer</div>
+                                    </div>
+                                    <div class="result-score high">91</div>
+                                </div>
+                                <div class="score-bar">
+                                    <div class="score-fill high" style="width: 91%; animation-delay: 0.6s;"></div>
+                                </div>
+                                <div class="result-footer">
+                                    <span class="result-badge hire">Нанять</span>
+                                    <span class="result-time">4 мин назад</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom controls -->
+            <div class="analysis-controls">
+                <div class="control-info">
+                    <div class="control-stat">Вакансия: <span>Frontend Developer (Senior)</span></div>
+                    <div class="control-stat">Время: <span>2:34</span></div>
+                    <div class="control-stat">Скорость: <span>~8 сек/резюме</span></div>
+                </div>
+                <div class="control-buttons">
+                    <button class="btn btn-ghost">Пауза</button>
+                    <button class="btn btn-danger">Остановить</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Animate progress value
+        let progress = 0;
+        const target = 75;
+        const progressEl = document.getElementById('progressValue');
+
+        function animateProgress() {
+            if (progress < target) {
+                progress += 1;
+                progressEl.textContent = progress + '%';
+                setTimeout(animateProgress, 50);
+            }
+        }
+
+        setTimeout(animateProgress, 500);
+    </script>
+</body>
+</html>

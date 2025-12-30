@@ -39,6 +39,8 @@ const Analysis: React.FC = () => {
   const [limitExceededInfo, setLimitExceededInfo] = useState<any>(null);
   const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
   const [limits, setLimits] = useState<any>(null);
+  // Ref для хранения начального количества проанализированных при старте сессии
+  const initialAnalyzedRef = React.useRef<number | null>(null);
 
   const isAnalyzing = app.activeAnalysis !== null && app.activeAnalysis.vacancyId === selectedVacancy;
   const analysisProgress = app.activeAnalysis || { total: 0, analyzed: 0, startTime: 0, vacancyId: '' };
@@ -47,12 +49,26 @@ const Analysis: React.FC = () => {
   useEffect(() => { loadResults(); }, [selectedVacancy, recommendationFilter]);
 
   useEffect(() => {
-    if (!app.activeAnalysis) return;
+    if (!app.activeAnalysis) {
+      initialAnalyzedRef.current = null;
+      return;
+    }
+
     const pollStats = async () => {
       try {
         const stats = await apiClient.getApplicationsStats(app.activeAnalysis!.vacancyId);
-        app.updateAnalysisProgress({ analyzed: stats.analyzed_applications });
-        if (stats.unanalyzed_applications === 0 || stats.analyzed_applications >= app.activeAnalysis!.total) {
+
+        // При первом запросе запоминаем начальное значение
+        if (initialAnalyzedRef.current === null) {
+          initialAnalyzedRef.current = stats.analyzed_applications;
+        }
+
+        // Вычисляем прогресс относительно начала текущей сессии
+        const newlyAnalyzed = stats.analyzed_applications - initialAnalyzedRef.current;
+        app.updateAnalysisProgress({ analyzed: Math.max(0, newlyAnalyzed) });
+
+        // Проверяем завершение
+        if (stats.unanalyzed_applications === 0 || newlyAnalyzed >= app.activeAnalysis!.total) {
           app.stopAnalysis();
           loadResults();
           loadApplicationsStats();

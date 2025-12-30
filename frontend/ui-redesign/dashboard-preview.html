@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timly Dashboard - Preview</title>
+
+    <!-- Plus Jakarta Sans - профессиональный, современный шрифт -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Refined Professional Palette */
+            --background: #faf9f7;
+            --foreground: #1e293b;
+            --card: #ffffff;
+            --card-foreground: #1e293b;
+            --primary: #0d9488;
+            --primary-foreground: #ffffff;
+            --muted: #f1f5f9;
+            --muted-foreground: #64748b;
+            --border: #e2e8f0;
+            --radius: 0.625rem;
+
+            /* Semantic colors */
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background);
+            color: var(--foreground);
+            line-height: 1.6;
+            letter-spacing: -0.01em;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--card);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 50;
+        }
+
+        .sidebar-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary), #14b8a6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--foreground);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 16px 12px;
+            overflow-y: auto;
+        }
+
+        .nav-section {
+            margin-bottom: 24px;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted-foreground);
+            padding: 0 12px;
+            margin-bottom: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: var(--radius);
+            color: var(--muted-foreground);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            margin-bottom: 2px;
+        }
+
+        .nav-item:hover {
+            background: var(--muted);
+            color: var(--foreground);
+        }
+
+        .nav-item.active {
+            background: rgba(13, 148, 136, 0.1);
+            color: var(--primary);
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            opacity: 0.7;
+        }
+
+        .nav-item.active .nav-icon {
+            opacity: 1;
+        }
+
+        /* Main content */
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+        }
+
+        /* Header */
+        .header {
+            height: 64px;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 40;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 12px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .user-menu:hover {
+            background: var(--muted);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--primary), #14b8a6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .user-info {
+            text-align: left;
+        }
+
+        .user-name {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: var(--muted-foreground);
+        }
+
+        /* Page content */
+        .page-content {
+            padding: 24px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Page header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+        }
+
+        .page-subtitle {
+            color: var(--muted-foreground);
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: none;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0f766e;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--foreground);
+        }
+
+        .btn-outline:hover {
+            background: var(--muted);
+            border-color: var(--muted-foreground);
+        }
+
+        /* Stats grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            animation: fadeIn 0.4s ease backwards;
+        }
+
+        .stat-card:nth-child(1) { animation-delay: 0.05s; }
+        .stat-card:nth-child(2) { animation-delay: 0.1s; }
+        .stat-card:nth-child(3) { animation-delay: 0.15s; }
+        .stat-card:nth-child(4) { animation-delay: 0.2s; }
+
+        .stat-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border-color: var(--primary);
+        }
+
+        .stat-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .stat-card-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--muted-foreground);
+            margin-bottom: 8px;
+        }
+
+        .stat-card-value {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1;
+        }
+
+        .stat-card-value span {
+            font-size: 18px;
+            color: var(--muted-foreground);
+            font-weight: 500;
+        }
+
+        .stat-card-footer {
+            margin-top: 12px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-card-footer.positive {
+            color: var(--success);
+        }
+
+        .stat-card-footer.neutral {
+            color: var(--muted-foreground);
+        }
+
+        .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-icon.teal { background: rgba(13, 148, 136, 0.1); color: var(--primary); }
+        .stat-icon.blue { background: rgba(59, 130, 246, 0.1); color: var(--info); }
+        .stat-icon.amber { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .stat-icon.green { background: rgba(34, 197, 94, 0.1); color: var(--success); }
+
+        /* Content grid */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        /* Card */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            animation: fadeIn 0.4s ease backwards;
+            animation-delay: 0.25s;
+        }
+
+        .card-header {
+            padding: 20px 24px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .card-description {
+            font-size: 13px;
+            color: var(--muted-foreground);
+        }
+
+        .card-content {
+            padding: 0 24px 24px;
+        }
+
+        /* Chart placeholder */
+        .chart-container {
+            height: 260px;
+            position: relative;
+        }
+
+        .chart-area {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: flex-end;
+            gap: 24px;
+            padding: 20px 0;
+        }
+
+        .chart-bar-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+        }
+
+        .chart-bar {
+            width: 100%;
+            background: linear-gradient(to top, rgba(13, 148, 136, 0.15), rgba(13, 148, 136, 0.05));
+            border-radius: 6px 6px 0 0;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .chart-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 3px 3px 0 0;
+        }
+
+        .chart-bar:hover {
+            background: linear-gradient(to top, rgba(13, 148, 136, 0.25), rgba(13, 148, 136, 0.1));
+        }
+
+        .chart-label {
+            margin-top: 12px;
+            font-size: 12px;
+            color: var(--muted-foreground);
+        }
+
+        .chart-grid {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+
+        .chart-grid-line {
+            border-top: 1px dashed var(--border);
+        }
+
+        /* Subscription widget */
+        .subscription-widget {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            animation: fadeIn 0.4s ease backwards;
+            animation-delay: 0.3s;
+        }
+
+        .subscription-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .subscription-plan {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+            background: rgba(13, 148, 136, 0.1);
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+
+        .subscription-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .subscription-desc {
+            font-size: 13px;
+            color: var(--muted-foreground);
+        }
+
+        .subscription-stats {
+            margin-top: 20px;
+        }
+
+        .subscription-stat {
+            margin-bottom: 16px;
+        }
+
+        .subscription-stat:last-child {
+            margin-bottom: 0;
+        }
+
+        .subscription-stat-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .subscription-stat-label {
+            color: var(--muted-foreground);
+        }
+
+        .subscription-stat-value {
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--muted);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        /* Recent analyses */
+        .analyses-list {
+            animation: fadeIn 0.4s ease backwards;
+            animation-delay: 0.35s;
+        }
+
+        .analysis-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .analysis-item:last-child {
+            border-bottom: none;
+        }
+
+        .analysis-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .analysis-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--muted-foreground);
+        }
+
+        .analysis-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .analysis-info p {
+            font-size: 13px;
+            color: var(--muted-foreground);
+        }
+
+        .analysis-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .analysis-badge {
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid;
+        }
+
+        .analysis-badge.hire {
+            background: rgba(34, 197, 94, 0.1);
+            color: #16a34a;
+            border-color: rgba(34, 197, 94, 0.2);
+        }
+
+        .analysis-badge.interview {
+            background: rgba(59, 130, 246, 0.1);
+            color: #2563eb;
+            border-color: rgba(59, 130, 246, 0.2);
+        }
+
+        .analysis-badge.maybe {
+            background: rgba(245, 158, 11, 0.1);
+            color: #d97706;
+            border-color: rgba(245, 158, 11, 0.2);
+        }
+
+        .analysis-badge.reject {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .analysis-score {
+            text-align: right;
+            min-width: 50px;
+        }
+
+        .analysis-score-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .analysis-score-label {
+            font-size: 11px;
+            color: var(--muted-foreground);
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .page-header {
+                flex-direction: column;
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">T</div>
+                <span class="logo-text">Timly</span>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Основное</div>
+                    <a href="#" class="nav-item active">
+                        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                        </svg>
+                        Dashboard
+                    </a>
+                    <a href="#" class="nav-item">
+                        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                        AI Анализ
+                    </a>
+                    <a href="#" class="nav-item">
+                        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        Поиск кандидатов
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Данные</div>
+                    <a href="#" class="nav-item">
+                        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Синхронизация
+                    </a>
+                    <a href="#" class="nav-item">
+                        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Экспорт
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Аккаунт</div>
+                    <a href="#" class="nav-item">
+                        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                        </svg>
+                        Тарифы
+                    </a>
+                    <a href="#" class="nav-item">
+                        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        Настройки
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-actions">
+                    <div class="user-menu">
+                        <div class="user-avatar">АК</div>
+                        <div class="user-info">
+                            <div class="user-name">Алексей К.</div>
+                            <div class="user-role">TechCorp HR</div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page content -->
+            <div class="page-content">
+                <!-- Page header -->
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Добрый день, TechCorp HR</h1>
+                        <p class="page-subtitle">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            четверг, 26 декабря
+                        </p>
+                    </div>
+                    <div class="header-buttons">
+                        <button class="btn btn-outline">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Синхронизация
+                        </button>
+                        <button class="btn btn-primary">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            AI Анализ
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div>
+                                <p class="stat-card-label">Всего анализов</p>
+                                <p class="stat-card-value">1,247</p>
+                                <p class="stat-card-footer neutral">
+                                    Смотреть все →
+                                </p>
+                            </div>
+                            <div class="stat-icon teal">
+                                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div>
+                                <p class="stat-card-label">За этот месяц</p>
+                                <p class="stat-card-value">348</p>
+                                <p class="stat-card-footer positive">
+                                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                                    </svg>
+                                    +12%
+                                </p>
+                            </div>
+                            <div class="stat-icon blue">
+                                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div>
+                                <p class="stat-card-label">Средний балл</p>
+                                <p class="stat-card-value">78 <span>/100</span></p>
+                                <p class="stat-card-footer neutral">Качество кандидатов</p>
+                            </div>
+                            <div class="stat-icon amber">
+                                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div>
+                                <p class="stat-card-label">Топ кандидатов</p>
+                                <p class="stat-card-value">156</p>
+                                <p class="stat-card-footer positive">
+                                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    Рекомендация «Нанять»
+                                </p>
+                            </div>
+                            <div class="stat-icon green">
+                                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content grid -->
+                <div class="content-grid">
+                    <!-- Chart card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <h2 class="card-title">Динамика анализов</h2>
+                                <p class="card-description">Количество обработанных резюме по месяцам</p>
+                            </div>
+                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;">
+                                Подробнее →
+                            </button>
+                        </div>
+                        <div class="card-content">
+                            <div class="chart-container">
+                                <div class="chart-grid">
+                                    <div class="chart-grid-line"></div>
+                                    <div class="chart-grid-line"></div>
+                                    <div class="chart-grid-line"></div>
+                                    <div class="chart-grid-line"></div>
+                                </div>
+                                <div class="chart-area">
+                                    <div class="chart-bar-wrapper">
+                                        <div class="chart-bar" style="height: 35%;"></div>
+                                        <span class="chart-label">Янв</span>
+                                    </div>
+                                    <div class="chart-bar-wrapper">
+                                        <div class="chart-bar" style="height: 48%;"></div>
+                                        <span class="chart-label">Фев</span>
+                                    </div>
+                                    <div class="chart-bar-wrapper">
+                                        <div class="chart-bar" style="height: 55%;"></div>
+                                        <span class="chart-label">Мар</span>
+                                    </div>
+                                    <div class="chart-bar-wrapper">
+                                        <div class="chart-bar" style="height: 68%;"></div>
+                                        <span class="chart-label">Апр</span>
+                                    </div>
+                                    <div class="chart-bar-wrapper">
+                                        <div class="chart-bar" style="height: 82%;"></div>
+                                        <span class="chart-label">Май</span>
+                                    </div>
+                                    <div class="chart-bar-wrapper">
+                                        <div class="chart-bar" style="height: 100%;"></div>
+                                        <span class="chart-label">Июн</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subscription widget -->
+                    <div class="subscription-widget">
+                        <div class="subscription-header">
+                            <div>
+                                <h3 class="subscription-title">Ваша подписка</h3>
+                                <p class="subscription-desc">Текущий период до 15 янв</p>
+                            </div>
+                            <span class="subscription-plan">Professional</span>
+                        </div>
+                        <div class="subscription-stats">
+                            <div class="subscription-stat">
+                                <div class="subscription-stat-header">
+                                    <span class="subscription-stat-label">Анализов использовано</span>
+                                    <span class="subscription-stat-value">650 / 1000</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 65%;"></div>
+                                </div>
+                            </div>
+                            <div class="subscription-stat">
+                                <div class="subscription-stat-header">
+                                    <span class="subscription-stat-label">Экспортов</span>
+                                    <span class="subscription-stat-value">12 / 50</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 24%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline" style="width: 100%; margin-top: 20px; justify-content: center;">
+                            Управление подпиской
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent analyses -->
+                <div class="card analyses-list">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title">Последние анализы</h2>
+                            <p class="card-description">Результаты AI-анализа резюме</p>
+                        </div>
+                        <button class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;">
+                            Смотреть все →
+                        </button>
+                    </div>
+                    <div class="card-content">
+                        <div class="analysis-item">
+                            <div class="analysis-left">
+                                <div class="analysis-avatar">АП</div>
+                                <div class="analysis-info">
+                                    <h4>Александр Петров</h4>
+                                    <p>Frontend Developer (Senior)</p>
+                                </div>
+                            </div>
+                            <div class="analysis-right">
+                                <span class="analysis-badge hire">Нанять</span>
+                                <div class="analysis-score">
+                                    <div class="analysis-score-value">94</div>
+                                    <div class="analysis-score-label">баллов</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="analysis-item">
+                            <div class="analysis-left">
+                                <div class="analysis-avatar">МИ</div>
+                                <div class="analysis-info">
+                                    <h4>Мария Иванова</h4>
+                                    <p>Backend Developer (Middle)</p>
+                                </div>
+                            </div>
+                            <div class="analysis-right">
+                                <span class="analysis-badge interview">Собеседование</span>
+                                <div class="analysis-score">
+                                    <div class="analysis-score-value">87</div>
+                                    <div class="analysis-score-label">баллов</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="analysis-item">
+                            <div class="analysis-left">
+                                <div class="analysis-avatar">ДС</div>
+                                <div class="analysis-info">
+                                    <h4>Дмитрий Смирнов</h4>
+                                    <p>DevOps Engineer</p>
+                                </div>
+                            </div>
+                            <div class="analysis-right">
+                                <span class="analysis-badge maybe">Возможно</span>
+                                <div class="analysis-score">
+                                    <div class="analysis-score-value">72</div>
+                                    <div class="analysis-score-label">баллов</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="analysis-item">
+                            <div class="analysis-left">
+                                <div class="analysis-avatar">ЕК</div>
+                                <div class="analysis-info">
+                                    <h4>Елена Козлова</h4>
+                                    <p>Product Manager</p>
+                                </div>
+                            </div>
+                            <div class="analysis-right">
+                                <span class="analysis-badge hire">Нанять</span>
+                                <div class="analysis-score">
+                                    <div class="analysis-score-value">91</div>
+                                    <div class="analysis-score-label">баллов</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

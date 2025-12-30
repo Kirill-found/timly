@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timly - Yandex Direct Banners</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: #1a1a1a;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 60px;
+      align-items: center;
+    }
+
+    h1 {
+      color: white;
+      font-size: 24px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .section {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .size-label {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .banner {
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    /* Noise texture */
+    .noise {
+      position: absolute;
+      inset: 0;
+      opacity: 0.03;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    }
+
+    /* ===== BANNER 1: 300x250 ===== */
+    .banner-300x250 {
+      width: 300px;
+      height: 250px;
+      background: linear-gradient(135deg, #0a0a0a 0%, #111 50%, #0d0d0d 100%);
+    }
+
+    .banner-300x250 .content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .banner-300x250 .glow {
+      position: absolute;
+      top: -50px;
+      right: -50px;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(217, 119, 6, 0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .banner-300x250 .logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: white;
+      letter-spacing: -0.5px;
+    }
+
+    .banner-300x250 .logo span {
+      color: #d97706;
+    }
+
+    .banner-300x250 h2 {
+      margin-top: 16px;
+      font-size: 22px;
+      font-weight: 800;
+      color: white;
+      line-height: 1.2;
+    }
+
+    .banner-300x250 h2 em {
+      font-style: normal;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .banner-300x250 .subtitle {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #888;
+      line-height: 1.4;
+    }
+
+    .banner-300x250 .cta {
+      margin-top: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+      border-radius: 8px;
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      width: fit-content;
+      box-shadow: 0 4px 20px -5px rgba(217, 119, 6, 0.5);
+    }
+
+    .banner-300x250 .cta svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ===== BANNER 2: 728x90 ===== */
+    .banner-728x90 {
+      width: 728px;
+      height: 90px;
+      background: linear-gradient(90deg, #0a0a0a 0%, #111 50%, #0a0a0a 100%);
+    }
+
+    .banner-728x90 .content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      padding: 0 30px;
+      display: flex;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .banner-728x90 .glow {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      height: 200px;
+      background: radial-gradient(ellipse, rgba(217, 119, 6, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .banner-728x90 .logo {
+      font-size: 24px;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -1px;
+      white-space: nowrap;
+    }
+
+    .banner-728x90 .logo span {
+      color: #d97706;
+    }
+
+    .banner-728x90 .divider {
+      width: 1px;
+      height: 40px;
+      background: rgba(255,255,255,0.1);
+    }
+
+    .banner-728x90 .text {
+      flex: 1;
+    }
+
+    .banner-728x90 h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .banner-728x90 h2 em {
+      font-style: normal;
+      color: #f59e0b;
+    }
+
+    .banner-728x90 .subtitle {
+      font-size: 12px;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    .banner-728x90 .cta {
+      padding: 14px 24px;
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      white-space: nowrap;
+      box-shadow: 0 4px 20px -5px rgba(217, 119, 6, 0.5);
+    }
+
+    /* ===== BANNER 3: 300x600 ===== */
+    .banner-300x600 {
+      width: 300px;
+      height: 600px;
+      background: linear-gradient(180deg, #0a0a0a 0%, #0d0d0d 50%, #111 100%);
+    }
+
+    .banner-300x600 .content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      padding: 30px 24px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .banner-300x600 .glow {
+      position: absolute;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(217, 119, 6, 0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .banner-300x600 .logo {
+      font-size: 22px;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -0.5px;
+    }
+
+    .banner-300x600 .logo span {
+      color: #d97706;
+    }
+
+    .banner-300x600 .badge {
+      margin-top: 30px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: rgba(217, 119, 6, 0.1);
+      border: 1px solid rgba(217, 119, 6, 0.2);
+      border-radius: 100px;
+      width: fit-content;
+    }
+
+    .banner-300x600 .badge-dot {
+      width: 6px;
+      height: 6px;
+      background: #d97706;
+      border-radius: 50%;
+    }
+
+    .banner-300x600 .badge-text {
+      font-size: 11px;
+      font-weight: 600;
+      color: #d97706;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .banner-300x600 h2 {
+      margin-top: 24px;
+      font-size: 32px;
+      font-weight: 800;
+      color: white;
+      line-height: 1.15;
+    }
+
+    .banner-300x600 h2 em {
+      font-style: normal;
+      display: block;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .banner-300x600 .features {
+      margin-top: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .banner-300x600 .feature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .banner-300x600 .feature-icon {
+      width: 32px;
+      height: 32px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .banner-300x600 .feature-icon svg {
+      width: 16px;
+      height: 16px;
+      color: #d97706;
+    }
+
+    .banner-300x600 .feature-text {
+      font-size: 14px;
+      color: #999;
+    }
+
+    .banner-300x600 .feature-text strong {
+      color: white;
+      font-weight: 600;
+    }
+
+    .banner-300x600 .stats {
+      margin-top: 30px;
+      padding: 20px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px;
+    }
+
+    .banner-300x600 .stat-value {
+      font-size: 36px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .banner-300x600 .stat-label {
+      font-size: 13px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .banner-300x600 .cta {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px 24px;
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+      border-radius: 12px;
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 4px 20px -5px rgba(217, 119, 6, 0.5);
+    }
+
+    /* ===== BANNER 4: 240x400 ===== */
+    .banner-240x400 {
+      width: 240px;
+      height: 400px;
+      background: linear-gradient(180deg, #0a0a0a 0%, #111 100%);
+    }
+
+    .banner-240x400 .content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .banner-240x400 .glow {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(217, 119, 6, 0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .banner-240x400 .logo {
+      font-size: 18px;
+      font-weight: 800;
+      color: white;
+    }
+
+    .banner-240x400 .logo span {
+      color: #d97706;
+    }
+
+    .banner-240x400 h2 {
+      margin-top: 24px;
+      font-size: 24px;
+      font-weight: 800;
+      color: white;
+      line-height: 1.2;
+    }
+
+    .banner-240x400 h2 em {
+      font-style: normal;
+      color: #f59e0b;
+    }
+
+    .banner-240x400 .number {
+      margin-top: 20px;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .banner-240x400 .number-value {
+      font-size: 56px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+
+    .banner-240x400 .number-unit {
+      font-size: 24px;
+      font-weight: 700;
+      color: #d97706;
+    }
+
+    .banner-240x400 .number-label {
+      font-size: 13px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .banner-240x400 .cta {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 14px 20px;
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+      border-radius: 10px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 4px 20px -5px rgba(217, 119, 6, 0.5);
+    }
+
+    /* ===== BANNER 5: 970x250 ===== */
+    .banner-970x250 {
+      width: 970px;
+      height: 250px;
+      background: linear-gradient(90deg, #0a0a0a 0%, #0d0d0d 30%, #111 70%, #0a0a0a 100%);
+    }
+
+    .banner-970x250 .content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      padding: 40px 50px;
+      display: flex;
+      align-items: center;
+      gap: 60px;
+    }
+
+    .banner-970x250 .glow {
+      position: absolute;
+      left: 30%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 500px;
+      height: 300px;
+      background: radial-gradient(ellipse, rgba(217, 119, 6, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .banner-970x250 .left {
+      flex: 1;
+    }
+
+    .banner-970x250 .logo {
+      font-size: 28px;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -1px;
+    }
+
+    .banner-970x250 .logo span {
+      color: #d97706;
+    }
+
+    .banner-970x250 h2 {
+      margin-top: 16px;
+      font-size: 36px;
+      font-weight: 800;
+      color: white;
+      line-height: 1.2;
+    }
+
+    .banner-970x250 h2 em {
+      font-style: normal;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .banner-970x250 .subtitle {
+      margin-top: 12px;
+      font-size: 16px;
+      color: #666;
+    }
+
+    .banner-970x250 .right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 20px;
+    }
+
+    .banner-970x250 .stats-row {
+      display: flex;
+      gap: 30px;
+    }
+
+    .banner-970x250 .stat {
+      text-align: center;
+      padding: 16px 24px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+    }
+
+    .banner-970x250 .stat-value {
+      font-size: 32px;
+      font-weight: 800;
+      color: #f59e0b;
+    }
+
+    .banner-970x250 .stat-label {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .banner-970x250 .cta {
+      padding: 16px 32px;
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+      border-radius: 10px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 4px 20px -5px rgba(217, 119, 6, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* ===== BANNER 6: 336x280 ===== */
+    .banner-336x280 {
+      width: 336px;
+      height: 280px;
+      background: linear-gradient(135deg, #0a0a0a 0%, #111 100%);
+    }
+
+    .banner-336x280 .content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .banner-336x280 .glow {
+      position: absolute;
+      top: -30px;
+      right: -30px;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(217, 119, 6, 0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .banner-336x280 .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .banner-336x280 .logo {
+      font-size: 20px;
+      font-weight: 800;
+      color: white;
+    }
+
+    .banner-336x280 .logo span {
+      color: #d97706;
+    }
+
+    .banner-336x280 .badge {
+      padding: 6px 12px;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      border-radius: 100px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #22c55e;
+      text-transform: uppercase;
+    }
+
+    .banner-336x280 h2 {
+      margin-top: 20px;
+      font-size: 26px;
+      font-weight: 800;
+      color: white;
+      line-height: 1.2;
+    }
+
+    .banner-336x280 h2 em {
+      font-style: normal;
+      color: #f59e0b;
+    }
+
+    .banner-336x280 .subtitle {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .banner-336x280 .cta {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 24px;
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+      border-radius: 10px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 4px 20px -5px rgba(217, 119, 6, 0.5);
+    }
+
+    /* Arrow icon */
+    .arrow-icon {
+      width: 16px;
+      height: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Timly — Рекламные баннеры для Яндекс.Директ</h1>
+
+  <!-- BANNER 300x250 -->
+  <div class="section">
+    <div class="size-label">300 x 250</div>
+    <div class="banner banner-300x250">
+      <div class="noise"></div>
+      <div class="glow"></div>
+      <div class="content">
+        <div class="logo">timly<span>.</span></div>
+        <h2>AI-скрининг резюме <em>за секунды</em></h2>
+        <p class="subtitle">Автоматизируйте подбор персонала и экономьте до 80% времени</p>
+        <a href="#" class="cta">
+          Попробовать бесплатно
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- BANNER 728x90 -->
+  <div class="section">
+    <div class="size-label">728 x 90</div>
+    <div class="banner banner-728x90">
+      <div class="noise"></div>
+      <div class="glow"></div>
+      <div class="content">
+        <div class="logo">timly<span>.</span></div>
+        <div class="divider"></div>
+        <div class="text">
+          <h2>Нанимайте <em>лучших</em> с помощью AI</h2>
+          <p class="subtitle">Автоматический скрининг резюме и оценка кандидатов</p>
+        </div>
+        <a href="#" class="cta">Начать бесплатно</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- BANNER 300x600 -->
+  <div class="section">
+    <div class="size-label">300 x 600</div>
+    <div class="banner banner-300x600">
+      <div class="noise"></div>
+      <div class="glow"></div>
+      <div class="content">
+        <div class="logo">timly<span>.</span></div>
+
+        <div class="badge">
+          <div class="badge-dot"></div>
+          <span class="badge-text">AI-платформа</span>
+        </div>
+
+        <h2>Рекрутинг на автопилоте<em>с ИИ</em></h2>
+
+        <div class="features">
+          <div class="feature">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+            </div>
+            <div class="feature-text"><strong>Мгновенный</strong> анализ резюме</div>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <div class="feature-text"><strong>AI-скоринг</strong> кандидатов</div>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <div class="feature-text"><strong>Экономия</strong> 80% времени</div>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat-value">10x</div>
+          <div class="stat-label">быстрее ручного подбора</div>
+        </div>
+
+        <a href="#" class="cta">
+          Попробовать бесплатно
+          <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- BANNER 240x400 -->
+  <div class="section">
+    <div class="size-label">240 x 400</div>
+    <div class="banner banner-240x400">
+      <div class="noise"></div>
+      <div class="glow"></div>
+      <div class="content">
+        <div class="logo">timly<span>.</span></div>
+
+        <h2>Найдите <em>идеального</em> кандидата</h2>
+
+        <div class="number">
+          <span class="number-value">80</span>
+          <span class="number-unit">%</span>
+        </div>
+        <p class="number-label">экономия времени на подбор</p>
+
+        <a href="#" class="cta">
+          Начать бесплатно
+          <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- BANNER 970x250 -->
+  <div class="section">
+    <div class="size-label">970 x 250</div>
+    <div class="banner banner-970x250">
+      <div class="noise"></div>
+      <div class="glow"></div>
+      <div class="content">
+        <div class="left">
+          <div class="logo">timly<span>.</span></div>
+          <h2>AI-платформа для <em>умного рекрутинга</em></h2>
+          <p class="subtitle">Автоматизируйте скрининг резюме и находите лучших кандидатов быстрее</p>
+        </div>
+        <div class="right">
+          <div class="stats-row">
+            <div class="stat">
+              <div class="stat-value">10x</div>
+              <div class="stat-label">Быстрее</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">80%</div>
+              <div class="stat-label">Экономия</div>
+            </div>
+          </div>
+          <a href="#" class="cta">
+            Попробовать бесплатно
+            <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BANNER 336x280 -->
+  <div class="section">
+    <div class="size-label">336 x 280</div>
+    <div class="banner banner-336x280">
+      <div class="noise"></div>
+      <div class="glow"></div>
+      <div class="content">
+        <div class="top-row">
+          <div class="logo">timly<span>.</span></div>
+          <div class="badge">Бесплатно</div>
+        </div>
+
+        <h2>Устали от <em>рутины</em> подбора?</h2>
+        <p class="subtitle">AI сделает скрининг резюме за вас — быстро и точно</p>
+
+        <a href="#" class="cta">
+          Автоматизировать
+          <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

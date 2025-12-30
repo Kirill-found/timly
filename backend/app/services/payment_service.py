@@ -68,7 +68,17 @@ class PaymentService:
                 amount = plan.price_monthly
                 description = f"Подписка {plan.name} на 1 месяц"
 
-            # Создаем платеж в ЮKassa
+            # Validate amount
+            if amount <= 0:
+                raise ValueError(f"Недопустимая сумма платежа: {amount}. Для бесплатных планов используйте активацию без оплаты.")
+
+            logger.info(f"Creating payment: plan={plan_type}, amount={amount}, duration={duration_months}, return_url={return_url}")
+
+            # Получаем email пользователя для чека
+            user = self.db.query(User).filter(User.id == user_id).first()
+            user_email = user.email if user else "customer@example.com"
+
+            # Создаем платеж в ЮKassa с чеком (54-ФЗ)
             payment = YooPayment.create({
                 "amount": {
                     "value": f"{amount:.2f}",
@@ -84,6 +94,24 @@ class PaymentService:
                     "user_id": str(user_id),
                     "plan_type": plan_type,
                     "duration_months": duration_months
+                },
+                "receipt": {
+                    "customer": {
+                        "email": user_email
+                    },
+                    "items": [
+                        {
+                            "description": description[:128],  # Max 128 chars
+                            "quantity": "1.00",
+                            "amount": {
+                                "value": f"{amount:.2f}",
+                                "currency": "RUB"
+                            },
+                            "vat_code": 1,  # НДС не облагается
+                            "payment_subject": "service",
+                            "payment_mode": "full_payment"
+                        }
+                    ]
                 }
             })
 
@@ -114,7 +142,14 @@ class PaymentService:
             }
 
         except Exception as e:
-            logger.error(f"Error creating payment: {e}", exc_info=True)
+            # Try to get more details from YooKassa error
+            error_details = str(e)
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_details = f"{e} - Response: {e.response.text}"
+                except:
+                    pass
+            logger.error(f"Error creating payment: {error_details}", exc_info=True)
             raise
 
     async def handle_webhook(self, webhook_data: Dict[str, Any]) -> bool:

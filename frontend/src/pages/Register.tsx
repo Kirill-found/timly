@@ -19,7 +19,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Eye, EyeOff, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, ArrowLeft, Check, BarChart3, Users, Download, Zap } from 'lucide-react';
 import { useAuth } from '@/store/AuthContext';
 
 const formSchema = z.object({
@@ -75,39 +75,92 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 py-8">
-      <div className="w-full max-w-md">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          {/* Header */}
-          <div className="text-center mb-6">
-            <Link to="/" className="inline-flex items-center gap-3 mb-4">
-              <img src="/logo.jpg" alt="Timly" className="h-10 w-10 rounded-xl" />
-              <span className="text-xl font-semibold text-zinc-100">Timly</span>
-            </Link>
-            <h1 className="text-2xl font-semibold text-zinc-100 mb-2">Создать аккаунт</h1>
-            <p className="text-sm text-zinc-500">Начните использовать Timly бесплатно</p>
+    <div className="min-h-screen bg-[#0a0a0a] flex">
+      {/* Left side - Features */}
+      <div className="hidden lg:flex lg:w-1/2 bg-[#0f0f0f] border-r border-zinc-800 flex-col justify-between p-12">
+        <div>
+          <Link to="/" className="inline-flex items-center gap-2.5 mb-12">
+            <img src="/logo.jpg" alt="timly" className="h-10 w-10 rounded-xl" />
+            <span className="text-xl font-semibold text-zinc-100 tracking-tight">timly<span className="text-zinc-500">.</span></span>
+          </Link>
+
+          <h2 className="text-3xl font-semibold text-zinc-100 mb-4 leading-tight">
+            Начните работать<br />с AI-скринингом
+          </h2>
+          <p className="text-zinc-500 mb-10 max-w-sm">
+            Регистрация занимает 2 минуты. 50 анализов резюме бесплатно — без карты и обязательств.
+          </p>
+
+          <div className="space-y-4">
+            {[
+              { icon: BarChart3, text: 'AI-оценка по 15+ критериям' },
+              { icon: Users, text: 'Интеграция с HeadHunter' },
+              { icon: Download, text: 'Экспорт отчётов в Excel' },
+              { icon: Zap, text: '100 резюме за 10 минут' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center">
+                  <item.icon className="h-4 w-4 text-zinc-400" />
+                </div>
+                <span className="text-sm text-zinc-400">{item.text}</span>
+              </div>
+            ))}
           </div>
 
-          {/* Benefits */}
-          <div className="mb-6 p-4 rounded-lg border border-zinc-800 bg-zinc-900/30">
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                '50 анализов бесплатно',
-                'Без кредитной карты',
-                'Интеграция с HH.ru',
-                'Экспорт в Excel',
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs text-zinc-400">
-                  <Check className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
+          {/* Stats */}
+          <div className="mt-12 grid grid-cols-3 gap-4">
+            {[
+              { value: '50', label: 'анализов бесплатно' },
+              { value: '2', label: 'минуты на старт' },
+              { value: '80%', label: 'экономия времени' },
+            ].map((stat, i) => (
+              <div key={i} className="text-center">
+                <div className="text-2xl font-bold text-zinc-100 tabular-nums">{stat.value}</div>
+                <div className="text-[11px] text-zinc-600">{stat.label}</div>
+              </div>
+            ))}
           </div>
+        </div>
+
+        <div className="text-xs text-zinc-600">
+          © 2024 timly. AI-скрининг резюме.
+        </div>
+      </div>
+
+      {/* Right side - Form */}
+      <div className="flex-1 flex items-center justify-center p-6 py-8">
+        <div className="w-full max-w-md">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            {/* Mobile header */}
+            <div className="text-center mb-6">
+              <Link to="/" className="lg:hidden inline-flex items-center gap-2.5 mb-4">
+                <img src="/logo.jpg" alt="timly" className="h-10 w-10 rounded-xl" />
+                <span className="text-xl font-semibold text-zinc-100 tracking-tight">timly<span className="text-zinc-500">.</span></span>
+              </Link>
+              <h1 className="text-2xl font-semibold text-zinc-100 mb-2">Создать аккаунт</h1>
+              <p className="text-sm text-zinc-500">Начните использовать timly бесплатно</p>
+            </div>
+
+            {/* Mobile Benefits */}
+            <div className="lg:hidden mb-6 p-4 rounded-lg border border-zinc-800 bg-zinc-900/30">
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  '50 анализов бесплатно',
+                  'Без кредитной карты',
+                  'Интеграция с HH.ru',
+                  'Экспорт в Excel',
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs text-zinc-400">
+                    <Check className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
           {/* Form Card */}
           <Card className="border-zinc-800 bg-zinc-900/50">
@@ -269,9 +322,13 @@ const Register: React.FC = () => {
 
           {/* Terms */}
           <p className="mt-4 text-[11px] text-center text-zinc-600">
-            Регистрируясь, вы соглашаетесь с условиями использования и политикой конфиденциальности
+            Регистрируясь, вы соглашаетесь с{' '}
+            <Link to="/terms" className="text-zinc-500 hover:text-zinc-400">условиями использования</Link>
+            {' '}и{' '}
+            <Link to="/privacy" className="text-zinc-500 hover:text-zinc-400">политикой конфиденциальности</Link>
           </p>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
     </div>
   );

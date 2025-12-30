@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timly V6 Landing - Mobile Audit</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #FAFAFA;
+      color: #1A1A1A;
+      padding: 40px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #1A1A1A;
+    }
+
+    h1::after { content: '.'; color: #CDFF4D; }
+
+    .subtitle {
+      text-align: center;
+      color: #6B6B6B;
+      margin-bottom: 60px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      background: #CDFF4D;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1A1A1A;
+      margin: 0 auto 40px;
+      display: flex;
+      justify-content: center;
+      width: fit-content;
+    }
+
+    .devices {
+      display: flex;
+      gap: 60px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 80px;
+    }
+
+    .device {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .device-label {
+      color: #6B6B6B;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .device-frame {
+      background: #1A1A1A;
+      border-radius: 40px;
+      padding: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+
+    .device-screen {
+      border-radius: 28px;
+      overflow: hidden;
+      background: #FAFAFA;
+      position: relative;
+    }
+
+    /* iPhone 14 Pro - 393x852 scaled */
+    .iphone .device-screen {
+      width: 280px;
+      height: 600px;
+    }
+
+    /* iPad - 820x1180 scaled */
+    .ipad .device-screen {
+      width: 420px;
+      height: 560px;
+    }
+
+    /* Status indicator */
+    .status-ok {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #22c55e;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 4px;
+      z-index: 10;
+    }
+
+    /* Mock V6 Landing Content */
+    .mock-nav {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(250,250,250,0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid #E8E8E8;
+    }
+
+    .mock-logo {
+      font-weight: 800;
+      font-size: 18px;
+      color: #1A1A1A;
+    }
+
+    .mock-logo::after { content: '.'; color: #CDFF4D; }
+
+    .mock-hamburger {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .mock-hamburger span {
+      width: 20px;
+      height: 2px;
+      background: #1A1A1A;
+      display: block;
+    }
+
+    .mock-hero {
+      padding: 20px 16px;
+      position: relative;
+    }
+
+    .mock-bg-shape {
+      position: absolute;
+      top: -100px;
+      right: -50px;
+      width: 200px;
+      height: 200px;
+      background: #CDFF4D;
+      border-radius: 50%;
+      opacity: 0.2;
+      filter: blur(40px);
+    }
+
+    .mock-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: #FFFFFF;
+      border: 1px solid #E8E8E8;
+      border-radius: 100px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #6B6B6B;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .mock-badge-dot {
+      width: 6px;
+      height: 6px;
+      background: #CDFF4D;
+      border-radius: 50%;
+    }
+
+    .mock-title {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+      color: #1A1A1A;
+    }
+
+    .mock-highlight {
+      position: relative;
+      display: inline-block;
+    }
+
+    .mock-highlight::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      left: -2px;
+      right: -2px;
+      height: 10px;
+      background: #CDFF4D;
+      z-index: -1;
+      border-radius: 2px;
+    }
+
+    .mock-subtitle {
+      font-size: 14px;
+      color: #6B6B6B;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .mock-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .mock-btn {
+      padding: 12px 20px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mock-btn-primary {
+      background: #1A1A1A;
+      color: #FFFFFF;
+    }
+
+    .mock-btn-ghost {
+      background: #FFFFFF;
+      color: #1A1A1A;
+      border: 1px solid #E8E8E8;
+    }
+
+    .mock-features {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 12px;
+      color: #6B6B6B;
+    }
+
+    .mock-feature {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mock-check {
+      width: 20px;
+      height: 20px;
+      background: #CDFF4D;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mock-check svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    /* Features section */
+    .mock-section {
+      padding: 30px 16px;
+      background: #1A1A1A;
+      color: white;
+    }
+
+    .mock-section-label {
+      display: inline-block;
+      padding: 6px 12px;
+      background: rgba(205,255,77,0.1);
+      border-radius: 100px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #CDFF4D;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+
+    .mock-section-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    .mock-section-desc {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 24px;
+    }
+
+    .mock-feature-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .mock-feature-card {
+      background: #252525;
+      border: 1px solid #333;
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .mock-feature-icon {
+      width: 40px;
+      height: 40px;
+      background: #CDFF4D;
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+
+    .mock-feature-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .mock-feature-desc {
+      font-size: 12px;
+      color: #888;
+      line-height: 1.5;
+    }
+
+    /* iPad specific */
+    .ipad .mock-nav {
+      padding: 16px 24px;
+    }
+
+    .ipad .mock-logo {
+      font-size: 22px;
+    }
+
+    .ipad .mock-hamburger {
+      display: none;
+    }
+
+    .ipad .nav-links {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .ipad .nav-link {
+      font-size: 12px;
+      color: #6B6B6B;
+    }
+
+    .ipad .nav-cta {
+      padding: 10px 18px;
+      background: #1A1A1A;
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 100px;
+    }
+
+    .ipad .mock-hero {
+      padding: 30px 32px;
+    }
+
+    .ipad .mock-title {
+      font-size: 42px;
+    }
+
+    .ipad .mock-subtitle {
+      font-size: 16px;
+      max-width: 400px;
+    }
+
+    .ipad .mock-buttons {
+      flex-direction: row;
+      gap: 12px;
+    }
+
+    .ipad .mock-btn {
+      padding: 14px 28px;
+      font-size: 14px;
+    }
+
+    .ipad .mock-features {
+      flex-direction: row;
+      gap: 24px;
+    }
+
+    .ipad .mock-section {
+      padding: 40px 32px;
+    }
+
+    .ipad .mock-section-title {
+      font-size: 32px;
+    }
+
+    .ipad .mock-feature-cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    /* Report section */
+    .report-section {
+      max-width: 1000px;
+      margin: 0 auto 60px;
+    }
+
+    .report-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      color: #22c55e;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .report-title svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .report-card {
+      background: #FFFFFF;
+      border: 1px solid #E8E8E8;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .report-card h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1A1A1A;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .report-card p {
+      font-size: 14px;
+      color: #6B6B6B;
+      line-height: 1.6;
+    }
+
+    .check-icon {
+      width: 24px;
+      height: 24px;
+      background: #22c55e;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .check-icon svg {
+      width: 14px;
+      height: 14px;
+      color: white;
+    }
+
+    .code-block {
+      background: #F5F5F5;
+      padding: 16px;
+      border-radius: 10px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #1A1A1A;
+      margin-top: 12px;
+      overflow-x: auto;
+      border-left: 3px solid #CDFF4D;
+    }
+
+    /* Summary */
+    .summary-section {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: #1A1A1A;
+      border-radius: 24px;
+      padding: 40px;
+      color: white;
+    }
+
+    .summary-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .summary-stat {
+      text-align: center;
+      padding: 24px;
+      background: #252525;
+      border-radius: 16px;
+    }
+
+    .summary-value {
+      font-size: 42px;
+      font-weight: 800;
+      color: #CDFF4D;
+      margin-bottom: 8px;
+    }
+
+    .summary-label {
+      font-size: 14px;
+      color: #888;
+    }
+
+    @media (max-width: 900px) {
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 20px; }
+      .devices { gap: 40px; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Timly V6 Landing</h1>
+  <p class="subtitle">Аудит адаптивности для мобильных устройств</p>
+
+  <div class="status-badge">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    Адаптивный дизайн реализован
+  </div>
+
+  <!-- Device Mockups -->
+  <div class="devices">
+
+    <!-- iPhone -->
+    <div class="device iphone">
+      <div class="device-label">iPhone 14 Pro (393x852)</div>
+      <div class="device-frame">
+        <div class="device-screen">
+          <div class="status-ok">OK</div>
+
+          <!-- Nav -->
+          <div class="mock-nav">
+            <div class="mock-logo">timly</div>
+            <div class="mock-hamburger">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+
+          <!-- Hero -->
+          <div class="mock-hero">
+            <div class="mock-bg-shape"></div>
+            <div class="mock-badge">
+              <span class="mock-badge-dot"></span>
+              Работает с HeadHunter
+            </div>
+            <h1 class="mock-title">
+              Найдите <span class="mock-highlight">лучших</span> кандидатов за минуты
+            </h1>
+            <p class="mock-subtitle">
+              AI анализирует резюме, ищет в базах HH.ru и показывает, кто реально подходит.
+            </p>
+            <div class="mock-buttons">
+              <div class="mock-btn mock-btn-primary">Попробовать бесплатно →</div>
+              <div class="mock-btn mock-btn-ghost">Смотреть демо</div>
+            </div>
+            <div class="mock-features">
+              <div class="mock-feature">
+                <div class="mock-check">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                50 анализов бесплатно
+              </div>
+              <div class="mock-feature">
+                <div class="mock-check">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                Без карты
+              </div>
+            </div>
+          </div>
+
+          <!-- Features section preview -->
+          <div class="mock-section">
+            <div class="mock-section-label">Возможности</div>
+            <div class="mock-section-title">Три способа найти кандидатов</div>
+            <div class="mock-section-desc">Анализируйте отклики, ищите в базе...</div>
+            <div class="mock-feature-cards">
+              <div class="mock-feature-card">
+                <div class="mock-feature-icon"></div>
+                <div class="mock-feature-title">Анализ откликов</div>
+                <div class="mock-feature-desc">Подключите HH.ru и получите ранжированный список</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- iPad -->
+    <div class="device ipad">
+      <div class="device-label">iPad (820x1180)</div>
+      <div class="device-frame">
+        <div class="device-screen">
+          <div class="status-ok">OK</div>
+
+          <!-- Nav with links -->
+          <div class="mock-nav">
+            <div class="mock-logo">timly</div>
+            <div class="nav-links">
+              <span class="nav-link">Возможности</span>
+              <span class="nav-link">Как работает</span>
+              <span class="nav-link">Тарифы</span>
+              <span class="nav-cta">Начать бесплатно</span>
+            </div>
+          </div>
+
+          <!-- Hero -->
+          <div class="mock-hero">
+            <div class="mock-bg-shape" style="width: 300px; height: 300px;"></div>
+            <div class="mock-badge">
+              <span class="mock-badge-dot"></span>
+              Работает с HeadHunter
+            </div>
+            <h1 class="mock-title">
+              Найдите <span class="mock-highlight">лучших</span> кандидатов за минуты
+            </h1>
+            <p class="mock-subtitle">
+              AI анализирует резюме, ищет в базах HH.ru и показывает, кто реально подходит — с понятным объяснением почему.
+            </p>
+            <div class="mock-buttons">
+              <div class="mock-btn mock-btn-primary">Попробовать бесплатно →</div>
+              <div class="mock-btn mock-btn-ghost">Смотреть демо</div>
+            </div>
+            <div class="mock-features">
+              <div class="mock-feature">
+                <div class="mock-check">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                50 анализов бесплатно
+              </div>
+              <div class="mock-feature">
+                <div class="mock-check">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                Без карты
+              </div>
+            </div>
+          </div>
+
+          <!-- Features -->
+          <div class="mock-section">
+            <div class="mock-section-label">Возможности</div>
+            <div class="mock-section-title">Три способа найти кандидатов</div>
+            <div class="mock-section-desc">Анализируйте отклики, ищите в базе или загружайте свои резюме</div>
+            <div class="mock-feature-cards">
+              <div class="mock-feature-card">
+                <div class="mock-feature-icon"></div>
+                <div class="mock-feature-title">Анализ откликов</div>
+                <div class="mock-feature-desc">Подключите HH.ru</div>
+              </div>
+              <div class="mock-feature-card">
+                <div class="mock-feature-icon"></div>
+                <div class="mock-feature-title">Поиск в базе</div>
+                <div class="mock-feature-desc">1.2M резюме</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Report -->
+  <div class="report-section">
+    <h2 class="report-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Реализованные адаптивные функции
+    </h2>
+
+    <div class="report-card">
+      <h3>
+        <span class="check-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+        Гамбургер-меню для мобильных
+      </h3>
+      <p>На экранах меньше 1024px навигация скрывается и появляется кнопка-гамбургер. При клике открывается боковое меню с плавной анимацией.</p>
+      <div class="code-block">
+@media (max-width: 1024px) {
+  .nav-links { display: none !important; }
+  .hamburger-btn { display: block; }
+}
+      </div>
+    </div>
+
+    <div class="report-card">
+      <h3>
+        <span class="check-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+        Адаптивный Hero-заголовок
+      </h3>
+      <p>Заголовок использует clamp() и уменьшается до 32px на мобильных. Подзаголовок адаптируется до 16px.</p>
+      <div class="code-block">
+.hero-title { font-size: clamp(44px, 5.5vw, 64px); }
+
+@media (max-width: 640px) {
+  .hero-title { font-size: 32px !important; }
+  .hero-subtitle { font-size: 16px; }
+}
+      </div>
+    </div>
+
+    <div class="report-card">
+      <h3>
+        <span class="check-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+        Скрытие декоративных элементов
+      </h3>
+      <p>Карточка с демо-данными (hero-visual) и плавающие карточки скрываются на мобильных устройствах, освобождая место для контента.</p>
+      <div class="code-block">
+@media (max-width: 640px) {
+  .hero-visual, .float-card { display: none !important; }
+}
+      </div>
+    </div>
+
+    <div class="report-card">
+      <h3>
+        <span class="check-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+        Вертикальные CTA-кнопки
+      </h3>
+      <p>На мобильных кнопки располагаются вертикально с полной шириной и минимальной высотой 48px для удобного касания.</p>
+      <div class="code-block">
+@media (max-width: 640px) {
+  .hero-ctas { flex-direction: column; gap: 12px; }
+  .btn { width: 100%; min-height: 48px; }
+}
+      </div>
+    </div>
+
+    <div class="report-card">
+      <h3>
+        <span class="check-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+        Коллапсируемые гриды
+      </h3>
+      <p>Features (3 колонки → 2 → 1), Pricing (2 → 1), How it works (3 → 1) — все секции адаптируются под размер экрана.</p>
+      <div class="code-block">
+@media (max-width: 1024px) {
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .features-grid, .how-grid, .pricing-grid { grid-template-columns: 1fr; }
+}
+      </div>
+    </div>
+
+    <div class="report-card">
+      <h3>
+        <span class="check-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+        Адаптивные отступы
+      </h3>
+      <p>Padding секций уменьшается с 120px до 80px, боковые отступы с 48px до 20px. Навигация становится компактнее.</p>
+      <div class="code-block">
+@media (max-width: 640px) {
+  .landing-nav { padding: 12px 20px; }
+  .hero { padding: 100px 20px 60px; }
+  .features, .how, .pricing, .cta { padding: 80px 20px; }
+}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-section">
+    <h2 class="summary-title">Итоги аудита</h2>
+    <div class="summary-grid">
+      <div class="summary-stat">
+        <div class="summary-value">2</div>
+        <div class="summary-label">Брейкпоинта<br>(1024px, 640px)</div>
+      </div>
+      <div class="summary-stat">
+        <div class="summary-value">0</div>
+        <div class="summary-label">Критических<br>проблем</div>
+      </div>
+      <div class="summary-stat">
+        <div class="summary-value">100%</div>
+        <div class="summary-label">Мобильная<br>готовность</div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

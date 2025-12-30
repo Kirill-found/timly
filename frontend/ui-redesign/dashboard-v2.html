@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timly - Dashboard</title>
+
+    <!-- Geist font from Vercel -->
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/style.css" rel="stylesheet">
+
+    <style>
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/Geist-Regular.woff2') format('woff2');
+            font-weight: 400;
+        }
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/Geist-Medium.woff2') format('woff2');
+            font-weight: 500;
+        }
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/Geist-SemiBold.woff2') format('woff2');
+            font-weight: 600;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-tertiary: #191919;
+            --bg-hover: #1a1a1a;
+
+            --border: #262626;
+            --border-subtle: #1f1f1f;
+
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1a1;
+            --text-muted: #737373;
+
+            --accent-green: #22c55e;
+            --accent-green-dim: rgba(34, 197, 94, 0.15);
+            --accent-blue: #3b82f6;
+            --accent-blue-dim: rgba(59, 130, 246, 0.15);
+            --accent-amber: #f59e0b;
+            --accent-amber-dim: rgba(245, 158, 11, 0.15);
+            --accent-red: #ef4444;
+            --accent-red-dim: rgba(239, 68, 68, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout */
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 220px;
+            background: var(--bg-primary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo {
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--text-primary);
+        }
+
+        .logo-badge {
+            font-size: 10px;
+            font-weight: 500;
+            padding: 2px 6px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 450;
+            transition: all 0.15s;
+            margin-bottom: 2px;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .nav-item svg {
+            width: 16px;
+            height: 16px;
+            opacity: 0.7;
+        }
+
+        .nav-item.active svg {
+            opacity: 1;
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            font-size: 11px;
+            padding: 1px 6px;
+            border-radius: 10px;
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+        }
+
+        .nav-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 12px 0;
+        }
+
+        .sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .user-block {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .user-block:hover {
+            background: var(--bg-hover);
+        }
+
+        .user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Main */
+        .main {
+            flex: 1;
+            margin-left: 220px;
+        }
+
+        /* Header */
+        .header {
+            height: 52px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            background: var(--bg-primary);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-title {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--accent-green);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent-green);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 1px solid transparent;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border-color: var(--border);
+            color: var(--text-secondary);
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+
+        .btn-primary {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            border-color: var(--text-primary);
+        }
+
+        .btn-primary:hover {
+            background: #e5e5e5;
+        }
+
+        .btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* Content */
+        .content {
+            padding: 24px;
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .stat-item {
+            background: var(--bg-secondary);
+            padding: 20px 24px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+        }
+
+        .stat-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .stat-meta.positive {
+            color: var(--accent-green);
+        }
+
+        .stat-value span {
+            font-size: 16px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        /* Grid */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: var(--text-primary);
+        }
+
+        .card-tabs {
+            display: flex;
+            gap: 4px;
+        }
+
+        .card-tab {
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 4px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            border: none;
+            background: transparent;
+        }
+
+        .card-tab:hover {
+            color: var(--text-secondary);
+        }
+
+        .card-tab.active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .card-content {
+            padding: 20px;
+        }
+
+        /* Chart */
+        .chart-container {
+            height: 200px;
+            position: relative;
+        }
+
+        .chart-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-line {
+            fill: none;
+            stroke: var(--text-secondary);
+            stroke-width: 1.5;
+        }
+
+        .chart-area {
+            fill: url(#chartGradient);
+        }
+
+        .chart-grid-line {
+            stroke: var(--border-subtle);
+            stroke-width: 1;
+        }
+
+        .chart-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 12px;
+            padding: 0 4px;
+        }
+
+        .chart-label {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* Distribution */
+        .distribution-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .distribution-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .distribution-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .distribution-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+        }
+
+        .distribution-dot.green { background: var(--accent-green); }
+        .distribution-dot.blue { background: var(--accent-blue); }
+        .distribution-dot.amber { background: var(--accent-amber); }
+        .distribution-dot.red { background: var(--accent-red); }
+
+        .distribution-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .distribution-right {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+
+        .distribution-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .distribution-percent {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Table */
+        .table-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .table-filters {
+            display: flex;
+            gap: 4px;
+        }
+
+        .table-filter {
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 4px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            border: none;
+            background: transparent;
+        }
+
+        .table-filter:hover {
+            color: var(--text-secondary);
+        }
+
+        .table-filter.active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px 20px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-primary);
+        }
+
+        td {
+            padding: 14px 20px;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: var(--bg-hover);
+        }
+
+        .candidate-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .candidate-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .candidate-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .candidate-vacancy {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+
+        .score-cell {
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .status-cell {
+            display: inline-flex;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .status-cell.hire {
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+        }
+
+        .status-cell.interview {
+            background: var(--accent-blue-dim);
+            color: var(--accent-blue);
+        }
+
+        .status-cell.maybe {
+            background: var(--accent-amber-dim);
+            color: var(--accent-amber);
+        }
+
+        .status-cell.reject {
+            background: var(--accent-red-dim);
+            color: var(--accent-red);
+        }
+
+        .time-cell {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        /* Activity */
+        .activity-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .activity-list {
+            padding: 0;
+        }
+
+        .activity-item {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .activity-icon.sync {
+            background: var(--accent-blue-dim);
+            color: var(--accent-blue);
+        }
+
+        .activity-icon.analysis {
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+        }
+
+        .activity-icon svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .activity-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .activity-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .activity-text strong {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .activity-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            .main {
+                margin-left: 0;
+            }
+            .stats-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="logo">Timly</span>
+                <span class="logo-badge">Admin</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <rect x="3" y="3" width="7" height="7" rx="1" stroke-width="1.5"/>
+                        <rect x="14" y="3" width="7" height="7" rx="1" stroke-width="1.5"/>
+                        <rect x="3" y="14" width="7" height="7" rx="1" stroke-width="1.5"/>
+                        <rect x="14" y="14" width="7" height="7" rx="1" stroke-width="1.5"/>
+                    </svg>
+                    Дашборд
+                </a>
+                <a href="#" class="nav-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    Анализ
+                </a>
+                <a href="#" class="nav-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    Кандидаты
+                </a>
+                <a href="#" class="nav-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                    Загрузка
+                </a>
+
+                <div class="nav-divider"></div>
+
+                <a href="#" class="nav-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Синхронизация
+                    <span class="nav-badge">0</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Экспорт
+                </a>
+
+                <div class="nav-divider"></div>
+
+                <a href="#" class="nav-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <circle cx="12" cy="12" r="3" stroke-width="1.5"/>
+                    </svg>
+                    Настройки
+                </a>
+                <a href="#" class="nav-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                    Админ-панель
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-block">
+                    <div class="user-avatar">K</div>
+                    <div class="user-info">
+                        <div class="user-name">kirillpogorelyy20</div>
+                    </div>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-muted)">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/>
+                    </svg>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="main">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <span class="header-title">Панель управления</span>
+                    <span class="status-badge">
+                        <span class="status-dot"></span>
+                        HH.ru подключён
+                    </span>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-ghost">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Синхронизация
+                    </button>
+                    <button class="btn btn-primary">
+                        Запустить анализ
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <div class="content">
+                <!-- Stats -->
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-label">Всего анализов</div>
+                        <div class="stat-value">1,247</div>
+                        <div class="stat-meta positive">+12% за месяц</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">За этот месяц</div>
+                        <div class="stat-value">348</div>
+                        <div class="stat-meta">из 500 лимита</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Средний балл</div>
+                        <div class="stat-value">78<span>/100</span></div>
+                        <div class="stat-meta">качество кандидатов</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Рекомендовано к найму</div>
+                        <div class="stat-value">156</div>
+                        <div class="stat-meta positive">29% от общего</div>
+                    </div>
+                </div>
+
+                <!-- Charts row -->
+                <div class="grid-2">
+                    <!-- Chart -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Динамика</span>
+                            <div class="card-tabs">
+                                <button class="card-tab active">6м</button>
+                                <button class="card-tab">12м</button>
+                                <button class="card-tab">Всё</button>
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            <div class="chart-container">
+                                <svg class="chart-svg" viewBox="0 0 600 200" preserveAspectRatio="none">
+                                    <defs>
+                                        <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                            <stop offset="0%" stop-color="rgba(161, 161, 161, 0.15)"/>
+                                            <stop offset="100%" stop-color="rgba(161, 161, 161, 0)"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <!-- Grid lines -->
+                                    <line class="chart-grid-line" x1="0" y1="50" x2="600" y2="50"/>
+                                    <line class="chart-grid-line" x1="0" y1="100" x2="600" y2="100"/>
+                                    <line class="chart-grid-line" x1="0" y1="150" x2="600" y2="150"/>
+                                    <!-- Area -->
+                                    <path class="chart-area" d="M0,180 L100,160 L200,140 L300,110 L400,80 L500,50 L600,30 L600,200 L0,200 Z"/>
+                                    <!-- Line -->
+                                    <path class="chart-line" d="M0,180 L100,160 L200,140 L300,110 L400,80 L500,50 L600,30"/>
+                                </svg>
+                            </div>
+                            <div class="chart-labels">
+                                <span class="chart-label">Авг</span>
+                                <span class="chart-label">Сен</span>
+                                <span class="chart-label">Окт</span>
+                                <span class="chart-label">Ноя</span>
+                                <span class="chart-label">Дек</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Distribution -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Распределение</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="distribution-list">
+                                <div class="distribution-item">
+                                    <div class="distribution-left">
+                                        <div class="distribution-dot green"></div>
+                                        <span class="distribution-label">Нанять</span>
+                                    </div>
+                                    <div class="distribution-right">
+                                        <span class="distribution-value">156</span>
+                                        <span class="distribution-percent">29%</span>
+                                    </div>
+                                </div>
+                                <div class="distribution-item">
+                                    <div class="distribution-left">
+                                        <div class="distribution-dot blue"></div>
+                                        <span class="distribution-label">Собеседование</span>
+                                    </div>
+                                    <div class="distribution-right">
+                                        <span class="distribution-value">187</span>
+                                        <span class="distribution-percent">29%</span>
+                                    </div>
+                                </div>
+                                <div class="distribution-item">
+                                    <div class="distribution-left">
+                                        <div class="distribution-dot amber"></div>
+                                        <span class="distribution-label">Возможно</span>
+                                    </div>
+                                    <div class="distribution-right">
+                                        <span class="distribution-value">124</span>
+                                        <span class="distribution-percent">19%</span>
+                                    </div>
+                                </div>
+                                <div class="distribution-item">
+                                    <div class="distribution-left">
+                                        <div class="distribution-dot red"></div>
+                                        <span class="distribution-label">Отклонить</span>
+                                    </div>
+                                    <div class="distribution-right">
+                                        <span class="distribution-value">145</span>
+                                        <span class="distribution-percent">23%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <span class="card-title">Последние анализы</span>
+                        <div class="table-filters">
+                            <button class="table-filter active">Все</button>
+                            <button class="table-filter">Нанять</button>
+                            <button class="table-filter">Отказ</button>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Кандидат</th>
+                                <th>Балл</th>
+                                <th>Статус</th>
+                                <th>Время</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="candidate-cell">
+                                        <div class="candidate-avatar">АП</div>
+                                        <div>
+                                            <div class="candidate-name">Александр Петров</div>
+                                            <div class="candidate-vacancy">Frontend Developer (Senior)</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="score-cell">94</td>
+                                <td><span class="status-cell hire">Нанять</span></td>
+                                <td class="time-cell">2 мин назад</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="candidate-cell">
+                                        <div class="candidate-avatar">МИ</div>
+                                        <div>
+                                            <div class="candidate-name">Мария Иванова</div>
+                                            <div class="candidate-vacancy">Backend Developer (Middle)</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="score-cell">87</td>
+                                <td><span class="status-cell interview">Собеседование</span></td>
+                                <td class="time-cell">15 мин назад</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="candidate-cell">
+                                        <div class="candidate-avatar">ДС</div>
+                                        <div>
+                                            <div class="candidate-name">Дмитрий Смирнов</div>
+                                            <div class="candidate-vacancy">DevOps Engineer</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="score-cell">72</td>
+                                <td><span class="status-cell maybe">Возможно</span></td>
+                                <td class="time-cell">1 час назад</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="candidate-cell">
+                                        <div class="candidate-avatar">ЕК</div>
+                                        <div>
+                                            <div class="candidate-name">Елена Козлова</div>
+                                            <div class="candidate-vacancy">Product Manager</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="score-cell">91</td>
+                                <td><span class="status-cell hire">Нанять</span></td>
+                                <td class="time-cell">2 часа назад</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="candidate-cell">
+                                        <div class="candidate-avatar">АН</div>
+                                        <div>
+                                            <div class="candidate-name">Андрей Новиков</div>
+                                            <div class="candidate-vacancy">QA Engineer</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="score-cell">45</td>
+                                <td><span class="status-cell reject">Отклонить</span></td>
+                                <td class="time-cell">3 часа назад</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

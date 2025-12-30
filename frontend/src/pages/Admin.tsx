@@ -1,8 +1,13 @@
+/**
+ * Админ-панель
+ * Управление пользователями и статистика
+ * Design: Dark Industrial
+ */
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { motion } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -21,7 +26,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/store/AuthContext';
 import { apiClient } from '@/services/api';
-import { Send, Users, DollarSign, Package, Search } from 'lucide-react';
+import { Send, Users, DollarSign, Package, Search, CheckCircle, XCircle, Loader2, Shield } from 'lucide-react';
 
 interface Statistics {
   users: {
@@ -61,7 +66,7 @@ interface User {
 }
 
 export default function Admin() {
-  useAuth(); // Ensure user is authenticated
+  useAuth();
   const [stats, setStats] = useState<Statistics | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -192,210 +197,277 @@ export default function Admin() {
     fetchUsers(searchQuery);
   };
 
-  const getPlanBadgeColor = (planType: string | undefined) => {
-    if (!planType) return 'bg-gray-500';
+  const getPlanBadgeClass = (planType: string | undefined) => {
+    if (!planType) return 'bg-zinc-700 text-zinc-300 border-zinc-600';
     switch (planType) {
       case 'trial':
-        return 'bg-green-500';
+        return 'bg-green-500/15 text-green-400 border-green-500/30';
       case 'free':
-        return 'bg-gray-500';
+        return 'bg-zinc-700 text-zinc-300 border-zinc-600';
       case 'starter':
-        return 'bg-blue-500';
+        return 'bg-blue-500/15 text-blue-400 border-blue-500/30';
       case 'professional':
-        return 'bg-purple-500';
+        return 'bg-purple-500/15 text-purple-400 border-purple-500/30';
       case 'enterprise':
-        return 'bg-yellow-500';
+        return 'bg-amber-500/15 text-amber-400 border-amber-500/30';
       default:
-        return 'bg-gray-500';
+        return 'bg-zinc-700 text-zinc-300 border-zinc-600';
     }
   };
 
   return (
-    <div className="container mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+    <div className="space-y-6">
+      {/* Заголовок */}
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Админ-панель</h1>
-        <Button onClick={sendStatisticsToTelegram} disabled={loading}>
-          <Send className="mr-2 h-4 w-4" />
-          Отправить статистику в Telegram
+        <div>
+          <h1 className="text-2xl font-semibold text-zinc-100 tracking-tight flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center">
+              <Shield className="h-5 w-5 text-zinc-400" />
+            </div>
+            Админ-панель
+          </h1>
+          <p className="text-zinc-500 text-sm mt-2">Управление пользователями и статистика</p>
+        </div>
+        <Button
+          onClick={sendStatisticsToTelegram}
+          disabled={loading}
+          variant="outline"
+          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+        >
+          {loading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="mr-2 h-4 w-4" />
+          )}
+          Отправить в Telegram
         </Button>
       </div>
 
+      {/* Уведомления */}
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Alert className="bg-red-500/10 border-red-500/20">
+            <XCircle className="h-4 w-4 text-red-400" />
+            <AlertDescription className="text-red-400">{error}</AlertDescription>
+          </Alert>
+        </motion.div>
       )}
 
       {success && (
-        <Alert>
-          <AlertDescription>{success}</AlertDescription>
-        </Alert>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Alert className="bg-green-500/10 border-green-500/20">
+            <CheckCircle className="h-4 w-4 text-green-400" />
+            <AlertDescription className="text-green-400">{success}</AlertDescription>
+          </Alert>
+        </motion.div>
       )}
 
       {/* Статистика */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Всего пользователей</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.users.total}</div>
-              <p className="text-xs text-muted-foreground">
-                Новых за неделю: {stats.users.new_this_week}
-              </p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-px bg-zinc-800 rounded-lg overflow-hidden">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-zinc-900 p-5"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-zinc-500">Всего пользователей</span>
+              <Users className="h-4 w-4 text-zinc-600" />
+            </div>
+            <div className="text-3xl font-bold text-zinc-100 tabular-nums">{stats.users.total}</div>
+            <p className="text-xs text-zinc-600 mt-1">
+              Новых за неделю: <span className="text-zinc-400">{stats.users.new_this_week}</span>
+            </p>
+          </motion.div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">С HH токеном</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.users.with_hh_token}</div>
-              <p className="text-xs text-muted-foreground">
-                Активных: {stats.users.active}
-              </p>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-zinc-900 p-5"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-zinc-500">С HH токеном</span>
+              <Package className="h-4 w-4 text-zinc-600" />
+            </div>
+            <div className="text-3xl font-bold text-zinc-100 tabular-nums">{stats.users.with_hh_token}</div>
+            <p className="text-xs text-zinc-600 mt-1">
+              Активных: <span className="text-zinc-400">{stats.users.active}</span>
+            </p>
+          </motion.div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Подписки</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.subscriptions.free +
-                  stats.subscriptions.starter +
-                  stats.subscriptions.professional +
-                  stats.subscriptions.enterprise}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Без подписки: {stats.users.without_subscription}
-              </p>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-zinc-900 p-5"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-zinc-500">Подписки</span>
+              <Package className="h-4 w-4 text-zinc-600" />
+            </div>
+            <div className="text-3xl font-bold text-zinc-100 tabular-nums">
+              {stats.subscriptions.free +
+                stats.subscriptions.starter +
+                stats.subscriptions.professional +
+                stats.subscriptions.enterprise}
+            </div>
+            <p className="text-xs text-zinc-600 mt-1">
+              Без подписки: <span className="text-zinc-400">{stats.users.without_subscription}</span>
+            </p>
+          </motion.div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Выручка (30 дней)</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.payments_last_30_days.revenue.toLocaleString('ru-RU')} ₽
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Платежей: {stats.payments_last_30_days.count}
-              </p>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-zinc-900 p-5"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-zinc-500">Выручка (30 дней)</span>
+              <DollarSign className="h-4 w-4 text-zinc-600" />
+            </div>
+            <div className="text-3xl font-bold text-zinc-100 tabular-nums">
+              {stats.payments_last_30_days.revenue.toLocaleString('ru-RU')} ₽
+            </div>
+            <p className="text-xs text-zinc-600 mt-1">
+              Платежей: <span className="text-zinc-400">{stats.payments_last_30_days.count}</span>
+            </p>
+          </motion.div>
         </div>
       )}
 
       {/* Список пользователей */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Пользователи</CardTitle>
-          <CardDescription>Управление пользователями и подписками</CardDescription>
-          <div className="flex gap-2 mt-4">
-            <Input
-              placeholder="Поиск по email или компании..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            />
-            <Button onClick={handleSearch} disabled={loading}>
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Email</TableHead>
-                <TableHead>Компания</TableHead>
-                <TableHead>Подписка</TableHead>
-                <TableHead>HH токен</TableHead>
-                <TableHead>Дата регистрации</TableHead>
-                <TableHead>Действия</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.email}</TableCell>
-                  <TableCell>{user.company_name || '—'}</TableCell>
-                  <TableCell>
-                    {user.subscription ? (
-                      <Badge className={getPlanBadgeColor(user.subscription.plan_type)}>
-                        {user.subscription.plan_name}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline">Нет подписки</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={user.has_hh_token ? 'default' : 'secondary'}>
-                      {user.has_hh_token ? 'Есть' : 'Нет'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(user.created_at).toLocaleDateString('ru-RU')}
-                  </TableCell>
-                  <TableCell>
-                    {selectedUser === user.id ? (
-                      <div className="flex gap-2">
-                        <Select value={selectedPlan} onValueChange={setSelectedPlan}>
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Выберите тариф" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="trial">Trial (50 анализов)</SelectItem>
-                            <SelectItem value="free">Free</SelectItem>
-                            <SelectItem value="starter">Starter</SelectItem>
-                            <SelectItem value="professional">Professional</SelectItem>
-                            <SelectItem value="enterprise">Enterprise</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          size="sm"
-                          onClick={() => updateUserSubscription(user.id, selectedPlan)}
-                          disabled={!selectedPlan || loading}
-                        >
-                          Сохранить
-                        </Button>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        <Card className="border-zinc-800 bg-zinc-900/50">
+          <CardHeader className="border-b border-zinc-800">
+            <CardTitle className="text-zinc-100">Пользователи</CardTitle>
+            <p className="text-sm text-zinc-500">Управление пользователями и подписками</p>
+            <div className="flex gap-2 mt-4">
+              <Input
+                placeholder="Поиск по email или компании..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
+              />
+              <Button
+                onClick={handleSearch}
+                disabled={loading}
+                variant="outline"
+                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0 overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-zinc-800 hover:bg-transparent">
+                  <TableHead className="text-zinc-400">Email</TableHead>
+                  <TableHead className="text-zinc-400">Компания</TableHead>
+                  <TableHead className="text-zinc-400">Подписка</TableHead>
+                  <TableHead className="text-zinc-400">HH токен</TableHead>
+                  <TableHead className="text-zinc-400">Дата регистрации</TableHead>
+                  <TableHead className="text-zinc-400">Действия</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id} className="border-zinc-800 hover:bg-zinc-800/30">
+                    <TableCell className="font-medium text-zinc-200">{user.email}</TableCell>
+                    <TableCell className="text-zinc-400">{user.company_name || '—'}</TableCell>
+                    <TableCell>
+                      {user.subscription ? (
+                        <span className={`px-2 py-0.5 rounded text-xs border ${getPlanBadgeClass(user.subscription.plan_type)}`}>
+                          {user.subscription.plan_name}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-xs border border-zinc-700 text-zinc-500">
+                          Нет подписки
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-0.5 rounded text-xs border ${
+                        user.has_hh_token
+                          ? 'bg-green-500/15 text-green-400 border-green-500/30'
+                          : 'bg-zinc-800 text-zinc-500 border-zinc-700'
+                      }`}>
+                        {user.has_hh_token ? 'Есть' : 'Нет'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-zinc-500 tabular-nums">
+                      {new Date(user.created_at).toLocaleDateString('ru-RU')}
+                    </TableCell>
+                    <TableCell>
+                      {selectedUser === user.id ? (
+                        <div className="flex gap-2">
+                          <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                            <SelectTrigger className="w-[160px] bg-zinc-800/50 border-zinc-700 text-zinc-100">
+                              <SelectValue placeholder="Выберите тариф" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-zinc-800">
+                              <SelectItem value="trial">Trial</SelectItem>
+                              <SelectItem value="free">Free</SelectItem>
+                              <SelectItem value="starter">Starter</SelectItem>
+                              <SelectItem value="professional">Professional</SelectItem>
+                              <SelectItem value="enterprise">Enterprise</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            onClick={() => updateUserSubscription(user.id, selectedPlan)}
+                            disabled={!selectedPlan || loading}
+                            className="bg-zinc-100 text-zinc-900 hover:bg-white"
+                          >
+                            Сохранить
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedUser(null);
+                              setSelectedPlan('');
+                            }}
+                            className="border-zinc-700 text-zinc-400 hover:bg-zinc-800"
+                          >
+                            Отмена
+                          </Button>
+                        </div>
+                      ) : (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => {
-                            setSelectedUser(null);
-                            setSelectedPlan('');
-                          }}
+                          onClick={() => setSelectedUser(user.id)}
+                          className="border-zinc-700 text-zinc-400 hover:bg-zinc-800"
                         >
-                          Отмена
+                          Изменить тариф
                         </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setSelectedUser(user.id)}
-                      >
-                        Изменить тариф
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 }

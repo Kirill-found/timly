@@ -1,0 +1,581 @@
+/**
+ * Страница настроек
+ * Настройка HH.ru токена и параметров анализа
+ * Design: Dark Industrial
+ */
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Settings as SettingsIcon, Key, CheckCircle, XCircle, Info, Save, ExternalLink, Loader2 } from 'lucide-react';
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { apiClient } from '@/services/api';
+import { useAuth } from '@/store/AuthContext';
+
+const Settings: React.FC = () => {
+  const { user, refreshProfile } = useAuth();
+  const [hhToken, setHhToken] = useState('');
+  const [isTestingToken, setIsTestingToken] = useState(false);
+  const [isSavingToken, setIsSavingToken] = useState(false);
+  const [tokenStatus, setTokenStatus] = useState<{
+    valid: boolean;
+    message: string;
+    employer?: string;
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showOAuthModal, setShowOAuthModal] = useState(false);
+  const [oauthCode, setOauthCode] = useState('');
+  const [isExchangingCode, setIsExchangingCode] = useState(false);
+
+  const handleOAuthConnect = () => {
+    const clientId = 'H1F4CKSVJ1360RB6KTOAG6NRQD8AQVLFDRLIPSLJ4N3I5164VRLC9JJU45AUVLTH';
+    const redirectUri = 'https://timly-hr.ru/auth/hh-callback';
+    const authUrl = `https://hh.ru/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    window.location.href = authUrl;
+  };
+
+  const handleCodeExchange = async () => {
+    if (!oauthCode.trim()) {
+      setError('Введите код авторизации');
+      return;
+    }
+
+    setIsExchangingCode(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await apiClient.exchangeHHCode(oauthCode);
+
+      if (response.data?.token_saved && response.data?.token_valid) {
+        setSuccessMessage('Токен HH.ru успешно сохранён и проверен!');
+        setShowOAuthModal(false);
+        setOauthCode('');
+        await refreshProfile();
+      } else {
+        setError('Токен получен, но не прошёл валидацию');
+      }
+    } catch (err: any) {
+      console.error('OAuth exchange error:', err);
+      if (err.response?.status === 401) {
+        setError('Ваша сессия истекла. Пожалуйста, перезагрузите страницу и войдите заново.');
+      } else {
+        setError(
+          err.response?.data?.error?.message ||
+          err.response?.data?.detail?.message ||
+          err.message ||
+          'Ошибка при обмене кода на токен'
+        );
+      }
+    } finally {
+      setIsExchangingCode(false);
+    }
+  };
+
+  useEffect(() => {
+    const code = sessionStorage.getItem('hh_oauth_code');
+
+    if (code) {
+      sessionStorage.removeItem('hh_oauth_code');
+      setIsExchangingCode(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      apiClient.exchangeHHCode(code)
+        .then(async (response) => {
+          if (response.data?.token_saved && response.data?.token_valid) {
+            setSuccessMessage('Токен HH.ru успешно сохранён и проверен!');
+            await refreshProfile();
+          } else {
+            setError('Токен получен, но не прошёл валидацию');
+          }
+        })
+        .catch((err: any) => {
+          console.error('OAuth exchange error:', err);
+          if (err.response?.status === 401) {
+            setError('Ваша сессия истекла. Пожалуйста, перезагрузите страницу и войдите заново.');
+          } else {
+            setError(
+              err.response?.data?.error?.message ||
+              err.response?.data?.detail?.message ||
+              err.message ||
+              'Ошибка при обмене кода на токен'
+            );
+          }
+        })
+        .finally(() => {
+          setIsExchangingCode(false);
+        });
+    }
+  }, [refreshProfile]);
+
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  const testToken = async () => {
+    if (!hhToken.trim()) {
+      setError('Введите токен HH.ru');
+      return;
+    }
+
+    setIsTestingToken(true);
+    setError(null);
+    setTokenStatus(null);
+
+    try {
+      const response = await fetch('https://api.hh.ru/me', {
+        headers: {
+          'Authorization': `Bearer ${hhToken}`,
+          'User-Agent': 'Timly/1.0 (timly.ru)'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTokenStatus({
+          valid: true,
+          message: 'Токен действителен',
+          employer: data.employer?.name || data.email
+        });
+      } else {
+        setTokenStatus({
+          valid: false,
+          message: 'Токен недействителен или истек'
+        });
+      }
+    } catch (err: any) {
+      console.error('Error testing token:', err);
+      setError('Ошибка при проверке токена');
+    } finally {
+      setIsTestingToken(false);
+    }
+  };
+
+  const saveToken = async () => {
+    if (!hhToken.trim()) {
+      setError('Введите токен HH.ru');
+      return;
+    }
+
+    if (tokenStatus && !tokenStatus.valid) {
+      setError('Невозможно сохранить недействительный токен');
+      return;
+    }
+
+    setIsSavingToken(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await apiClient.updateHHToken(hhToken);
+
+      if (response.success) {
+        setSuccessMessage('HH.ru токен успешно сохранен');
+        setHhToken('');
+        setTokenStatus(null);
+        await refreshProfile();
+      }
+    } catch (err: any) {
+      console.error('Error saving token:', err);
+      setError(err.response?.data?.error?.message || 'Ошибка при сохранении токена');
+    } finally {
+      setIsSavingToken(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Заголовок */}
+      <div>
+        <h1 className="text-2xl font-semibold text-zinc-100 tracking-tight flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center">
+            <SettingsIcon className="h-5 w-5 text-zinc-400" />
+          </div>
+          Настройки
+        </h1>
+        <p className="text-zinc-500 text-sm mt-2">
+          Настройка интеграции с HH.ru и параметров анализа
+        </p>
+      </div>
+
+      {/* Уведомления */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Alert className="bg-red-500/10 border-red-500/20">
+            <XCircle className="h-4 w-4 text-red-400" />
+            <AlertDescription className="text-red-400">{error}</AlertDescription>
+          </Alert>
+        </motion.div>
+      )}
+
+      {successMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Alert className="bg-green-500/10 border-green-500/20">
+            <CheckCircle className="h-4 w-4 text-green-400" />
+            <AlertDescription className="text-green-400">{successMessage}</AlertDescription>
+          </Alert>
+        </motion.div>
+      )}
+
+      {/* Статус токена */}
+      {user?.has_hh_token && user?.token_verified && (
+        <Alert className="bg-green-500/10 border-green-500/20">
+          <CheckCircle className="h-4 w-4 text-green-400" />
+          <AlertDescription className="text-green-400">
+            HH.ru токен настроен и проверен
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* HH.ru токен */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card className="border-zinc-800 bg-zinc-900/50">
+          <CardHeader className="border-b border-zinc-800">
+            <CardTitle className="flex items-center gap-2 text-zinc-100">
+              <Key className="h-5 w-5 text-zinc-400" />
+              HH.ru API Токен
+            </CardTitle>
+            <p className="text-sm text-zinc-500">
+              Токен работодателя для доступа к вакансиям и откликам
+            </p>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-5">
+            {/* Простой способ - OAuth */}
+            <div className="p-4 border border-zinc-700 rounded-lg bg-zinc-800/30">
+              <h3 className="font-semibold mb-2 flex items-center gap-2 text-zinc-100">
+                <ExternalLink className="h-4 w-4 text-zinc-400" />
+                Рекомендуемый способ
+              </h3>
+              <p className="text-sm text-zinc-500 mb-3">
+                Автоматическое подключение через HH.ru OAuth (занимает 30 секунд)
+              </p>
+              <Button
+                onClick={handleOAuthConnect}
+                className="w-full bg-red-500 hover:bg-red-600 text-white font-medium"
+                size="lg"
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Подключить через HH.ru
+              </Button>
+            </div>
+
+            {/* Разделитель */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-zinc-800" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="px-3 bg-zinc-900/50 text-xs text-zinc-600">
+                  или ручная настройка
+                </span>
+              </div>
+            </div>
+
+            {/* Ручной способ */}
+            <Alert className="bg-zinc-800/30 border-zinc-700">
+              <Info className="h-4 w-4 text-zinc-400" />
+              <AlertDescription>
+                <div className="space-y-2 text-zinc-400">
+                  <p className="font-semibold text-zinc-300">Ручной способ:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-sm">
+                    <li>Перейдите на <a href="https://hh.ru/oauth/authorize?response_type=code&client_id=H1F4CKSVJ1360RB6KTOAG6NRQD8AQVLFDRLIPSLJ4N3I5164VRLC9JJU45AUVLTH&redirect_uri=https://timly-hr.ru/auth/hh-callback" target="_blank" rel="noopener noreferrer" className="text-zinc-200 hover:underline">страницу авторизации</a></li>
+                    <li>Войдите как работодатель</li>
+                    <li>Скопируйте код из URL (параметр code=...)</li>
+                    <li>Вставьте полученный access_token ниже</li>
+                  </ol>
+                </div>
+              </AlertDescription>
+            </Alert>
+
+            {/* Поле токена */}
+            <div className="space-y-2">
+              <Label className="text-zinc-300">Access Token</Label>
+              <Input
+                type="password"
+                placeholder="Введите ваш HH.ru access token..."
+                className="bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
+                value={hhToken}
+                onChange={(e) => {
+                  setHhToken(e.target.value);
+                  setTokenStatus(null);
+                }}
+              />
+            </div>
+
+            {/* Статус проверки */}
+            {tokenStatus && (
+              <Alert className={tokenStatus.valid
+                ? 'bg-green-500/10 border-green-500/20'
+                : 'bg-red-500/10 border-red-500/20'
+              }>
+                {tokenStatus.valid ? (
+                  <CheckCircle className="h-4 w-4 text-green-400" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-red-400" />
+                )}
+                <AlertDescription className={tokenStatus.valid ? 'text-green-400' : 'text-red-400'}>
+                  <div className="font-semibold">{tokenStatus.message}</div>
+                  {tokenStatus.employer && (
+                    <div className="text-sm mt-1 opacity-80">Работодатель: {tokenStatus.employer}</div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Кнопки */}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={testToken}
+                disabled={!hhToken.trim() || isTestingToken}
+                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              >
+                {isTestingToken ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Проверка...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Проверить токен
+                  </>
+                )}
+              </Button>
+
+              <Button
+                onClick={saveToken}
+                disabled={!hhToken.trim() || isSavingToken}
+                className="bg-zinc-100 text-zinc-900 hover:bg-white"
+              >
+                {isSavingToken ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Сохранение...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Сохранить токен
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <p className="text-sm text-zinc-600">
+              Вы можете сохранить токен сразу или проверить его валидность перед сохранением
+            </p>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Параметры анализа */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+      >
+        <Card className="border-zinc-800 bg-zinc-900/50">
+          <CardHeader className="border-b border-zinc-800">
+            <CardTitle className="flex items-center gap-2 text-zinc-100">
+              <SettingsIcon className="h-5 w-5 text-zinc-400" />
+              Параметры AI анализа
+            </CardTitle>
+            <p className="text-sm text-zinc-500">
+              Настройка параметров автоматического анализа резюме
+            </p>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-4">
+            <Alert className="bg-zinc-800/30 border-zinc-700">
+              <Info className="h-4 w-4 text-zinc-400" />
+              <AlertDescription className="text-zinc-400">
+                Настройки AI анализа будут доступны в следующей версии
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-3 opacity-50 pointer-events-none">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-zinc-300">Автоматический анализ</Label>
+                  <p className="text-sm text-zinc-500">
+                    Запускать анализ автоматически после синхронизации
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  className="h-5 w-5 rounded border-zinc-600 bg-zinc-800"
+                  disabled
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-zinc-300">Минимальный балл</Label>
+                  <p className="text-sm text-zinc-500">
+                    Порог для автоматического отклонения (0-100)
+                  </p>
+                </div>
+                <Input
+                  type="number"
+                  className="w-20 bg-zinc-800/50 border-zinc-700 text-zinc-100"
+                  placeholder="40"
+                  disabled
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-zinc-300">Пакетный анализ</Label>
+                  <p className="text-sm text-zinc-500">
+                    Количество резюме для одновременной обработки
+                  </p>
+                </div>
+                <Input
+                  type="number"
+                  className="w-20 bg-zinc-800/50 border-zinc-700 text-zinc-100"
+                  placeholder="5"
+                  disabled
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Информация об аккаунте */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
+      >
+        <Card className="border-zinc-800 bg-zinc-900/50">
+          <CardHeader className="border-b border-zinc-800">
+            <CardTitle className="text-zinc-100">Информация об аккаунте</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <div className="text-zinc-500">Email</div>
+                <div className="font-medium text-zinc-100">{user?.email}</div>
+              </div>
+              <div>
+                <div className="text-zinc-500">Компания</div>
+                <div className="font-medium text-zinc-100">{user?.company_name || '—'}</div>
+              </div>
+              <div>
+                <div className="text-zinc-500">Роль</div>
+                <div className="font-medium text-zinc-100">
+                  {user?.role === 'admin' ? 'Администратор' : 'Пользователь'}
+                </div>
+              </div>
+              <div>
+                <div className="text-zinc-500">HH.ru интеграция</div>
+                <div className="font-medium">
+                  {user?.has_hh_token ? (
+                    <span className="text-green-400">Настроена</span>
+                  ) : (
+                    <span className="text-amber-400">Не настроена</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Модальное окно для ввода OAuth кода */}
+      <Dialog open={showOAuthModal} onOpenChange={setShowOAuthModal}>
+        <DialogContent className="sm:max-w-[500px] bg-zinc-900 border-zinc-800">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-100">Подключение HH.ru</DialogTitle>
+            <DialogDescription className="text-zinc-500">
+              Скопируйте код авторизации из адресной строки открывшегося окна
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <Alert className="bg-zinc-800/30 border-zinc-700">
+              <Info className="h-4 w-4 text-zinc-400" />
+              <AlertDescription className="text-zinc-400">
+                <ol className="list-decimal list-inside space-y-1 text-sm">
+                  <li>В открывшемся окне авторизуйтесь на HH.ru</li>
+                  <li>После авторизации вас перенаправит на другую страницу</li>
+                  <li>Скопируйте значение параметра <code className="bg-zinc-800 px-1 rounded text-zinc-300">code=</code> из URL</li>
+                  <li>Вставьте код в поле ниже</li>
+                </ol>
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-2">
+              <Label className="text-zinc-300">Код авторизации</Label>
+              <Input
+                placeholder="Вставьте код из URL (после code=...)"
+                className="bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
+                value={oauthCode}
+                onChange={(e) => setOauthCode(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && oauthCode.trim()) {
+                    handleCodeExchange();
+                  }
+                }}
+              />
+              <p className="text-xs text-zinc-600">
+                Пример: https://timly-hr.ru/settings?<span className="text-zinc-400">code=ABC123XYZ</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowOAuthModal(false);
+                setOauthCode('');
+                setError(null);
+              }}
+              disabled={isExchangingCode}
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={handleCodeExchange}
+              disabled={!oauthCode.trim() || isExchangingCode}
+              className="bg-zinc-100 text-zinc-900 hover:bg-white"
+            >
+              {isExchangingCode ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Обработка...
+                </>
+              ) : (
+                'Подключить'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default Settings;

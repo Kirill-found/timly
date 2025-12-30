@@ -1,26 +1,32 @@
 /**
  * Landing - Timly HR Platform
- * Design: Dark Industrial - единый стиль с ЛК, плотная компоновка
+ * Design: Dark Industrial
+ * Focus: AI объяснение, mobile-first (86% трафика)
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowRight,
   Check,
-  X,
-  Zap,
+  ChevronDown,
   Download,
+  FileText,
+  TrendingUp,
+  AlertTriangle,
+  Eye,
+  Sliders,
   Shield,
-  Clock,
-  Users,
-  BarChart3,
-  ExternalLink,
+  Mail,
+  MessageCircle,
+  Quote,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
 const Landing: React.FC = () => {
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
@@ -35,319 +41,250 @@ const Landing: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-zinc-100">
       {/* Header */}
-      <header className="border-b border-zinc-800">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/logo.jpg" alt="Timly" className="h-8 w-8 rounded-lg" />
-            <span className="text-lg font-semibold">Timly</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100">
+      <header className="border-b border-zinc-800/50 sticky top-0 bg-[#0a0a0a]/95 backdrop-blur-sm z-50">
+        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <img src="/logo.jpg" alt="timly" className="h-7 w-7 rounded-lg" />
+            <span className="text-base font-semibold tracking-tight">timly</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 text-sm h-8">
               <Link to="/login">Войти</Link>
             </Button>
-            <Button asChild size="sm" className="bg-zinc-100 text-zinc-900 hover:bg-white">
-              <Link to="/register">Начать бесплатно</Link>
+            <Button asChild size="sm" className="bg-zinc-100 text-zinc-900 hover:bg-white text-sm h-8">
+              <Link to="/register">Начать</Link>
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="border-b border-zinc-800">
-        <div className="max-w-6xl mx-auto px-6 py-16">
+      {/* Hero - Pain first, identification */}
+      <section className="border-b border-zinc-800/50">
+        <div className="max-w-6xl mx-auto px-4 py-12 md:py-20">
           <motion.div
             initial="hidden"
             animate="visible"
             variants={stagger}
-            className="grid lg:grid-cols-2 gap-12 items-center"
+            className="max-w-2xl"
           >
-            {/* Left: Text */}
-            <div className="space-y-6">
-              <motion.div variants={fadeIn}>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-400 mb-4">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                  Интеграция с HH.ru
+            {/* Badge - identification */}
+            <motion.div variants={fadeIn} className="mb-6">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800/80 text-xs text-zinc-300 border border-zinc-700/50">
+                Для HR-менеджеров и рекрутеров
+              </span>
+            </motion.div>
+
+            {/* Pain-first headline */}
+            <motion.h1
+              variants={fadeIn}
+              className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.15] mb-5"
+            >
+              100 откликов на вакансию?
+              <br />
+              <span className="text-zinc-500">AI отсортирует за 10 минут.</span>
+            </motion.h1>
+
+            <motion.p variants={fadeIn} className="text-base md:text-lg text-zinc-400 leading-relaxed mb-6 max-w-lg">
+              Загрузите отклики с HeadHunter — получите список кандидатов
+              с оценками и объяснением, почему каждый подходит или нет.
+            </motion.p>
+
+            {/* CTA */}
+            <motion.div variants={fadeIn} className="flex flex-col sm:flex-row gap-3 mb-8">
+              <Button asChild size="lg" className="bg-zinc-100 text-zinc-900 hover:bg-white h-11 px-6 text-sm font-medium">
+                <Link to="/register">
+                  Попробовать бесплатно
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </motion.div>
+
+            {/* Trust signals */}
+            <motion.div variants={fadeIn} className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-zinc-500">
+              <span className="flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5 text-zinc-400" />
+                50 анализов бесплатно
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5 text-zinc-400" />
+                Без карты
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5 text-zinc-400" />
+                Настройка 2 минуты
+              </span>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Social proof */}
+      <section className="border-b border-zinc-800/50 bg-zinc-900/30">
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <p className="text-sm text-zinc-500">
+              <span className="text-zinc-300 font-medium">500+ HR-специалистов</span> экономят время с Timly
+            </p>
+            <div className="flex items-center gap-6 text-zinc-600">
+              <span className="text-xs uppercase tracking-wider">Сэкономлено:</span>
+              <span className="text-zinc-300 font-semibold tabular-nums">12,000+ часов</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Problem statement */}
+      <section className="border-b border-zinc-800/50">
+        <div className="max-w-6xl mx-auto px-4 py-12 md:py-16">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={stagger}
+          >
+            <motion.p variants={fadeIn} className="text-xs uppercase tracking-wider text-zinc-600 mb-3">
+              Знакомая ситуация?
+            </motion.p>
+            <motion.h2 variants={fadeIn} className="text-xl md:text-2xl font-semibold mb-8 max-w-lg">
+              Вы тратите 8 часов на чтение резюме, а в итоге всё равно не уверены, что никого не пропустили
+            </motion.h2>
+
+            <motion.div variants={fadeIn} className="grid md:grid-cols-3 gap-4">
+              {[
+                { text: 'Резюме сливаются в одно после 30-го отклика', icon: FileText },
+                { text: 'Хорошие кандидаты теряются среди нерелевантных', icon: AlertTriangle },
+                { text: 'Нет объективных критериев — только интуиция', icon: Eye },
+              ].map((item, i) => (
+                <div key={i} className="p-4 rounded-lg bg-zinc-900/50 border border-zinc-800/50">
+                  <item.icon className="h-5 w-5 text-zinc-600 mb-3" />
+                  <p className="text-sm text-zinc-400">{item.text}</p>
                 </div>
-              </motion.div>
-
-              <motion.h1
-                variants={fadeIn}
-                className="text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.1]"
-              >
-                100 резюме за 10 минут.
-                <br />
-                <span className="text-zinc-500">AI находит лучших.</span>
-              </motion.h1>
-
-              <motion.p variants={fadeIn} className="text-lg text-zinc-400 leading-relaxed">
-                Автоматический скрининг откликов с HeadHunter.
-                Оценка по 15+ критериям. Топ-кандидаты в Excel.
-              </motion.p>
-
-              <motion.div variants={fadeIn} className="flex gap-3">
-                <Button asChild size="lg" className="bg-zinc-100 text-zinc-900 hover:bg-white h-12 px-6">
-                  <Link to="/register">
-                    Попробовать бесплатно
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="lg" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 h-12 px-6">
-                  <Link to="/login">Войти</Link>
-                </Button>
-              </motion.div>
-
-              <motion.div variants={fadeIn} className="flex items-center gap-6 text-sm text-zinc-500">
-                <span className="flex items-center gap-1.5">
-                  <Check className="h-4 w-4 text-green-500" />
-                  50 анализов бесплатно
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Check className="h-4 w-4 text-green-500" />
-                  Без карты
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Check className="h-4 w-4 text-green-500" />
-                  2 минуты на старт
-                </span>
-              </motion.div>
-            </div>
-
-            {/* Right: Stats grid */}
-            <motion.div variants={fadeIn}>
-              <div className="grid grid-cols-2 gap-px bg-zinc-800 rounded-xl overflow-hidden">
-                {[
-                  { value: '10', unit: 'мин', label: 'на 100 резюме', sub: 'вместо 8 часов' },
-                  { value: '95%', unit: '', label: 'точность оценки', sub: 'по 15+ критериям' },
-                  { value: '80%', unit: '', label: 'экономия времени', sub: 'на скрининге' },
-                  { value: '50', unit: '', label: 'анализов бесплатно', sub: 'в Trial тарифе' },
-                ].map((stat, i) => (
-                  <div key={i} className="bg-[#111] p-6">
-                    <div className="text-3xl font-semibold tracking-tight tabular-nums">
-                      {stat.value}
-                      <span className="text-lg text-zinc-500">{stat.unit}</span>
-                    </div>
-                    <div className="text-sm text-zinc-400 mt-1">{stat.label}</div>
-                    <div className="text-xs text-zinc-600 mt-0.5">{stat.sub}</div>
-                  </div>
-                ))}
-              </div>
+              ))}
             </motion.div>
           </motion.div>
         </div>
       </section>
 
-      {/* Problem → Solution */}
-      <section className="border-b border-zinc-800">
-        <div className="max-w-6xl mx-auto px-6 py-16">
+      {/* How AI works - KEY SECTION */}
+      <section className="border-b border-zinc-800/50">
+        <div className="max-w-6xl mx-auto px-4 py-12 md:py-16">
           <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: "-50px" }}
             variants={stagger}
           >
-            <motion.div variants={fadeIn} className="text-center mb-10">
-              <h2 className="text-2xl font-semibold mb-2">Знакомая ситуация?</h2>
-              <p className="text-zinc-500">Ручной скрининг vs Timly AI</p>
+            <motion.div variants={fadeIn} className="mb-10">
+              <p className="text-xs uppercase tracking-wider text-zinc-600 mb-3">Как работает AI</p>
+              <h2 className="text-xl md:text-2xl font-semibold mb-3">
+                Прозрачная оценка по понятным критериям
+              </h2>
+              <p className="text-zinc-500 max-w-lg">
+                Никакой магии. Вы всегда видите, почему AI поставил такой балл.
+              </p>
             </motion.div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Problem */}
-              <motion.div variants={fadeIn}>
-                <Card className="bg-red-500/5 border-red-500/20 h-full">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
-                        <X className="h-4 w-4 text-red-500" />
-                      </div>
-                      <span className="font-medium text-red-400">Ручной отбор</span>
-                    </div>
-                    <div className="space-y-3">
-                      {[
-                        '8+ часов на просмотр 100 резюме',
-                        'К вечеру все кандидаты "на одно лицо"',
-                        'Субъективная оценка без критериев',
-                        'Пропустили сильного — ушёл к конкуренту',
-                        'Нет аналитики для руководства',
-                      ].map((item, i) => (
-                        <div key={i} className="flex items-start gap-2 text-sm text-zinc-400">
-                          <X className="h-4 w-4 text-red-500/70 mt-0.5 flex-shrink-0" />
-                          <span>{item}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Solution */}
-              <motion.div variants={fadeIn}>
-                <Card className="bg-green-500/5 border-green-500/20 h-full">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
-                        <Check className="h-4 w-4 text-green-500" />
-                      </div>
-                      <span className="font-medium text-green-400">Timly AI</span>
-                    </div>
-                    <div className="space-y-3">
-                      {[
-                        '10-15 минут на 100 резюме',
-                        'Объективная оценка каждого кандидата',
-                        '15+ критериев: навыки, опыт, зарплата',
-                        'Топ-кандидаты всегда наверху списка',
-                        'Excel-отчёт с графиками и метриками',
-                      ].map((item, i) => (
-                        <div key={i} className="flex items-start gap-2 text-sm text-zinc-400">
-                          <Check className="h-4 w-4 text-green-500/70 mt-0.5 flex-shrink-0" />
-                          <span>{item}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="border-b border-zinc-800">
-        <div className="max-w-6xl mx-auto px-6 py-16">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={stagger}
-          >
-            <motion.div variants={fadeIn} className="text-center mb-10">
-              <h2 className="text-2xl font-semibold mb-2">Как это работает</h2>
-              <p className="text-zinc-500">3 шага до первых результатов</p>
-            </motion.div>
-
-            <div className="grid md:grid-cols-3 gap-px bg-zinc-800 rounded-xl overflow-hidden">
+            {/* Criteria grid */}
+            <motion.div variants={fadeIn} className="grid md:grid-cols-2 gap-4 mb-10">
               {[
                 {
-                  step: '01',
-                  title: 'Подключите HH.ru',
-                  desc: 'Добавьте API-токен HeadHunter в настройках. Занимает 2 минуты.',
-                  icon: Users,
+                  title: 'Соответствие требованиям',
+                  desc: 'AI сопоставляет навыки из вакансии с навыками в резюме. Указали "1С" — проверит, есть ли опыт.',
+                  icon: Check,
                 },
                 {
-                  step: '02',
-                  title: 'Синхронизируйте',
-                  desc: 'Нажмите одну кнопку — система загрузит вакансии и отклики.',
-                  icon: Zap,
+                  title: 'Опыт и карьера',
+                  desc: 'Анализирует релевантный опыт, рост по должностям, длительность на позициях.',
+                  icon: TrendingUp,
                 },
                 {
-                  step: '03',
-                  title: 'Получите отчёт',
-                  desc: 'AI проанализирует резюме и выдаст топ-кандидатов с оценками.',
-                  icon: BarChart3,
+                  title: 'Red flags',
+                  desc: 'Частая смена работы, большие перерывы, несоответствие зарплатных ожиданий.',
+                  icon: AlertTriangle,
+                },
+                {
+                  title: 'Качество резюме',
+                  desc: 'Конкретные достижения vs "выполнял обязанности". Структурированность.',
+                  icon: FileText,
                 },
               ].map((item, i) => (
-                <motion.div key={i} variants={fadeIn} className="bg-[#111] p-6 relative">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="text-4xl font-bold text-zinc-800">{item.step}</div>
-                    <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center">
-                      <item.icon className="h-5 w-5 text-zinc-400" />
+                <div key={i} className="p-5 rounded-lg bg-zinc-900/50 border border-zinc-800/50">
+                  <div className="flex items-start gap-4">
+                    <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                      <item.icon className="h-4 w-4 text-zinc-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-1.5">{item.title}</h3>
+                      <p className="text-sm text-zinc-500 leading-relaxed">{item.desc}</p>
                     </div>
                   </div>
-                  <h3 className="text-lg font-medium mb-2">{item.title}</h3>
-                  <p className="text-sm text-zinc-500 leading-relaxed">{item.desc}</p>
-                </motion.div>
+                </div>
               ))}
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Demo / Interface preview */}
-      <section className="border-b border-zinc-800">
-        <div className="max-w-6xl mx-auto px-6 py-16">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={stagger}
-          >
-            <motion.div variants={fadeIn} className="text-center mb-10">
-              <h2 className="text-2xl font-semibold mb-2">Результаты анализа</h2>
-              <p className="text-zinc-500">Так выглядит отчёт по кандидатам</p>
             </motion.div>
 
+            {/* Example evaluation - CRITICAL */}
             <motion.div variants={fadeIn}>
-              <Card className="border-zinc-800 overflow-hidden">
+              <p className="text-xs uppercase tracking-wider text-zinc-600 mb-4">Пример оценки</p>
+              <Card className="border-zinc-800 bg-zinc-900/50 overflow-hidden">
                 <CardContent className="p-0">
                   {/* Header */}
-                  <div className="px-5 py-3 border-b border-zinc-800 bg-[#0f0f0f] flex items-center justify-between">
-                    <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                      Менеджер по продажам — 47 откликов
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-zinc-600">Экспорт</span>
-                      <Download className="h-3.5 w-3.5 text-zinc-600" />
-                    </div>
-                  </div>
-
-                  {/* Table */}
-                  <div className="divide-y divide-zinc-800/50">
-                    {[
-                      { name: 'Артём Волков', score: 94, status: 'hire', skills: 92, exp: '7 лет', salary: '280 000 ₽' },
-                      { name: 'Мария Соколова', score: 87, status: 'interview', skills: 85, exp: '4 года', salary: '180 000 ₽' },
-                      { name: 'Дмитрий Новиков', score: 76, status: 'maybe', skills: 78, exp: '3 года', salary: '150 000 ₽' },
-                      { name: 'Елена Петрова', score: 45, status: 'reject', skills: 42, exp: '1 год', salary: '120 000 ₽' },
-                    ].map((c, i) => (
-                      <div key={i} className="px-5 py-4 flex items-center gap-4 hover:bg-zinc-900/50 transition-colors">
-                        {/* Avatar */}
-                        <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center text-[11px] font-medium text-zinc-500">
-                          {c.name.split(' ').map(n => n[0]).join('')}
-                        </div>
-
-                        {/* Name */}
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[13px] font-medium">{c.name}</div>
-                          <div className="text-xs text-zinc-600">{c.exp} опыта · {c.salary}</div>
-                        </div>
-
-                        {/* Skills bar */}
-                        <div className="w-24 hidden sm:block">
-                          <div className="text-[10px] text-zinc-600 mb-1">Навыки {c.skills}%</div>
-                          <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-zinc-500 rounded-full" style={{ width: `${c.skills}%` }} />
-                          </div>
-                        </div>
-
-                        {/* Score */}
-                        <div className="text-right">
-                          <div className="text-lg font-semibold tabular-nums">{c.score}</div>
-                          <div className="text-[10px] text-zinc-600">баллов</div>
-                        </div>
-
-                        {/* Status */}
-                        <span className={`px-2.5 py-1 rounded text-[11px] font-medium ${
-                          c.status === 'hire' ? 'bg-green-500/15 text-green-500' :
-                          c.status === 'interview' ? 'bg-blue-500/15 text-blue-500' :
-                          c.status === 'maybe' ? 'bg-amber-500/15 text-amber-500' :
-                          'bg-red-500/15 text-red-500'
-                        }`}>
-                          {c.status === 'hire' ? 'Нанять' :
-                           c.status === 'interview' ? 'Интервью' :
-                           c.status === 'maybe' ? 'Возможно' : 'Отказ'}
-                        </span>
+                  <div className="px-4 py-3 border-b border-zinc-800/50 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center text-sm font-medium text-zinc-400">
+                        АВ
                       </div>
-                    ))}
+                      <div>
+                        <p className="font-medium text-sm">Анна Волкова</p>
+                        <p className="text-xs text-zinc-600">Менеджер по продажам · 5 лет опыта</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-green-400 tabular-nums">82</div>
+                      <div className="text-[10px] text-zinc-600 uppercase tracking-wide">балла</div>
+                    </div>
                   </div>
 
-                  {/* Footer */}
-                  <div className="px-5 py-3 border-t border-zinc-800 bg-[#0f0f0f] flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-xs text-zinc-600">
-                      <span><span className="text-green-500">12</span> нанять</span>
-                      <span><span className="text-blue-500">18</span> интервью</span>
-                      <span><span className="text-amber-500">9</span> возможно</span>
-                      <span><span className="text-red-500">8</span> отказ</span>
+                  {/* Why this score */}
+                  <div className="p-4 space-y-3">
+                    <p className="text-xs uppercase tracking-wider text-zinc-600 mb-2">Почему такой балл:</p>
+
+                    <div className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-zinc-400">
+                        <span className="text-zinc-300">Опыт B2B продаж 4 года</span> — совпадает с требованием вакансии
+                      </p>
                     </div>
-                    <span className="text-xs text-zinc-600">Ср. балл: 72</span>
+
+                    <div className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-zinc-400">
+                        <span className="text-zinc-300">Рост: менеджер → старший менеджер</span> — позитивная динамика
+                      </p>
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-zinc-400">
+                        <span className="text-zinc-300">Последняя работа 8 месяцев</span> — уточнить причину ухода
+                      </p>
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-zinc-400">
+                        <span className="text-zinc-300">Нет опыта с CRM Bitrix</span> — указан в требованиях вакансии
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Recommendation */}
+                  <div className="px-4 py-3 bg-zinc-800/30 border-t border-zinc-800/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-zinc-400">Рекомендация AI:</span>
+                      <span className="px-2.5 py-1 rounded bg-blue-500/15 text-blue-400 text-xs font-medium">
+                        Пригласить на интервью
+                      </span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -356,90 +293,47 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* Features grid */}
-      <section className="border-b border-zinc-800">
-        <div className="max-w-6xl mx-auto px-6 py-16">
+      {/* Your control - addressing anxiety */}
+      <section className="border-b border-zinc-800/50 bg-zinc-900/30">
+        <div className="max-w-6xl mx-auto px-4 py-12 md:py-16">
           <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: "-50px" }}
             variants={stagger}
           >
-            <motion.div variants={fadeIn} className="text-center mb-10">
-              <h2 className="text-2xl font-semibold mb-2">Возможности</h2>
-              <p className="text-zinc-500">Всё для эффективного найма</p>
-            </motion.div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-zinc-800 rounded-xl overflow-hidden">
-              {[
-                {
-                  icon: BarChart3,
-                  title: 'AI-анализ резюме',
-                  desc: 'Оценка по 15+ критериям: навыки, опыт, образование, соответствие вакансии',
-                },
-                {
-                  icon: Users,
-                  title: 'Интеграция с HH.ru',
-                  desc: 'Автоматическая синхронизация вакансий и откликов одной кнопкой',
-                },
-                {
-                  icon: Download,
-                  title: 'Экспорт в Excel',
-                  desc: 'Готовый отчёт с графиками, фильтрами и контактами кандидатов',
-                },
-                {
-                  icon: Zap,
-                  title: 'Быстрая обработка',
-                  desc: '100 резюме за 10-15 минут вместо 8 часов ручной работы',
-                },
-                {
-                  icon: Clock,
-                  title: 'Экономия 80% времени',
-                  desc: 'Занимайтесь собеседованиями, а не рутинным скринингом',
-                },
-                {
-                  icon: Shield,
-                  title: 'Безопасность',
-                  desc: 'Данные зашифрованы и хранятся в защищённых дата-центрах РФ',
-                },
-              ].map((f, i) => (
-                <motion.div key={i} variants={fadeIn} className="bg-[#111] p-6">
-                  <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center mb-4">
-                    <f.icon className="h-5 w-5 text-zinc-400" />
-                  </div>
-                  <h3 className="font-medium mb-2">{f.title}</h3>
-                  <p className="text-sm text-zinc-500 leading-relaxed">{f.desc}</p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Who is it for */}
-      <section className="border-b border-zinc-800">
-        <div className="max-w-6xl mx-auto px-6 py-16">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={stagger}
-          >
-            <motion.div variants={fadeIn} className="text-center mb-10">
-              <h2 className="text-2xl font-semibold mb-2">Timly подходит вам, если</h2>
+            <motion.div variants={fadeIn} className="mb-8">
+              <p className="text-xs uppercase tracking-wider text-zinc-600 mb-3">Ваш контроль</p>
+              <h2 className="text-xl md:text-2xl font-semibold mb-3">
+                AI помогает, но решаете вы
+              </h2>
+              <p className="text-zinc-500 max-w-lg">
+                Мы не удаляем кандидатов и не принимаем решения за вас.
+              </p>
             </motion.div>
 
             <motion.div variants={fadeIn} className="grid md:grid-cols-3 gap-4">
               {[
-                { text: 'Используете HH.ru для найма', icon: ExternalLink },
-                { text: 'Получаете 50+ откликов на вакансию', icon: Users },
-                { text: 'Хотите тратить время на интервью, а не скрининг', icon: Clock },
+                {
+                  icon: Eye,
+                  title: 'Видите всех',
+                  desc: 'Все кандидаты остаются в списке. Даже с низким баллом — никто не удаляется автоматически.',
+                },
+                {
+                  icon: Sliders,
+                  title: 'Можете изменить',
+                  desc: 'Не согласны с оценкой? Переоцените кандидата вручную. AI учтёт ваше мнение.',
+                },
+                {
+                  icon: FileText,
+                  title: 'Полное резюме',
+                  desc: 'Всегда видите оригинал резюме. AI показывает выводы, но исходник рядом.',
+                },
               ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 p-4 rounded-lg bg-zinc-900/50 border border-zinc-800">
-                  <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                    <Check className="h-4 w-4 text-green-500" />
-                  </div>
-                  <span className="text-sm text-zinc-300">{item.text}</span>
+                <div key={i} className="p-5 rounded-lg bg-[#0a0a0a] border border-zinc-800/50">
+                  <item.icon className="h-5 w-5 text-zinc-500 mb-3" />
+                  <h3 className="font-medium mb-1.5">{item.title}</h3>
+                  <p className="text-sm text-zinc-500 leading-relaxed">{item.desc}</p>
                 </div>
               ))}
             </motion.div>
@@ -447,9 +341,161 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="border-b border-zinc-800">
-        <div className="max-w-6xl mx-auto px-6 py-20">
+      {/* How to start - simplified */}
+      <section className="border-b border-zinc-800/50">
+        <div className="max-w-6xl mx-auto px-4 py-12 md:py-16">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={stagger}
+          >
+            <motion.div variants={fadeIn} className="mb-8">
+              <p className="text-xs uppercase tracking-wider text-zinc-600 mb-3">Начать просто</p>
+              <h2 className="text-xl md:text-2xl font-semibold">3 шага до первых результатов</h2>
+            </motion.div>
+
+            <motion.div variants={fadeIn} className="grid md:grid-cols-3 gap-6">
+              {[
+                {
+                  step: '01',
+                  title: 'Подключите HH.ru',
+                  desc: 'Авторизуйтесь через HeadHunter. Никаких API-токенов — всё автоматически.',
+                },
+                {
+                  step: '02',
+                  title: 'Выберите вакансию',
+                  desc: 'Timly загрузит ваши вакансии и отклики. Выберите, какую анализировать.',
+                },
+                {
+                  step: '03',
+                  title: 'Получите результат',
+                  desc: 'Через 10-15 минут — список кандидатов с баллами и объяснениями.',
+                },
+              ].map((item, i) => (
+                <div key={i} className="relative">
+                  <div className="text-5xl font-bold text-zinc-800/50 mb-3">{item.step}</div>
+                  <h3 className="font-medium mb-2">{item.title}</h3>
+                  <p className="text-sm text-zinc-500 leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="border-b border-zinc-800/50 bg-zinc-900/30">
+        <div className="max-w-6xl mx-auto px-4 py-12 md:py-16">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={stagger}
+          >
+            <motion.div variants={fadeIn} className="mb-8">
+              <p className="text-xs uppercase tracking-wider text-zinc-600 mb-3">Отзывы</p>
+              <h2 className="text-xl md:text-2xl font-semibold">Что говорят HR-менеджеры</h2>
+            </motion.div>
+
+            <motion.div variants={fadeIn} className="grid md:grid-cols-2 gap-4">
+              {[
+                {
+                  quote: 'Раньше понедельник уходил на разбор откликов. Теперь за час вижу топ-20 и планирую собеседования. Главное — я понимаю, почему AI выбрал именно этих людей.',
+                  name: 'Мария К.',
+                  role: 'HR-менеджер, ритейл',
+                },
+                {
+                  quote: 'Боялась, что AI будет ошибаться. Но он не отсеивает — только сортирует. Я всё равно смотрю всех, просто начинаю с лучших. Экономлю 6 часов в неделю.',
+                  name: 'Елена С.',
+                  role: 'Рекрутер, IT-компания',
+                },
+              ].map((item, i) => (
+                <Card key={i} className="border-zinc-800 bg-[#0a0a0a]">
+                  <CardContent className="p-5">
+                    <Quote className="h-5 w-5 text-zinc-700 mb-3" />
+                    <p className="text-sm text-zinc-400 leading-relaxed mb-4">
+                      "{item.quote}"
+                    </p>
+                    <div>
+                      <p className="text-sm font-medium">{item.name}</p>
+                      <p className="text-xs text-zinc-600">{item.role}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* FAQ - addressing AI anxiety */}
+      <section className="border-b border-zinc-800/50">
+        <div className="max-w-6xl mx-auto px-4 py-12 md:py-16">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={stagger}
+          >
+            <motion.div variants={fadeIn} className="mb-8">
+              <p className="text-xs uppercase tracking-wider text-zinc-600 mb-3">Вопросы</p>
+              <h2 className="text-xl md:text-2xl font-semibold">Частые вопросы про AI</h2>
+            </motion.div>
+
+            <motion.div variants={fadeIn} className="space-y-2 max-w-2xl">
+              {[
+                {
+                  q: 'AI точно не пропустит хорошего кандидата?',
+                  a: 'AI не отсеивает кандидатов — он сортирует их по релевантности. Все резюме остаются в списке. Даже если AI поставил низкий балл, вы можете посмотреть кандидата и переоценить его вручную.',
+                },
+                {
+                  q: 'Как AI понимает, что важно для моей вакансии?',
+                  a: 'AI анализирует текст вашей вакансии: требования к навыкам, опыту, образованию. Потом сопоставляет с данными из резюме. Вы видите, какие требования совпали, а какие нет.',
+                },
+                {
+                  q: 'Что если я не согласен с оценкой?',
+                  a: 'Вы всегда можете изменить оценку любого кандидата. Ваше мнение важнее. AI — это помощник, не начальник.',
+                },
+                {
+                  q: 'Мои данные в безопасности?',
+                  a: 'Данные хранятся в защищённых дата-центрах в России. Мы не передаём их третьим лицам. Шифрование на всех этапах.',
+                },
+                {
+                  q: 'Это дорого?',
+                  a: '50 анализов бесплатно, без карты. Потом от 2 999 ₽/мес за 500 анализов. Экономия 6+ часов в неделю окупает подписку с первого дня.',
+                },
+              ].map((item, i) => (
+                <div
+                  key={i}
+                  className="border border-zinc-800/50 rounded-lg overflow-hidden"
+                >
+                  <button
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-zinc-900/50 transition-colors"
+                  >
+                    <span className="text-sm font-medium pr-4">{item.q}</span>
+                    <ChevronDown
+                      className={`h-4 w-4 text-zinc-500 flex-shrink-0 transition-transform ${
+                        openFaq === i ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                  {openFaq === i && (
+                    <div className="px-4 pb-4">
+                      <p className="text-sm text-zinc-500 leading-relaxed">{item.a}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="border-b border-zinc-800/50">
+        <div className="max-w-6xl mx-auto px-4 py-16 md:py-20">
           <motion.div
             initial="hidden"
             whileInView="visible"
@@ -457,15 +503,15 @@ const Landing: React.FC = () => {
             variants={stagger}
             className="text-center"
           >
-            <motion.h2 variants={fadeIn} className="text-3xl lg:text-4xl font-semibold mb-4">
-              Попробуйте бесплатно
+            <motion.h2 variants={fadeIn} className="text-2xl md:text-3xl font-semibold mb-4">
+              Попробуйте на своих откликах
             </motion.h2>
-            <motion.p variants={fadeIn} className="text-zinc-500 mb-8 max-w-lg mx-auto">
-              50 анализов в подарок. Без кредитной карты. Настройка за 2 минуты.
+            <motion.p variants={fadeIn} className="text-zinc-500 mb-8 max-w-md mx-auto">
+              50 анализов бесплатно. Без карты. Результат через 10 минут.
             </motion.p>
 
-            <motion.div variants={fadeIn} className="flex gap-3 justify-center">
-              <Button asChild size="lg" className="bg-zinc-100 text-zinc-900 hover:bg-white h-12 px-8">
+            <motion.div variants={fadeIn}>
+              <Button asChild size="lg" className="bg-zinc-100 text-zinc-900 hover:bg-white h-11 px-8 text-sm font-medium">
                 <Link to="/register">
                   Начать бесплатно
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -473,29 +519,75 @@ const Landing: React.FC = () => {
               </Button>
             </motion.div>
 
-            <motion.div variants={fadeIn} className="flex items-center justify-center gap-6 mt-6 text-sm text-zinc-600">
-              <span>✓ 50 анализов бесплатно</span>
-              <span>✓ Без автоплатежей</span>
-              <span>✓ Отмена в любой момент</span>
+            <motion.div variants={fadeIn} className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-6 text-sm text-zinc-600">
+              <span>50 анализов бесплатно</span>
+              <span>Без автоплатежей</span>
+              <span>Отмена в любой момент</span>
             </motion.div>
           </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-800">
-        <div className="max-w-6xl mx-auto px-6 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <img src="/logo.jpg" alt="Timly" className="h-8 w-8 rounded-lg" />
-              <span className="font-medium">Timly</span>
-              <span className="text-zinc-600 text-sm">AI-скрининг резюме</span>
+      <footer className="border-t border-zinc-800/50">
+        <div className="max-w-6xl mx-auto px-4 py-10">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            {/* Brand */}
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-2 mb-3">
+                <img src="/logo.jpg" alt="timly" className="h-7 w-7 rounded-lg" />
+                <span className="text-base font-semibold tracking-tight">timly</span>
+              </div>
+              <p className="text-sm text-zinc-600 max-w-xs leading-relaxed">
+                AI-помощник для скрининга резюме. Сортирует отклики, объясняет оценки, экономит время.
+              </p>
             </div>
-            <div className="flex items-center gap-6 text-sm text-zinc-500">
-              <a href="mailto:support@timly-hr.ru" className="hover:text-zinc-300 transition-colors">
-                support@timly-hr.ru
-              </a>
-              <span>© 2024 Timly</span>
+
+            {/* Contacts */}
+            <div>
+              <h4 className="text-sm font-medium mb-3">Контакты</h4>
+              <div className="space-y-2">
+                <a
+                  href="mailto:timly-hr@timly-hr.ru"
+                  className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  <Mail className="h-4 w-4" />
+                  timly-hr@timly-hr.ru
+                </a>
+                <a
+                  href="https://t.me/timly_support_bot"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Telegram
+                </a>
+              </div>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="text-sm font-medium mb-3">Документы</h4>
+              <div className="space-y-2">
+                <Link to="/privacy" className="block text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+                  Политика конфиденциальности
+                </Link>
+                <Link to="/terms" className="block text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+                  Условия использования
+                </Link>
+                <Link to="/offer" className="block text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+                  Публичная оферта
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-6 border-t border-zinc-800/50 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-zinc-600">
+            <span>© 2024 Timly. Все права защищены.</span>
+            <div className="flex items-center gap-3">
+              <Shield className="h-3.5 w-3.5" />
+              <span>Данные защищены и хранятся в РФ</span>
             </div>
           </div>
         </div>

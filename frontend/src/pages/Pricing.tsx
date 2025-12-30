@@ -1,11 +1,15 @@
 /**
  * Страница тарифных планов
- * Отображение доступных планов подписки и возможность апгрейда
+ * Design: Dark Industrial - минималистичный, утилитарный
  */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Check, Loader2, Minus } from 'lucide-react';
 import apiClient from '@/services/api';
 import type { SubscriptionPlan, Subscription } from '@/types';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 const Pricing: React.FC = () => {
   const navigate = useNavigate();
@@ -25,7 +29,11 @@ const Pricing: React.FC = () => {
         apiClient.getSubscriptionPlans(),
         apiClient.getCurrentSubscription()
       ]);
-      setPlans(plansData);
+      // Фильтруем: только активные, исключаем trial (объединён с free)
+      const activePlans = plansData
+        .filter((p: SubscriptionPlan) => p.is_active !== false && p.plan_type !== 'trial')
+        .sort((a: SubscriptionPlan, b: SubscriptionPlan) => (a.display_order ?? 0) - (b.display_order ?? 0));
+      setPlans(activePlans);
       setCurrentSubscription(subscriptionData);
     } catch (error) {
       console.error('Failed to load subscription data:', error);
@@ -35,254 +43,334 @@ const Pricing: React.FC = () => {
   };
 
   const handleSelectPlan = (planType: string) => {
-    // Перенаправляем на страницу оформления заказа
     navigate(`/checkout?plan=${planType}&period=${billingPeriod}`);
   };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ru-RU', {
-      style: 'currency',
-      currency: 'RUB',
-      minimumFractionDigits: 0
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(price);
   };
 
   const getPlanPrice = (plan: SubscriptionPlan) => {
-    // Поддержка новой и старой структуры API
     const yearlyPrice = plan.pricing?.yearly ?? plan.price_yearly ?? 0;
     const monthlyPrice = plan.pricing?.monthly ?? plan.price_monthly ?? 0;
     return billingPeriod === 'yearly' ? yearlyPrice : monthlyPrice;
+  };
+
+  const getMonthlyEquivalent = (plan: SubscriptionPlan) => {
+    const yearlyPrice = plan.pricing?.yearly ?? plan.price_yearly ?? 0;
+    return Math.round(yearlyPrice / 12);
   };
 
   const isCurrentPlan = (planType: string) => {
     return currentSubscription?.plan?.plan_type === planType;
   };
 
-  const getPlanFeatures = (plan: SubscriptionPlan): string[] => {
-    // Поддержка новой и старой структуры API
-    const maxVacancies = plan.limits?.active_vacancies ?? plan.max_active_vacancies ?? 0;
+  // Функции для каждого тарифа
+  const getPlanFeatures = (plan: SubscriptionPlan) => {
+    const planType = plan.plan_type;
     const maxAnalyses = plan.limits?.analyses_per_month ?? plan.max_analyses_per_month ?? 0;
     const maxExports = plan.limits?.exports_per_month ?? plan.max_export_per_month ?? 0;
 
-    const features: string[] = [
-      `${maxVacancies === 999999 ? 'Неограниченно' : maxVacancies} активных вакансий`,
-      `${maxAnalyses === 999999 ? 'Неограниченно' : maxAnalyses} анализов в месяц`,
-      `${maxExports === 999999 ? 'Неограниченно' : maxExports} экспортов в месяц`
-    ];
+    const features: { text: string; included: boolean }[] = [];
 
-    if (plan.features.basic_analysis) features.push('Базовый AI анализ');
-    if (plan.features.advanced_ai) features.push('Продвинутый AI анализ');
-    if (plan.features.priority_support) features.push('Приоритетная поддержка');
-    if (plan.features.api_access) features.push('Доступ к API');
-    if (plan.features.custom_integrations) features.push('Кастомные интеграции');
-    if (plan.features.dedicated_manager) features.push('Персональный менеджер');
+    // Анализы
+    features.push({
+      text: maxAnalyses >= 999999 ? 'Безлимит анализов' : `${maxAnalyses} анализов/мес`,
+      included: true
+    });
+
+    // Загрузки
+    if (planType === 'free') {
+      features.push({ text: '10 загрузок резюме', included: true });
+    } else if (planType === 'starter') {
+      features.push({ text: '50 загрузок резюме', included: true });
+    } else {
+      features.push({ text: 'Безлимит загрузок', included: true });
+    }
+
+    // Экспорты
+    features.push({
+      text: maxExports >= 999999 ? 'Безлимит экспортов' : `${maxExports} экспортов/мес`,
+      included: true
+    });
+
+    // Поиск по базе
+    const hasSearch = planType === 'professional' || planType === 'enterprise';
+    features.push({
+      text: 'Поиск по базе резюме',
+      included: hasSearch
+    });
+
+    // AI анализ
+    features.push({
+      text: 'Продвинутый AI',
+      included: planType !== 'free'
+    });
+
+    // Поддержка
+    features.push({
+      text: 'Приоритетная поддержка',
+      included: planType !== 'free'
+    });
+
+    // API
+    if (planType === 'professional' || planType === 'enterprise') {
+      features.push({ text: 'API доступ', included: true });
+    }
+
+    // Enterprise extras
+    if (planType === 'enterprise') {
+      features.push({ text: 'Персональный менеджер', included: true });
+      features.push({ text: 'Кастомные интеграции', included: true });
+    }
 
     return features;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Загрузка тарифных планов...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-zinc-600 mx-auto mb-4" />
+          <p className="text-zinc-500 text-sm">Загрузка тарифов...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Заголовок */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Выберите подходящий тариф
-          </h1>
-          <p className="text-xl text-gray-600 mb-8">
-            Начните с бесплатного плана и масштабируйтесь по мере роста
-          </p>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="text-center">
+        <motion.h1
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-2xl font-semibold text-zinc-100 tracking-tight"
+        >
+          Тарифы
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="text-zinc-500 mt-2"
+        >
+          Выберите подходящий план
+        </motion.p>
 
-          {/* Переключатель периода оплаты */}
-          <div className="flex justify-center items-center gap-4">
-            <span className={`text-sm font-medium ${billingPeriod === 'monthly' ? 'text-gray-900' : 'text-gray-500'}`}>
-              Ежемесячно
-            </span>
+        {/* Period Toggle */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="flex justify-center mt-6"
+        >
+          <div className="inline-flex items-center p-1 rounded-lg bg-zinc-800/50 border border-zinc-700/50">
             <button
-              onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
-              className="relative inline-flex h-6 w-11 items-center rounded-full bg-indigo-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              onClick={() => setBillingPeriod('monthly')}
+              className={`px-4 py-1.5 rounded text-sm transition-all ${
+                billingPeriod === 'monthly'
+                  ? 'bg-zinc-700 text-zinc-100'
+                  : 'text-zinc-500 hover:text-zinc-400'
+              }`}
             >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  billingPeriod === 'yearly' ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
+              Месяц
             </button>
-            <span className={`text-sm font-medium ${billingPeriod === 'yearly' ? 'text-gray-900' : 'text-gray-500'}`}>
-              Ежегодно
-              <span className="ml-2 text-green-600 text-xs">Экономия до 20%</span>
-            </span>
+            <button
+              onClick={() => setBillingPeriod('yearly')}
+              className={`px-4 py-1.5 rounded text-sm transition-all flex items-center gap-2 ${
+                billingPeriod === 'yearly'
+                  ? 'bg-zinc-700 text-zinc-100'
+                  : 'text-zinc-500 hover:text-zinc-400'
+              }`}
+            >
+              Год
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-600 text-zinc-300">
+                -20%
+              </span>
+            </button>
           </div>
-        </div>
+        </motion.div>
+      </div>
 
-        {/* Карточки тарифов */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {plans.map((plan) => {
-            const price = getPlanPrice(plan);
-            const features = getPlanFeatures(plan);
-            const current = isCurrentPlan(plan.plan_type);
+      {/* Plans Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {plans.map((plan, idx) => {
+          const price = getPlanPrice(plan);
+          const features = getPlanFeatures(plan);
+          const current = isCurrentPlan(plan.plan_type);
+          const isPopular = plan.plan_type === 'professional';
+          const isEnterprise = plan.plan_type === 'enterprise';
+          const monthlyEquivalent = billingPeriod === 'yearly' ? getMonthlyEquivalent(plan) : null;
 
-            return (
-              <div
-                key={plan.id}
-                className={`relative bg-white rounded-2xl shadow-lg overflow-hidden ${
-                  plan.is_popular ? 'ring-2 ring-indigo-600' : ''
-                }`}
-              >
-                {plan.is_popular && (
-                  <div className="absolute top-0 right-0 bg-indigo-600 text-white px-4 py-1 text-xs font-semibold rounded-bl-lg">
-                    Популярный
+          return (
+            <motion.div
+              key={plan.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05 + 0.2 }}
+            >
+              <Card className={`h-full border-zinc-800 bg-zinc-900/50 relative ${
+                isPopular ? 'ring-1 ring-zinc-600' : ''
+              }`}>
+                {/* Popular badge */}
+                {isPopular && (
+                  <div className="absolute -top-2.5 left-4">
+                    <span className="text-[10px] uppercase tracking-wider px-2 py-1 bg-zinc-100 text-zinc-900 font-medium rounded">
+                      Популярный
+                    </span>
                   </div>
                 )}
 
-                <div className="p-8">
-                  {/* Заголовок плана */}
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                    {plan.name}
-                  </h3>
+                <CardContent className="p-5 flex flex-col h-full">
+                  {/* Plan name */}
+                  <div className="mb-4">
+                    <h3 className="text-lg font-medium text-zinc-100">
+                      {plan.name}
+                    </h3>
+                    <p className="text-xs text-zinc-600 mt-0.5">
+                      {plan.description}
+                    </p>
+                  </div>
 
-                  {/* Цена */}
-                  <div className="mb-6">
+                  {/* Price */}
+                  <div className="mb-5 pb-5 border-b border-zinc-800">
                     {price === 0 ? (
-                      <div className="text-4xl font-bold text-gray-900">
-                        Бесплатно
+                      <div className="flex items-baseline">
+                        <span className="text-3xl font-semibold text-zinc-100 tabular-nums">0</span>
+                        <span className="text-zinc-500 ml-1">₽</span>
+                      </div>
+                    ) : isEnterprise ? (
+                      <div>
+                        <span className="text-xl font-medium text-zinc-100">По запросу</span>
                       </div>
                     ) : (
-                      <>
-                        <div className="text-4xl font-bold text-gray-900">
-                          {formatPrice(price)}
+                      <div>
+                        <div className="flex items-baseline">
+                          <span className="text-3xl font-semibold text-zinc-100 tabular-nums">
+                            {formatPrice(billingPeriod === 'yearly' ? monthlyEquivalent! : price)}
+                          </span>
+                          <span className="text-zinc-500 ml-1">₽/мес</span>
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {billingPeriod === 'yearly' ? '/ год' : '/ месяц'}
-                        </div>
-                      </>
+                        {billingPeriod === 'yearly' && (
+                          <p className="text-xs text-zinc-600 mt-1">
+                            {formatPrice(price)} ₽ за год
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
 
-                  {/* Возможности */}
-                  <ul className="space-y-3 mb-8">
+                  {/* Features */}
+                  <ul className="space-y-2 mb-5 flex-1">
                     {features.map((feature, index) => (
-                      <li key={index} className="flex items-start">
-                        <svg
-                          className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0"
-                          fill="none"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span className="text-sm text-gray-700">{feature}</span>
+                      <li key={index} className="flex items-center gap-2 text-sm">
+                        {feature.included ? (
+                          <Check className="h-3.5 w-3.5 text-zinc-500 flex-shrink-0" />
+                        ) : (
+                          <Minus className="h-3.5 w-3.5 text-zinc-700 flex-shrink-0" />
+                        )}
+                        <span className={feature.included ? 'text-zinc-400' : 'text-zinc-700'}>
+                          {feature.text}
+                        </span>
                       </li>
                     ))}
                   </ul>
 
-                  {/* Кнопка действия */}
+                  {/* Button */}
                   {current ? (
-                    <button
+                    <Button
                       disabled
-                      className="w-full bg-gray-100 text-gray-600 py-3 px-6 rounded-lg font-semibold cursor-not-allowed"
+                      variant="outline"
+                      className="w-full border-zinc-700 text-zinc-600 cursor-not-allowed"
                     >
                       Текущий план
-                    </button>
+                    </Button>
+                  ) : isEnterprise ? (
+                    <Button
+                      onClick={() => window.open('https://t.me/timly_support_bot', '_blank')}
+                      variant="outline"
+                      className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                    >
+                      Написать в Telegram
+                    </Button>
                   ) : (
-                    <button
+                    <Button
                       onClick={() => handleSelectPlan(plan.plan_type)}
-                      className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors ${
-                        plan.is_popular
-                          ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                          : 'bg-gray-900 text-white hover:bg-gray-800'
+                      className={`w-full ${
+                        isPopular
+                          ? 'bg-zinc-100 text-zinc-900 hover:bg-white'
+                          : 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700'
                       }`}
                     >
-                      {price === 0 ? 'Начать бесплатно' : 'Выбрать план'}
-                    </button>
+                      {price === 0 ? 'Начать бесплатно' : 'Выбрать'}
+                    </Button>
                   )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })}
+      </div>
 
-        {/* Текущая подписка */}
-        {currentSubscription && (
-          <div className="mt-12 bg-white rounded-lg shadow-lg p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Ваша текущая подписка
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">План</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {currentSubscription.plan.name}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Использовано анализов</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {currentSubscription.usage?.analyses?.used ?? currentSubscription.analyses_used_this_month ?? 0} / {currentSubscription.usage?.analyses?.limit ?? currentSubscription.plan.limits?.analyses_per_month ?? currentSubscription.plan.max_analyses_per_month ?? 0}
-                </p>
-                <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-indigo-600 h-2 rounded-full"
-                    style={{
-                      width: `${currentSubscription.usage?.analyses?.percentage ?? Math.min(
-                        ((currentSubscription.analyses_used_this_month ?? 0) / (currentSubscription.plan.max_analyses_per_month ?? 1)) * 100,
-                        100
-                      )}%`
-                    }}
-                  />
+      {/* Current subscription info */}
+      {currentSubscription && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+        >
+          <Card className="border-zinc-800 bg-zinc-900/50">
+            <CardContent className="p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm text-zinc-500">Текущий план</p>
+                  <p className="text-zinc-100 font-medium">{currentSubscription.plan.name}</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-sm text-zinc-500">Использовано</p>
+                    <p className="text-zinc-100 tabular-nums">
+                      {currentSubscription.usage?.analyses?.used ?? currentSubscription.analyses_used_this_month ?? 0}
+                      <span className="text-zinc-600"> / </span>
+                      {currentSubscription.usage?.analyses?.limit ?? currentSubscription.plan.max_analyses_per_month ?? 0}
+                    </p>
+                  </div>
+                  <div className="w-32 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-zinc-500 rounded-full"
+                      style={{
+                        width: `${Math.min(
+                          ((currentSubscription.analyses_used_this_month ?? 0) /
+                          (currentSubscription.plan.max_analyses_per_month ?? 1)) * 100,
+                          100
+                        )}%`
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Использовано экспортов</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {currentSubscription.usage?.exports?.used ?? currentSubscription.exports_used_this_month ?? 0} / {currentSubscription.usage?.exports?.limit ?? currentSubscription.plan.limits?.exports_per_month ?? currentSubscription.plan.max_export_per_month ?? 0}
-                </p>
-                <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-indigo-600 h-2 rounded-full"
-                    style={{
-                      width: `${currentSubscription.usage?.exports?.percentage ?? Math.min(
-                        ((currentSubscription.exports_used_this_month ?? 0) / (currentSubscription.plan.max_export_per_month ?? 1)) * 100,
-                        100
-                      )}%`
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="mt-6 flex gap-4">
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Вернуться в Dashboard
-              </button>
-            </div>
-          </div>
-        )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
-        {/* FAQ или дополнительная информация */}
-        <div className="mt-12 text-center">
-          <p className="text-gray-600">
-            Нужна помощь с выбором плана?{' '}
-            <a href="mailto:support@timly.ru" className="text-indigo-600 hover:text-indigo-700 font-semibold">
-              Свяжитесь с нами
-            </a>
-          </p>
-        </div>
+      {/* Footer */}
+      <div className="text-center text-sm text-zinc-600">
+        <p>
+          Вопросы?{' '}
+          <a
+            href="https://t.me/timly_support_bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-zinc-400 hover:text-zinc-300 transition-colors"
+          >
+            Напишите нам
+          </a>
+        </p>
       </div>
     </div>
   );

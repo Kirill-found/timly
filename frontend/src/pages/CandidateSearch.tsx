@@ -1,22 +1,22 @@
 /**
  * Страница поиска кандидатов по базе резюме HH.ru
  * Создание поисковых проектов, запуск поиска, AI анализ
+ * Design: Dark Industrial
  */
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search, Plus, Play, Brain, Star, StarOff, Filter, Trash2,
-  ChevronRight, Loader2, AlertCircle, CheckCircle, XCircle,
-  Users, TrendingUp, MapPin, Briefcase, Clock, ExternalLink
+  Search, Plus, Play, Brain, Star, StarOff, Trash2,
+  Loader2, AlertCircle, Users, TrendingUp, MapPin,
+  Briefcase, ExternalLink, Sparkles
 } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -259,29 +259,29 @@ const CandidateSearch: React.FC = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
-      draft: { variant: 'outline', label: 'Черновик' },
-      running: { variant: 'default', label: 'Поиск...' },
-      completed: { variant: 'secondary', label: 'Загружено' },
-      analyzing: { variant: 'default', label: 'Анализ...' },
-      done: { variant: 'default', label: 'Готово' },
-      failed: { variant: 'destructive', label: 'Ошибка' }
+    const variants: Record<string, { className: string; label: string }> = {
+      draft: { className: 'bg-zinc-800 text-zinc-400 border-zinc-700', label: 'Черновик' },
+      running: { className: 'bg-blue-500/15 text-blue-400 border-blue-500/30', label: 'Поиск...' },
+      completed: { className: 'bg-zinc-700 text-zinc-300 border-zinc-600', label: 'Загружено' },
+      analyzing: { className: 'bg-purple-500/15 text-purple-400 border-purple-500/30', label: 'Анализ...' },
+      done: { className: 'bg-green-500/15 text-green-400 border-green-500/30', label: 'Готово' },
+      failed: { className: 'bg-red-500/15 text-red-400 border-red-500/30', label: 'Ошибка' }
     };
-    const config = variants[status] || { variant: 'outline' as const, label: status };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    const config = variants[status] || { className: 'bg-zinc-800 text-zinc-400', label: status };
+    return <span className={`px-2 py-0.5 rounded text-xs border ${config.className}`}>{config.label}</span>;
   };
 
   const getRecommendationBadge = (rec?: string) => {
     if (!rec) return null;
-    const config: Record<string, { color: string; label: string }> = {
-      hire: { color: 'bg-green-500', label: 'Нанять' },
-      consider: { color: 'bg-yellow-500', label: 'Рассмотреть' },
-      reject: { color: 'bg-red-500', label: 'Отклонить' }
+    const config: Record<string, { className: string; label: string }> = {
+      hire: { className: 'bg-green-500/15 text-green-400 border-green-500/30', label: 'Нанять' },
+      consider: { className: 'bg-amber-500/15 text-amber-400 border-amber-500/30', label: 'Рассмотреть' },
+      reject: { className: 'bg-red-500/15 text-red-400 border-red-500/30', label: 'Отклонить' }
     };
     const c = config[rec];
     if (!c) return null;
     return (
-      <span className={`px-2 py-1 rounded text-white text-xs ${c.color}`}>
+      <span className={`px-2 py-0.5 rounded text-xs border ${c.className}`}>
         {c.label}
       </span>
     );
@@ -306,59 +306,61 @@ const CandidateSearch: React.FC = () => {
       {/* Заголовок */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Поиск кандидатов</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-semibold text-zinc-100 tracking-tight">Поиск кандидатов</h1>
+          <p className="text-zinc-500 text-sm mt-1">
             Поиск по базе резюме HH.ru с AI анализом
           </p>
         </div>
 
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="bg-zinc-100 text-zinc-900 hover:bg-white font-medium">
               <Plus className="w-4 h-4 mr-2" />
               Новый поиск
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg bg-zinc-900 border-zinc-800">
             <DialogHeader>
-              <DialogTitle>Создать поисковый проект</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-zinc-100">Создать поисковый проект</DialogTitle>
+              <DialogDescription className="text-zinc-500">
                 Настройте параметры поиска кандидатов
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Название поиска *</Label>
+                <Label className="text-zinc-300">Название поиска *</Label>
                 <Input
                   placeholder="Python разработчики в Москве"
+                  className="h-10 bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
                   value={newSearch.name}
                   onChange={e => setNewSearch(prev => ({ ...prev, name: e.target.value }))}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Поисковый запрос *</Label>
+                <Label className="text-zinc-300">Поисковый запрос *</Label>
                 <Input
                   placeholder="Python Django FastAPI"
+                  className="h-10 bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
                   value={newSearch.search_query}
                   onChange={e => setNewSearch(prev => ({ ...prev, search_query: e.target.value }))}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-zinc-600">
                   Ключевые слова: должность, навыки, технологии
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label>Привязка к вакансии (для контекста AI анализа)</Label>
+                <Label className="text-zinc-300">Привязка к вакансии</Label>
                 <Select
                   value={newSearch.vacancy_id}
                   onValueChange={v => setNewSearch(prev => ({ ...prev, vacancy_id: v }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-zinc-800/50 border-zinc-700 text-zinc-100">
                     <SelectValue placeholder="Без привязки" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-zinc-900 border-zinc-800">
                     <SelectItem value="">Без привязки</SelectItem>
                     {vacancies.map(v => (
                       <SelectItem key={v.id} value={v.id}>{v.title}</SelectItem>
@@ -369,7 +371,7 @@ const CandidateSearch: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Регион</Label>
+                  <Label className="text-zinc-300">Регион</Label>
                   <Select
                     value={newSearch.filters.area}
                     onValueChange={v => setNewSearch(prev => ({
@@ -377,10 +379,10 @@ const CandidateSearch: React.FC = () => {
                       filters: { ...prev.filters, area: v }
                     }))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-zinc-800/50 border-zinc-700 text-zinc-100">
                       <SelectValue placeholder="Любой" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-zinc-900 border-zinc-800">
                       <SelectItem value="">Любой</SelectItem>
                       {dictionaries?.areas.map(a => (
                         <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
@@ -390,7 +392,7 @@ const CandidateSearch: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Опыт работы</Label>
+                  <Label className="text-zinc-300">Опыт работы</Label>
                   <Select
                     value={newSearch.filters.experience}
                     onValueChange={v => setNewSearch(prev => ({
@@ -398,10 +400,10 @@ const CandidateSearch: React.FC = () => {
                       filters: { ...prev.filters, experience: v }
                     }))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-zinc-800/50 border-zinc-700 text-zinc-100">
                       <SelectValue placeholder="Любой" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-zinc-900 border-zinc-800">
                       <SelectItem value="">Любой</SelectItem>
                       {dictionaries?.experience.map(e => (
                         <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
@@ -413,10 +415,11 @@ const CandidateSearch: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Зарплата от</Label>
+                  <Label className="text-zinc-300">Зарплата от</Label>
                   <Input
                     type="number"
                     placeholder="100000"
+                    className="h-10 bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
                     value={newSearch.filters.salary_from}
                     onChange={e => setNewSearch(prev => ({
                       ...prev,
@@ -425,10 +428,11 @@ const CandidateSearch: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Зарплата до</Label>
+                  <Label className="text-zinc-300">Зарплата до</Label>
                   <Input
                     type="number"
                     placeholder="300000"
+                    className="h-10 bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
                     value={newSearch.filters.salary_to}
                     onChange={e => setNewSearch(prev => ({
                       ...prev,
@@ -439,22 +443,28 @@ const CandidateSearch: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label>Описание (опционально)</Label>
+                <Label className="text-zinc-300">Описание</Label>
                 <Textarea
                   placeholder="Заметки о поиске..."
+                  className="bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 resize-none"
                   value={newSearch.description}
                   onChange={e => setNewSearch(prev => ({ ...prev, description: e.target.value }))}
                 />
               </div>
             </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowCreateDialog(false)}
+                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              >
                 Отмена
               </Button>
               <Button
                 onClick={handleCreateSearch}
                 disabled={!newSearch.name || !newSearch.search_query || isLoading}
+                className="bg-zinc-100 text-zinc-900 hover:bg-white"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                 Создать
@@ -465,68 +475,78 @@ const CandidateSearch: React.FC = () => {
       </div>
 
       {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Alert className="bg-red-500/10 border-red-500/20">
+            <AlertCircle className="h-4 w-4 text-red-400" />
+            <AlertDescription className="text-red-400">{error}</AlertDescription>
+          </Alert>
+        </motion.div>
       )}
 
       <div className="grid grid-cols-12 gap-6">
         {/* Список поисков */}
         <div className="col-span-4 space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Поисковые проекты</CardTitle>
+          <Card className="border-zinc-800 bg-zinc-900/50">
+            <CardHeader className="pb-3 border-b border-zinc-800">
+              <CardTitle className="text-base text-zinc-100">Поисковые проекты</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="p-3 space-y-2">
               {isLoading && searches.length === 0 ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
                 </div>
               ) : searches.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>Нет поисковых проектов</p>
-                  <p className="text-sm">Создайте первый поиск</p>
+                <div className="text-center py-8">
+                  <Search className="w-12 h-12 mx-auto mb-3 text-zinc-700" />
+                  <p className="text-zinc-500">Нет поисковых проектов</p>
+                  <p className="text-sm text-zinc-600">Создайте первый поиск</p>
                 </div>
               ) : (
-                searches.map(search => (
-                  <div
-                    key={search.id}
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                      selectedSearch?.id === search.id
-                        ? 'bg-primary/10 border-primary'
-                        : 'hover:bg-muted'
-                    }`}
-                    onClick={() => setSelectedSearch(search)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{search.name}</div>
-                        <div className="text-sm text-muted-foreground truncate">
-                          {search.search_query}
+                <AnimatePresence>
+                  {searches.map((search, idx) => (
+                    <motion.div
+                      key={search.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                        selectedSearch?.id === search.id
+                          ? 'bg-zinc-800 border-zinc-600'
+                          : 'border-zinc-800 hover:bg-zinc-800/50 hover:border-zinc-700'
+                      }`}
+                      onClick={() => setSelectedSearch(search)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-zinc-200 truncate">{search.name}</div>
+                          <div className="text-sm text-zinc-500 truncate mt-0.5">
+                            {search.search_query}
+                          </div>
+                          <div className="flex items-center gap-2 mt-2">
+                            {getStatusBadge(search.status)}
+                            <span className="text-xs text-zinc-600">
+                              {search.processed_count} кандидатов
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-2">
-                          {getStatusBadge(search.status)}
-                          <span className="text-xs text-muted-foreground">
-                            {search.processed_count} кандидатов
-                          </span>
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleDeleteSearch(search.id);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={e => {
-                          e.stopPropagation();
-                          handleDeleteSearch(search.id);
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               )}
             </CardContent>
           </Card>
@@ -537,20 +557,21 @@ const CandidateSearch: React.FC = () => {
           {selectedSearch ? (
             <>
               {/* Информация о поиске */}
-              <Card>
-                <CardHeader className="pb-3">
+              <Card className="border-zinc-800 bg-zinc-900/50">
+                <CardHeader className="pb-3 border-b border-zinc-800">
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle>{selectedSearch.name}</CardTitle>
-                      <CardDescription className="mt-1">
+                      <CardTitle className="text-zinc-100">{selectedSearch.name}</CardTitle>
+                      <p className="text-sm text-zinc-500 mt-1">
                         Запрос: {selectedSearch.search_query}
-                      </CardDescription>
+                      </p>
                     </div>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         onClick={handleRunSearch}
                         disabled={isSearching || selectedSearch.status === 'running'}
+                        className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
                       >
                         {isSearching ? (
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -562,11 +583,12 @@ const CandidateSearch: React.FC = () => {
                       <Button
                         onClick={handleAnalyzeCandidates}
                         disabled={isAnalyzing || selectedSearch.processed_count === 0}
+                        className="bg-zinc-100 text-zinc-900 hover:bg-white"
                       >
                         {isAnalyzing ? (
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         ) : (
-                          <Brain className="w-4 h-4 mr-2" />
+                          <Sparkles className="w-4 h-4 mr-2" />
                         )}
                         AI Анализ
                       </Button>
@@ -576,29 +598,29 @@ const CandidateSearch: React.FC = () => {
 
                 {/* Статистика */}
                 {stats && (
-                  <CardContent>
-                    <div className="grid grid-cols-4 gap-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold">{stats.total_candidates}</div>
-                        <div className="text-xs text-muted-foreground">Всего</div>
+                  <CardContent className="pt-4">
+                    <div className="grid grid-cols-4 gap-px bg-zinc-800 rounded-lg overflow-hidden">
+                      <div className="bg-zinc-900 p-4 text-center">
+                        <div className="text-2xl font-bold text-zinc-100 tabular-nums">{stats.total_candidates}</div>
+                        <div className="text-xs text-zinc-500 mt-1">Всего</div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">{stats.hire_count}</div>
-                        <div className="text-xs text-muted-foreground">Нанять</div>
+                      <div className="bg-zinc-900 p-4 text-center">
+                        <div className="text-2xl font-bold text-green-400 tabular-nums">{stats.hire_count}</div>
+                        <div className="text-xs text-zinc-500 mt-1">Нанять</div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-yellow-600">{stats.consider_count}</div>
-                        <div className="text-xs text-muted-foreground">Рассмотреть</div>
+                      <div className="bg-zinc-900 p-4 text-center">
+                        <div className="text-2xl font-bold text-amber-400 tabular-nums">{stats.consider_count}</div>
+                        <div className="text-xs text-zinc-500 mt-1">Рассмотреть</div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-red-600">{stats.reject_count}</div>
-                        <div className="text-xs text-muted-foreground">Отклонить</div>
+                      <div className="bg-zinc-900 p-4 text-center">
+                        <div className="text-2xl font-bold text-red-400 tabular-nums">{stats.reject_count}</div>
+                        <div className="text-xs text-zinc-500 mt-1">Отклонить</div>
                       </div>
                     </div>
                     {stats.avg_score && (
                       <div className="mt-4 text-center">
-                        <span className="text-muted-foreground">Средний балл: </span>
-                        <span className="font-semibold">{stats.avg_score}</span>
+                        <span className="text-zinc-500">Средний балл: </span>
+                        <span className="font-semibold text-zinc-100">{stats.avg_score}</span>
                       </div>
                     )}
                   </CardContent>
@@ -606,12 +628,12 @@ const CandidateSearch: React.FC = () => {
               </Card>
 
               {/* Фильтры */}
-              <div className="flex gap-4 items-center">
+              <div className="flex gap-3 items-center">
                 <Select value={recommendationFilter} onValueChange={setRecommendationFilter}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-48 bg-zinc-900/50 border-zinc-800 text-zinc-300">
                     <SelectValue placeholder="Все рекомендации" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-zinc-900 border-zinc-800">
                     <SelectItem value="all">Все рекомендации</SelectItem>
                     <SelectItem value="hire">Нанять</SelectItem>
                     <SelectItem value="consider">Рассмотреть</SelectItem>
@@ -620,11 +642,15 @@ const CandidateSearch: React.FC = () => {
                 </Select>
 
                 <Button
-                  variant={favoritesOnly ? 'default' : 'outline'}
+                  variant="outline"
                   size="sm"
                   onClick={() => setFavoritesOnly(!favoritesOnly)}
+                  className={favoritesOnly
+                    ? 'bg-amber-500/15 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
+                    : 'border-zinc-700 text-zinc-400 hover:bg-zinc-800'
+                  }
                 >
-                  <Star className="w-4 h-4 mr-1" />
+                  <Star className={`w-4 h-4 mr-1 ${favoritesOnly ? 'fill-amber-400' : ''}`} />
                   Избранные
                 </Button>
               </div>
@@ -632,116 +658,134 @@ const CandidateSearch: React.FC = () => {
               {/* Список кандидатов */}
               <div className="space-y-3">
                 {candidates.length === 0 ? (
-                  <Card>
-                    <CardContent className="py-12 text-center text-muted-foreground">
-                      <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p>Нет кандидатов</p>
-                      <p className="text-sm">Запустите поиск для загрузки резюме</p>
+                  <Card className="border-zinc-800 bg-zinc-900/50">
+                    <CardContent className="py-12 text-center">
+                      <Users className="w-12 h-12 mx-auto mb-3 text-zinc-700" />
+                      <p className="text-zinc-500">Нет кандидатов</p>
+                      <p className="text-sm text-zinc-600">Запустите поиск для загрузки резюме</p>
                     </CardContent>
                   </Card>
                 ) : (
-                  candidates.map(candidate => (
-                    <Card key={candidate.id}>
-                      <CardContent className="py-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3">
-                              <div className="font-semibold text-lg">
-                                {candidate.full_name}
-                              </div>
-                              {candidate.ai_score !== undefined && (
-                                <Badge variant="outline" className="text-lg px-3">
-                                  {candidate.ai_score}
-                                </Badge>
-                              )}
-                              {getRecommendationBadge(candidate.ai_recommendation)}
-                            </div>
+                  <AnimatePresence>
+                    {candidates.map((candidate, idx) => (
+                      <motion.div
+                        key={candidate.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.03 }}
+                      >
+                        <Card className="border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 transition-colors">
+                          <CardContent className="py-4">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3">
+                                  <div className="font-semibold text-lg text-zinc-100">
+                                    {candidate.full_name}
+                                  </div>
+                                  {candidate.ai_score !== undefined && (
+                                    <span className="px-2.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-100 text-sm font-medium tabular-nums">
+                                      {candidate.ai_score}
+                                    </span>
+                                  )}
+                                  {getRecommendationBadge(candidate.ai_recommendation)}
+                                </div>
 
-                            <div className="text-muted-foreground mt-1">
-                              {candidate.title}
-                            </div>
+                                <div className="text-zinc-400 mt-1">
+                                  {candidate.title}
+                                </div>
 
-                            <div className="flex flex-wrap gap-4 mt-3 text-sm text-muted-foreground">
-                              {candidate.area && (
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" />
-                                  {candidate.area}
-                                </span>
-                              )}
-                              {candidate.experience_years && (
-                                <span className="flex items-center gap-1">
-                                  <Briefcase className="w-3 h-3" />
-                                  {formatExperience(candidate.experience_years)}
-                                </span>
-                              )}
-                              {candidate.salary && (
-                                <span className="flex items-center gap-1">
-                                  <TrendingUp className="w-3 h-3" />
-                                  {formatSalary(candidate.salary, candidate.currency)}
-                                </span>
-                              )}
-                              {candidate.age && (
-                                <span>{candidate.age} лет</span>
-                              )}
-                            </div>
+                                <div className="flex flex-wrap gap-4 mt-3 text-sm text-zinc-500">
+                                  {candidate.area && (
+                                    <span className="flex items-center gap-1">
+                                      <MapPin className="w-3 h-3" />
+                                      {candidate.area}
+                                    </span>
+                                  )}
+                                  {candidate.experience_years && (
+                                    <span className="flex items-center gap-1">
+                                      <Briefcase className="w-3 h-3" />
+                                      {formatExperience(candidate.experience_years)}
+                                    </span>
+                                  )}
+                                  {candidate.salary && (
+                                    <span className="flex items-center gap-1">
+                                      <TrendingUp className="w-3 h-3" />
+                                      {formatSalary(candidate.salary, candidate.currency)}
+                                    </span>
+                                  )}
+                                  {candidate.age && (
+                                    <span>{candidate.age} лет</span>
+                                  )}
+                                </div>
 
-                            {candidate.skills.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-3">
-                                {candidate.skills.slice(0, 6).map((skill, idx) => (
-                                  <Badge key={idx} variant="secondary" className="text-xs">
-                                    {skill}
-                                  </Badge>
-                                ))}
-                                {candidate.skills.length > 6 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{candidate.skills.length - 6}
-                                  </Badge>
+                                {candidate.skills.length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5 mt-3">
+                                    {candidate.skills.slice(0, 6).map((skill, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-xs"
+                                      >
+                                        {skill}
+                                      </span>
+                                    ))}
+                                    {candidate.skills.length > 6 && (
+                                      <span className="px-2 py-0.5 rounded border border-zinc-700 text-zinc-500 text-xs">
+                                        +{candidate.skills.length - 6}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+
+                                {candidate.ai_summary && (
+                                  <p className="text-sm mt-3 text-zinc-500 line-clamp-2">
+                                    {candidate.ai_summary}
+                                  </p>
                                 )}
                               </div>
-                            )}
 
-                            {candidate.ai_summary && (
-                              <p className="text-sm mt-3 text-muted-foreground line-clamp-2">
-                                {candidate.ai_summary}
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="flex flex-col gap-2 ml-4">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleToggleFavorite(candidate)}
-                            >
-                              {candidate.is_favorite ? (
-                                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                              ) : (
-                                <StarOff className="w-5 h-5" />
-                              )}
-                            </Button>
-                            <Button variant="ghost" size="icon" asChild>
-                              <a
-                                href={`https://hh.ru/resume/${candidate.hh_resume_id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <ExternalLink className="w-5 h-5" />
-                              </a>
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                              <div className="flex flex-col gap-1 ml-4">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-9 w-9 hover:bg-zinc-800"
+                                  onClick={() => handleToggleFavorite(candidate)}
+                                >
+                                  {candidate.is_favorite ? (
+                                    <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
+                                  ) : (
+                                    <StarOff className="w-5 h-5 text-zinc-500" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-9 w-9 hover:bg-zinc-800"
+                                  asChild
+                                >
+                                  <a
+                                    href={`https://hh.ru/resume/${candidate.hh_resume_id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <ExternalLink className="w-5 h-5 text-zinc-500" />
+                                  </a>
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 )}
               </div>
             </>
           ) : (
-            <Card>
-              <CardContent className="py-16 text-center text-muted-foreground">
-                <Search className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">Выберите поисковый проект</h3>
-                <p>Или создайте новый для поиска кандидатов</p>
+            <Card className="border-zinc-800 bg-zinc-900/50">
+              <CardContent className="py-16 text-center">
+                <Search className="w-16 h-16 mx-auto mb-4 text-zinc-700" />
+                <h3 className="text-lg font-medium text-zinc-300 mb-2">Выберите поисковый проект</h3>
+                <p className="text-zinc-500">Или создайте новый для поиска кандидатов</p>
               </CardContent>
             </Card>
           )}
