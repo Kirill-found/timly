@@ -274,10 +274,15 @@ async def check_limits(
                 reset_date = (datetime.utcnow() + relativedelta(months=1)).isoformat()
         else:
             # Нет подписки - бесплатный план
-            analyses_limit = 10  # Лимит free плана
+            analyses_limit = 20  # Лимит free плана (20 анализов/месяц)
             analyses_remaining = max(0, analyses_limit - analyses_used)
             is_unlimited = False
             reset_date = None
+
+        # Получаем тип тарифа
+        plan_type = "free"
+        if subscription and subscription.plan:
+            plan_type = subscription.plan.plan_type.value
 
         return success(data={
             "can_analyze": can_analyze,
@@ -292,7 +297,8 @@ async def check_limits(
             "analyses_used": analyses_used,
             "analyses_limit": analyses_limit,
             "is_unlimited": is_unlimited,
-            "reset_date": reset_date
+            "reset_date": reset_date,
+            "plan_type": plan_type
         })
 
     except Exception as e:

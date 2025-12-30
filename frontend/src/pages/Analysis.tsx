@@ -1,10 +1,15 @@
 /**
  * Analysis - Анализ резюме
- * Design: Dark Industrial - единый стиль с Dashboard
+ * Design: Dark Industrial
+ *
+ * Исправлено:
+ * 1. Polling прогресса - стабильный без скачков
+ * 2. Отображение лимитов - понятное "Осталось X анализов"
+ * 3. Убран запутывающий слайдер %
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, ExternalLink, Phone, Square, Play, ChevronDown, ChevronUp } from 'lucide-react';
+import { Download, ExternalLink, Phone, Square, Play, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -34,38 +39,26 @@ const Analysis: React.FC = () => {
   const [applicationsStats, setApplicationsStats] = useState<any>(null);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [analysisLimit, setAnalysisLimit] = useState<number>(100);
   const [limitModalOpen, setLimitModalOpen] = useState(false);
   const [limitExceededInfo, setLimitExceededInfo] = useState<any>(null);
   const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
   const [limits, setLimits] = useState<any>(null);
 
+  // ========== ИСПРАВЛЕННЫЙ POLLING ==========
+  // Используем useRef для сохранения данных между рендерами
+  const pollingDataRef = useRef<{
+    initialAnalyzed: number | null;
+    intervalId: NodeJS.Timeout | null;
+    lastProgress: number;
+    noProgressSince: number | null;  // Таймстамп когда перестал быть прогресс
+  }>({ initialAnalyzed: null, intervalId: null, lastProgress: 0, noProgressSince: null });
+
   const isAnalyzing = app.activeAnalysis !== null && app.activeAnalysis.vacancyId === selectedVacancy;
   const analysisProgress = app.activeAnalysis || { total: 0, analyzed: 0, startTime: 0, vacancyId: '' };
 
+  // Загрузка данных
   useEffect(() => { loadVacancies(); loadLimits(); }, []);
   useEffect(() => { loadResults(); }, [selectedVacancy, recommendationFilter]);
-
-  useEffect(() => {
-    if (!app.activeAnalysis) return;
-    const pollStats = async () => {
-      try {
-        const stats = await apiClient.getApplicationsStats(app.activeAnalysis!.vacancyId);
-        app.updateAnalysisProgress({ analyzed: stats.analyzed_applications });
-        if (stats.unanalyzed_applications === 0 || stats.analyzed_applications >= app.activeAnalysis!.total) {
-          app.stopAnalysis();
-          loadResults();
-          loadApplicationsStats();
-          loadDashboardStats();
-          loadLimits();
-        }
-      } catch (err) {
-        console.error('[Analysis] Polling error:', err);
-      }
-    };
-    app.startGlobalPolling(pollStats, 3000, 300000);
-  }, [app.activeAnalysis?.vacancyId]);
-
   useEffect(() => {
     if (selectedVacancy !== 'all') {
       loadApplicationsStats();
@@ -75,6 +68,101 @@ const Analysis: React.FC = () => {
       setDashboardStats(null);
     }
   }, [selectedVacancy]);
+
+  // ИСПРАВЛЕННЫЙ useEffect для polling
+  useEffect(() => {
+    // Если нет активного анализа - очищаем
+    if (!app.activeAnalysis) {
+      pollingDataRef.current.initialAnalyzed = null;
+      pollingDataRef.current.lastProgress = 0;
+      pollingDataRef.current.noProgressSince = null;
+      if (pollingDataRef.current.intervalId) {
+        clearInterval(pollingDataRef.current.intervalId);
+        pollingDataRef.current.intervalId = null;
+      }
+      return;
+    }
+
+    const vacancyId = app.activeAnalysis.vacancyId;
+    const targetTotal = app.activeAnalysis.total;
+
+    const pollStats = async () => {
+      try {
+        const stats = await apiClient.getApplicationsStats(vacancyId);
+        const currentAnalyzed = stats.analyzed_applications;
+
+        // При первом вызове запоминаем начальное значение
+        if (pollingDataRef.current.initialAnalyzed === null) {
+          pollingDataRef.current.initialAnalyzed = currentAnalyzed;
+        }
+
+        // Вычисляем прогресс ОТНОСИТЕЛЬНО старта
+        const newlyAnalyzed = currentAnalyzed - pollingDataRef.current.initialAnalyzed;
+        const safeProgress = Math.max(0, Math.min(newlyAnalyzed, targetTotal));
+
+        app.updateAnalysisProgress({ analyzed: safeProgress });
+
+        // Отслеживаем прогресс - если нет изменений 30 сек, завершаем
+        const now = Date.now();
+        if (safeProgress > pollingDataRef.current.lastProgress) {
+          pollingDataRef.current.lastProgress = safeProgress;
+          pollingDataRef.current.noProgressSince = null;
+        } else if (pollingDataRef.current.noProgressSince === null) {
+          pollingDataRef.current.noProgressSince = now;
+        }
+
+        // Таймаут 30 секунд без прогресса - завершаем анализ
+        const NO_PROGRESS_TIMEOUT = 30000;
+        const noProgressTime = pollingDataRef.current.noProgressSince 
+          ? now - pollingDataRef.current.noProgressSince 
+          : 0;
+
+        // Проверяем завершение: успех ИЛИ таймаут
+        const isComplete = stats.unanalyzed_applications === 0 || safeProgress >= targetTotal;
+        const isTimeout = noProgressTime >= NO_PROGRESS_TIMEOUT;
+
+        if (isComplete || isTimeout) {
+          // Останавливаем polling
+          if (pollingDataRef.current.intervalId) {
+            clearInterval(pollingDataRef.current.intervalId);
+            pollingDataRef.current.intervalId = null;
+          }
+          pollingDataRef.current.initialAnalyzed = null;
+          pollingDataRef.current.lastProgress = 0;
+          pollingDataRef.current.noProgressSince = null;
+          app.stopAnalysis();
+          loadResults();
+          loadApplicationsStats();
+          loadDashboardStats();
+          loadLimits();
+          
+          // Если завершили по таймауту и было 0 прогресса - все уже проанализированы
+          if (isTimeout && safeProgress === 0) {
+            console.log('[Analysis] Все отклики уже были проанализированы ранее');
+          }
+        }
+      } catch (err) {
+        console.error('[Analysis] Polling error:', err);
+      }
+    };
+
+    // Очищаем предыдущий интервал если был
+    if (pollingDataRef.current.intervalId) {
+      clearInterval(pollingDataRef.current.intervalId);
+    }
+
+    // Запускаем новый polling
+    pollStats(); // Сразу первый вызов
+    pollingDataRef.current.intervalId = setInterval(pollStats, 3000);
+
+    // Cleanup при размонтировании
+    return () => {
+      if (pollingDataRef.current.intervalId) {
+        clearInterval(pollingDataRef.current.intervalId);
+        pollingDataRef.current.intervalId = null;
+      }
+    };
+  }, [app.activeAnalysis?.vacancyId, app.activeAnalysis?.total]);
 
   const loadLimits = async () => {
     try {
@@ -132,6 +220,13 @@ const Analysis: React.FC = () => {
   };
 
   const handleStopAnalysis = () => {
+    if (pollingDataRef.current.intervalId) {
+      clearInterval(pollingDataRef.current.intervalId);
+      pollingDataRef.current.intervalId = null;
+    }
+    pollingDataRef.current.initialAnalyzed = null;
+    pollingDataRef.current.lastProgress = 0;
+    pollingDataRef.current.noProgressSince = null;
     app.stopAnalysis();
     loadResults();
     loadApplicationsStats();
@@ -143,16 +238,39 @@ const Analysis: React.FC = () => {
       setError('Выберите вакансию');
       return;
     }
+
+    const toAnalyze = applicationsStats?.unanalyzed_applications || 0;
+    if (toAnalyze === 0) {
+      setError('Нет откликов для анализа');
+      return;
+    }
+
+    // Проверяем лимит
+    const remaining = limits?.analyses_remaining || 0;
+    if (!limits?.is_unlimited && remaining <= 0) {
+      setLimitExceededInfo(limits);
+      setLimitModalOpen(true);
+      return;
+    }
+
+    // Анализируем столько, сколько позволяет лимит
+    const actualToAnalyze = limits?.is_unlimited ? toAnalyze : Math.min(toAnalyze, remaining);
+
     setError(null);
-    const toAnalyze = Math.ceil((applicationsStats?.unanalyzed_applications || 0) * analysisLimit / 100);
+    // Сбрасываем все данные поллинга перед стартом
+    pollingDataRef.current.initialAnalyzed = null;
+    pollingDataRef.current.lastProgress = 0;
+    pollingDataRef.current.noProgressSince = null;
+
     app.startAnalysis({
       vacancyId: selectedVacancy,
-      total: toAnalyze,
+      total: actualToAnalyze,
       analyzed: 0,
       startTime: Date.now()
     });
+
     try {
-      await apiClient.startAnalysisNewApplications(selectedVacancy, undefined, toAnalyze);
+      await apiClient.startAnalysisNewApplications(selectedVacancy, undefined, actualToAnalyze);
     } catch (err: any) {
       const errorDetail = err.response?.data?.detail;
       if (errorDetail?.error === 'LIMIT_EXCEEDED') {
@@ -240,9 +358,11 @@ const Analysis: React.FC = () => {
     return min > 0 ? `~${min} мин` : `~${sec} сек`;
   };
 
-  const limitsUsed = limits ? limits.analyses_used : 0;
-  const limitsTotal = limits ? limits.analyses_limit : 0;
-  const limitsRemaining = limits ? limits.analyses_remaining : 0;
+  // Лимиты - ИСПРАВЛЕННАЯ логика отображения
+  const limitsRemaining = limits?.analyses_remaining ?? 0;
+  const limitsTotal = limits?.analyses_limit ?? 20;
+  const limitsUsed = limits?.analyses_used ?? 0;
+  const isUnlimited = limits?.is_unlimited ?? false;
 
   const fadeIn = {
     initial: { opacity: 0, y: 8 },
@@ -279,47 +399,69 @@ const Analysis: React.FC = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm"
+            className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3"
           >
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
             {error}
+            <button onClick={() => setError(null)} className="ml-auto hover:text-red-300">×</button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Limits - компактный блок */}
-      {limits && !limits.is_unlimited && (
+      {/* ИСПРАВЛЕННЫЕ Лимиты - понятный блок */}
+      {limits && !isUnlimited && (
         <motion.div {...fadeIn}>
           <Card>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                      Лимит анализов
-                    </div>
-                    <div className="flex items-baseline gap-2 mt-1">
-                      <span className="text-2xl font-semibold tabular-nums">{limitsRemaining}</span>
-                      <span className="text-sm text-zinc-500">из {limitsTotal}</span>
-                    </div>
+              <div className="flex items-center gap-6">
+                {/* Основной показатель - сколько ОСТАЛОСЬ */}
+                <div className="flex-shrink-0">
+                  <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-1">
+                    Доступно анализов
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className={`text-3xl font-semibold tabular-nums ${
+                      limitsRemaining <= 5 ? 'text-red-400' :
+                      limitsRemaining <= 10 ? 'text-amber-400' :
+                      'text-zinc-100'
+                    }`}>
+                      {limitsRemaining}
+                    </span>
+                    <span className="text-sm text-zinc-600">/ {limitsTotal}</span>
                   </div>
                 </div>
-                <div className="flex-1 max-w-xs ml-8">
+
+                {/* Прогресс-бар - показывает ИСПОЛЬЗОВАННОЕ */}
+                <div className="flex-1">
                   <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all ${
-                        limitsRemaining < 10 ? 'bg-red-500' :
-                        limitsRemaining < limitsTotal * 0.2 ? 'bg-amber-500' :
-                        'bg-zinc-600'
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        limitsRemaining <= 5 ? 'bg-red-500' :
+                        limitsRemaining <= 10 ? 'bg-amber-500' :
+                        'bg-green-500'
                       }`}
-                      style={{ width: `${(limitsUsed / limitsTotal) * 100}%` }}
+                      style={{ width: `${((limitsTotal - limitsRemaining) / limitsTotal) * 100}%` }}
                     />
                   </div>
-                  {limits.reset_date && (
-                    <div className="text-[11px] text-zinc-600 mt-1.5">
-                      Обновление: {new Date(limits.reset_date).toLocaleDateString('ru-RU')}
-                    </div>
-                  )}
+                  <div className="flex justify-between mt-1.5 text-[11px] text-zinc-600">
+                    <span>Использовано: {limitsUsed}</span>
+                    {limits.reset_date && (
+                      <span>Обновление: {new Date(limits.reset_date).toLocaleDateString('ru-RU')}</span>
+                    )}
+                  </div>
                 </div>
+
+                {/* Кнопка улучшить - если мало осталось */}
+                {limitsRemaining <= 10 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 flex-shrink-0"
+                    onClick={() => window.open('/pricing', '_blank')}
+                  >
+                    Увеличить
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -357,7 +499,7 @@ const Analysis: React.FC = () => {
       {/* Stats + Control */}
       {selectedVacancy !== 'all' && applicationsStats && (
         <motion.div {...fadeIn} className="space-y-4">
-          {/* Stats Row - как в Dashboard */}
+          {/* Stats Row */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-px bg-zinc-800 border border-zinc-800 rounded-lg overflow-hidden">
             <div className="bg-card p-5">
               <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
@@ -369,7 +511,7 @@ const Analysis: React.FC = () => {
             </div>
             <div className="bg-card p-5">
               <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
-                Обработано
+                Проанализировано
               </div>
               <div className="text-3xl font-semibold tracking-tight tabular-nums text-green-500">
                 {applicationsStats.analyzed_applications}
@@ -394,64 +536,36 @@ const Analysis: React.FC = () => {
             </div>
           </div>
 
-          {/* Analysis Control */}
+          {/* Analysis Control - УПРОЩЁННЫЙ */}
           {!isAnalyzing ? (
             <Card>
               <CardContent className="p-5">
                 {applicationsStats.unanalyzed_applications > 0 ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-1">
-                          Количество для анализа
-                        </div>
-                        <div className="text-lg font-semibold">
-                          {Math.ceil(applicationsStats.unanalyzed_applications * analysisLimit / 100)}
-                          <span className="text-zinc-500 font-normal"> из {applicationsStats.unanalyzed_applications}</span>
-                        </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm text-zinc-400 mb-1">
+                        {applicationsStats.unanalyzed_applications} {
+                          applicationsStats.unanalyzed_applications === 1 ? 'резюме ожидает' :
+                          applicationsStats.unanalyzed_applications < 5 ? 'резюме ожидают' : 'резюме ожидают'
+                        } анализа
                       </div>
-                      <div className="text-3xl font-semibold tabular-nums text-zinc-400">
-                        {analysisLimit}%
-                      </div>
+                      {!isUnlimited && limitsRemaining < applicationsStats.unanalyzed_applications && (
+                        <div className="text-xs text-amber-400">
+                          Лимит позволяет проанализировать {limitsRemaining} из {applicationsStats.unanalyzed_applications}
+                        </div>
+                      )}
                     </div>
-
-                    <input
-                      type="range"
-                      min="10"
-                      max="100"
-                      step="10"
-                      value={analysisLimit}
-                      onChange={(e) => setAnalysisLimit(Number(e.target.value))}
-                      className="w-full h-2 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-zinc-400"
-                    />
-
-                    <div className="flex gap-2">
-                      {[25, 50, 75, 100].map(p => (
-                        <button
-                          key={p}
-                          onClick={() => setAnalysisLimit(p)}
-                          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            analysisLimit === p
-                              ? 'bg-zinc-700 text-zinc-100'
-                              : 'bg-zinc-800/50 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'
-                          }`}
-                        >
-                          {p}%
-                        </button>
-                      ))}
-                    </div>
-
                     <Button
                       onClick={handleAnalyzeNew}
-                      className="w-full h-12 bg-zinc-100 text-zinc-900 hover:bg-white font-medium"
+                      className="h-11 px-6 bg-zinc-100 text-zinc-900 hover:bg-white font-medium"
                     >
                       <Play className="h-4 w-4 mr-2" />
                       Запустить анализ
                     </Button>
                   </div>
                 ) : (
-                  <div className="text-center py-4 text-zinc-500">
-                    Все резюме обработаны
+                  <div className="text-center py-2 text-zinc-500">
+                    Все резюме проанализированы
                   </div>
                 )}
               </CardContent>
@@ -477,7 +591,8 @@ const Analysis: React.FC = () => {
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${progressPercent}%` }}
-                    className="h-full bg-zinc-400 rounded-full"
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    className="h-full bg-green-500 rounded-full"
                   />
                 </div>
 
@@ -500,7 +615,7 @@ const Analysis: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Distribution - как в Dashboard */}
+      {/* Distribution */}
       {selectedVacancy !== 'all' && statsData.total > 0 && (
         <motion.div {...fadeIn}>
           <Card>
@@ -541,7 +656,7 @@ const Analysis: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Results Table - как в Dashboard */}
+      {/* Results Table */}
       <motion.div {...fadeIn}>
         <Card>
           <CardHeader className="pb-0 flex flex-row items-center justify-between">
