@@ -234,11 +234,18 @@ const ForgotPassword: React.FC = () => {
                     <FormLabel className="text-zinc-300">Код восстановления</FormLabel>
                     <FormControl>
                       <Input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         placeholder="000000"
                         maxLength={6}
                         className="h-11 bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 text-center text-xl tracking-[0.5em] font-mono"
                         autoFocus
                         {...field}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          field.onChange(value);
+                        }}
                       />
                     </FormControl>
                     <FormMessage className="text-red-400" />
