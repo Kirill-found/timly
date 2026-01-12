@@ -28,7 +28,23 @@ class ResumeParser:
     """
 
     def __init__(self):
-        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        # Настройка HTTP прокси если указан (для обхода блокировки OpenAI в РФ)
+        import httpx
+        http_client = None
+        if hasattr(settings, 'OPENAI_PROXY_URL') and settings.OPENAI_PROXY_URL:
+            logger.info(f"ResumeParser: используется прокси для OpenAI: {settings.OPENAI_PROXY_URL}")
+            http_client = httpx.AsyncClient(
+                proxies={
+                    "http://": settings.OPENAI_PROXY_URL,
+                    "https://": settings.OPENAI_PROXY_URL
+                },
+                timeout=60.0
+            )
+
+        self.client = AsyncOpenAI(
+            api_key=settings.OPENAI_API_KEY,
+            http_client=http_client
+        )
         self.model = settings.OPENAI_MODEL
 
     async def parse_pdf(self, file: BinaryIO, filename: str) -> Dict[str, Any]:

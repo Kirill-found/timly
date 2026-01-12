@@ -32,7 +32,7 @@ router = APIRouter(prefix="/manual-analysis", tags=["Manual Analysis"])
 class ManualVacancy(BaseModel):
     """Схема вакансии для ручного анализа"""
     title: str
-    description: str
+    description: Optional[str] = ""
     key_skills: List[str] = []
     experience_required: str = "1-3"
     salary_from: Optional[int] = None
