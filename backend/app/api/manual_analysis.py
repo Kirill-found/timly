@@ -243,15 +243,15 @@ async def analyze_candidate(
     """
     # Проверка лимитов
     subscription_service = SubscriptionService(db)
-    try:
-        subscription_service.check_analysis_limit(current_user.id)
-    except Exception as e:
+    can_analyze, error_msg = await subscription_service.check_can_analyze(current_user.id)
+    if not can_analyze:
+        subscription = await subscription_service.get_or_create_subscription(current_user.id)
         raise HTTPException(
             status_code=403,
             detail={
                 "error": "LIMIT_EXCEEDED",
-                "message": str(e),
-                "subscription": subscription_service.get_subscription_info(current_user.id)
+                "message": error_msg or "Лимит анализов исчерпан",
+                "subscription": subscription.to_dict()
             }
         )
 
@@ -291,7 +291,7 @@ async def analyze_candidate(
         analysis = await analyzer.analyze_resume(vacancy_data, resume_data)
 
         # Увеличиваем счетчик использования
-        subscription_service.increment_usage(current_user.id)
+        await subscription_service.increment_analysis_usage(current_user.id)
 
         return {
             "id": request.candidate.id,
