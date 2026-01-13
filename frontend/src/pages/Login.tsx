@@ -23,28 +23,6 @@ import {
 import { Eye, EyeOff, ArrowRight, ArrowLeft, Sparkles, Users, FileText, Clock } from 'lucide-react';
 import { useAuth } from '@/store/AuthContext';
 
-// Timly Logo Component
-const TimlyLogo = ({ className = "h-10 w-auto" }: { className?: string }) => (
-  <svg viewBox="0 0 120 60" fill="none" className={className}>
-    {/* Three connected people - heads */}
-    <circle cx="25" cy="15" r="8" fill="#1e3a5f"/>
-    <circle cx="60" cy="15" r="8" fill="#1e3a5f"/>
-    <circle cx="95" cy="15" r="8" fill="#1e3a5f"/>
-    {/* Bodies with holes (torso rings) */}
-    <circle cx="25" cy="32" r="7" stroke="#1e3a5f" strokeWidth="4" fill="none"/>
-    <circle cx="60" cy="32" r="7" stroke="#1e3a5f" strokeWidth="4" fill="none"/>
-    <circle cx="95" cy="32" r="7" stroke="#1e3a5f" strokeWidth="4" fill="none"/>
-    {/* Connecting wave with loops */}
-    <path
-      d="M18 42 Q25 55 32 42 Q40 30 48 42 Q55 55 62 42 Q70 30 78 42 Q85 55 92 42 Q99 30 102 42"
-      stroke="#1e3a5f"
-      strokeWidth="4"
-      fill="none"
-      strokeLinecap="round"
-    />
-  </svg>
-);
-
 const formSchema = z.object({
   email: z
     .string()
@@ -133,7 +111,7 @@ const Login: React.FC = () => {
             {/* Logo */}
             <motion.div variants={fadeIn}>
               <Link to="/" className="inline-flex items-center gap-3 mb-16 group">
-                <TimlyLogo className="h-10 w-auto transition-transform group-hover:scale-105" />
+                <img src="/timly-logo.png" alt="timly" className="h-10 w-10 rounded-xl transition-transform group-hover:scale-105" />
                 <span
                   className="text-2xl font-semibold text-[#1e3a5f] tracking-tight"
                   style={{ fontFamily: "'Clash Display', sans-serif" }}
@@ -225,7 +203,7 @@ const Login: React.FC = () => {
               {/* Mobile header */}
               <div className="text-center mb-8 lg:hidden">
                 <Link to="/" className="inline-flex items-center gap-3 mb-6">
-                  <TimlyLogo className="h-9 w-auto" />
+                  <img src="/timly-logo.png" alt="timly" className="h-9 w-9 rounded-xl" />
                   <span
                     className="text-xl font-semibold text-[#1e3a5f]"
                     style={{ fontFamily: "'Clash Display', sans-serif" }}

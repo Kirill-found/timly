@@ -28,28 +28,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-// Timly Logo Component - three connected people
-const TimlyLogo = ({ className = "h-8 w-auto" }: { className?: string }) => (
-  <svg viewBox="0 0 120 60" fill="none" className={className}>
-    {/* Three connected people - heads */}
-    <circle cx="25" cy="15" r="8" fill="currentColor"/>
-    <circle cx="60" cy="15" r="8" fill="currentColor"/>
-    <circle cx="95" cy="15" r="8" fill="currentColor"/>
-    {/* Bodies with holes (torso rings) */}
-    <circle cx="25" cy="32" r="7" stroke="currentColor" strokeWidth="4" fill="none"/>
-    <circle cx="60" cy="32" r="7" stroke="currentColor" strokeWidth="4" fill="none"/>
-    <circle cx="95" cy="32" r="7" stroke="currentColor" strokeWidth="4" fill="none"/>
-    {/* Connecting wave with loops */}
-    <path
-      d="M18 42 Q25 55 32 42 Q40 30 48 42 Q55 55 62 42 Q70 30 78 42 Q85 55 92 42 Q99 30 102 42"
-      stroke="currentColor"
-      strokeWidth="4"
-      fill="none"
-      strokeLinecap="round"
-    />
-  </svg>
-);
-
 const Landing: React.FC = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showStickyCta, setShowStickyCta] = useState(false);
@@ -79,7 +57,7 @@ const Landing: React.FC = () => {
       <header className="border-b border-[#1e3a5f]/10 sticky top-0 bg-[#faf8f5]/95 backdrop-blur-sm z-50">
         <div className="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5 group">
-            <TimlyLogo className="h-8 w-auto text-[#1e3a5f] transition-transform group-hover:scale-105" />
+            <img src="/timly-logo.png" alt="timly" className="h-9 w-9 rounded-xl transition-transform group-hover:scale-105" />
             <span className="text-xl font-display font-semibold text-[#1e3a5f]">timly</span>
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#1e3a5f]/70">
@@ -662,7 +640,7 @@ const Landing: React.FC = () => {
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div className="md:col-span-2">
               <div className="flex items-center gap-2.5 mb-4">
-                <TimlyLogo className="h-8 w-auto text-white" />
+                <img src="/timly-logo.png" alt="timly" className="h-9 w-9 rounded-xl" />
                 <span className="text-xl font-display font-semibold text-white">timly</span>
               </div>
               <p className="text-white/50 max-w-xs leading-relaxed">
