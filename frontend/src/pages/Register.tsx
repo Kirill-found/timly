@@ -1,6 +1,8 @@
 /**
  * Register - Регистрация
- * Design: Dark Industrial - единый стиль
+ * Design: Warm Professional - тёплый, доверительный
+ * Typography: Clash Display + Satoshi
+ * Palette: Warm White + Deep Navy + Warm Orange
  */
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -10,7 +12,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -19,8 +20,30 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Eye, EyeOff, ArrowRight, ArrowLeft, Check, BarChart3, Users, Download, Zap } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, ArrowLeft, Check, Sparkles, Users, FileText, Clock } from 'lucide-react';
 import { useAuth } from '@/store/AuthContext';
+
+// Timly Logo Component
+const TimlyLogo = ({ className = "h-10 w-auto" }: { className?: string }) => (
+  <svg viewBox="0 0 120 60" fill="none" className={className}>
+    {/* Three connected people - heads */}
+    <circle cx="25" cy="15" r="8" fill="#1e3a5f"/>
+    <circle cx="60" cy="15" r="8" fill="#1e3a5f"/>
+    <circle cx="95" cy="15" r="8" fill="#1e3a5f"/>
+    {/* Bodies with holes (torso rings) */}
+    <circle cx="25" cy="32" r="7" stroke="#1e3a5f" strokeWidth="4" fill="none"/>
+    <circle cx="60" cy="32" r="7" stroke="#1e3a5f" strokeWidth="4" fill="none"/>
+    <circle cx="95" cy="32" r="7" stroke="#1e3a5f" strokeWidth="4" fill="none"/>
+    {/* Connecting wave with loops */}
+    <path
+      d="M18 42 Q25 55 32 42 Q40 30 48 42 Q55 55 62 42 Q70 30 78 42 Q85 55 92 42 Q99 30 102 42"
+      stroke="#1e3a5f"
+      strokeWidth="4"
+      fill="none"
+      strokeLinecap="round"
+    />
+  </svg>
+);
 
 const formSchema = z.object({
   company_name: z
@@ -74,263 +97,363 @@ const Register: React.FC = () => {
     }
   };
 
+  const fadeIn = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
+  const stagger = {
+    visible: {
+      transition: {
+        staggerChildren: 0.08
+      }
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex">
-      {/* Left side - Features */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#0f0f0f] border-r border-zinc-800 flex-col justify-between p-12">
-        <div>
-          <Link to="/" className="inline-flex items-center gap-2.5 mb-12">
-            <img src="/logo.jpg" alt="timly" className="h-10 w-10 rounded-xl" />
-            <span className="text-xl font-semibold text-zinc-100 tracking-tight">timly<span className="text-zinc-500">.</span></span>
-          </Link>
+    <>
+      {/* Fonts */}
+      <style>{`
+        @import url('https://api.fontshare.com/v2/css?f[]=clash-display@600,700&f[]=satoshi@400,500,700&display=swap');
+      `}</style>
 
-          <h2 className="text-3xl font-semibold text-zinc-100 mb-4 leading-tight">
-            Начните работать<br />с AI-скринингом
-          </h2>
-          <p className="text-zinc-500 mb-10 max-w-sm">
-            Регистрация занимает 2 минуты. 50 анализов резюме бесплатно — без карты и обязательств.
-          </p>
-
-          <div className="space-y-4">
-            {[
-              { icon: BarChart3, text: 'AI-оценка по 15+ критериям' },
-              { icon: Users, text: 'Интеграция с HeadHunter' },
-              { icon: Download, text: 'Экспорт отчётов в Excel' },
-              { icon: Zap, text: '100 резюме за 10 минут' },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center">
-                  <item.icon className="h-4 w-4 text-zinc-400" />
-                </div>
-                <span className="text-sm text-zinc-400">{item.text}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Stats */}
-          <div className="mt-12 grid grid-cols-3 gap-4">
-            {[
-              { value: '50', label: 'анализов бесплатно' },
-              { value: '2', label: 'минуты на старт' },
-              { value: '80%', label: 'экономия времени' },
-            ].map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="text-2xl font-bold text-zinc-100 tabular-nums">{stat.value}</div>
-                <div className="text-[11px] text-zinc-600">{stat.label}</div>
-              </div>
-            ))}
-          </div>
+      <div
+        className="min-h-screen flex"
+        style={{
+          fontFamily: "'Satoshi', sans-serif",
+          background: 'linear-gradient(135deg, #faf8f5 0%, #f5f0eb 50%, #faf8f5 100%)'
+        }}
+      >
+        {/* Gradient mesh background */}
+        <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[#f97316]/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-[#1e3a5f]/5 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 w-[400px] h-[400px] bg-[#f97316]/3 rounded-full blur-3xl" />
         </div>
 
-        <div className="text-xs text-zinc-600">
-          © 2024 timly. AI-скрининг резюме.
-        </div>
-      </div>
+        {/* Left side - Branding & Features */}
+        <div className="hidden lg:flex lg:w-[45%] flex-col justify-between p-12 relative">
+          {/* Decorative pattern */}
+          <div className="absolute inset-0 opacity-[0.03]" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231e3a5f' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }} />
 
-      {/* Right side - Form */}
-      <div className="flex-1 flex items-center justify-center p-6 py-8">
-        <div className="w-full max-w-md">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
+            initial="hidden"
+            animate="visible"
+            variants={stagger}
           >
-            {/* Mobile header */}
-            <div className="text-center mb-6">
-              <Link to="/" className="lg:hidden inline-flex items-center gap-2.5 mb-4">
-                <img src="/logo.jpg" alt="timly" className="h-10 w-10 rounded-xl" />
-                <span className="text-xl font-semibold text-zinc-100 tracking-tight">timly<span className="text-zinc-500">.</span></span>
-              </Link>
-              <h1 className="text-2xl font-semibold text-zinc-100 mb-2">Создать аккаунт</h1>
-              <p className="text-sm text-zinc-500">Начните использовать timly бесплатно</p>
-            </div>
-
-            {/* Mobile Benefits */}
-            <div className="lg:hidden mb-6 p-4 rounded-lg border border-zinc-800 bg-zinc-900/30">
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  '50 анализов бесплатно',
-                  'Без кредитной карты',
-                  'Интеграция с HH.ru',
-                  'Экспорт в Excel',
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs text-zinc-400">
-                    <Check className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          {/* Form Card */}
-          <Card className="border-zinc-800 bg-zinc-900/50">
-            <CardContent className="p-6">
-              {/* Error */}
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm"
+            {/* Logo */}
+            <motion.div variants={fadeIn}>
+              <Link to="/" className="inline-flex items-center gap-3 mb-16 group">
+                <TimlyLogo className="h-10 w-auto transition-transform group-hover:scale-105" />
+                <span
+                  className="text-2xl font-semibold text-[#1e3a5f] tracking-tight"
+                  style={{ fontFamily: "'Clash Display', sans-serif" }}
                 >
-                  {error}
-                </motion.div>
-              )}
+                  timly
+                </span>
+              </Link>
+            </motion.div>
 
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="company_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-zinc-300">Компания</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Название компании"
-                            className="h-11 bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
-                            autoComplete="organization"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-400" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="full_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-zinc-300">Ваше имя</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Иван Иванов"
-                            className="h-11 bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
-                            autoComplete="name"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-400" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-zinc-300">Email</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="hr@company.com"
-                            className="h-11 bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500"
-                            autoComplete="email"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-400" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-zinc-300">Пароль</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Input
-                              type={showPassword ? 'text' : 'password'}
-                              placeholder="Минимум 8 символов"
-                              className="h-11 bg-zinc-800/50 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 pr-10"
-                              autoComplete="new-password"
-                              {...field}
-                            />
-                            <button
-                              type="button"
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
-                              onClick={() => setShowPassword(!showPassword)}
-                            >
-                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
-                          </div>
-                        </FormControl>
-                        <FormMessage className="text-red-400" />
-                        <p className="text-[11px] text-zinc-600 mt-1">
-                          Строчные, заглавные буквы и цифры
-                        </p>
-                      </FormItem>
-                    )}
-                  />
-
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full h-11 bg-zinc-100 text-zinc-900 hover:bg-white font-medium"
-                  >
-                    {loading ? (
-                      <span className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-zinc-400 border-t-zinc-900 rounded-full animate-spin" />
-                        Создание...
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        Создать аккаунт
-                        <ArrowRight className="h-4 w-4" />
-                      </span>
-                    )}
-                  </Button>
-                </form>
-              </Form>
-
-              {/* Divider */}
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-zinc-800" />
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="px-3 bg-zinc-900/50 text-xs text-zinc-600">или</span>
-                </div>
-              </div>
-
-              {/* Links */}
-              <div className="text-center">
-                <p className="text-sm text-zinc-500">
-                  Уже есть аккаунт?{' '}
-                  <Link to="/login" className="text-zinc-300 hover:text-white transition-colors">
-                    Войти
-                  </Link>
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Back to home */}
-          <div className="mt-6 text-center">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 text-sm text-zinc-600 hover:text-zinc-400 transition-colors"
+            {/* Headline */}
+            <motion.h2
+              variants={fadeIn}
+              className="text-[2.5rem] leading-[1.1] text-[#1e3a5f] mb-6"
+              style={{ fontFamily: "'Clash Display', sans-serif", fontWeight: 600 }}
             >
-              <ArrowLeft className="h-4 w-4" />
-              Вернуться на главную
-            </Link>
-          </div>
+              Начните работать<br />
+              <span className="text-[#f97316]">с AI-скринингом</span>
+            </motion.h2>
 
-          {/* Terms */}
-          <p className="mt-4 text-[11px] text-center text-zinc-600">
-            Регистрируясь, вы соглашаетесь с{' '}
-            <Link to="/terms" className="text-zinc-500 hover:text-zinc-400">условиями использования</Link>
-            {' '}и{' '}
-            <Link to="/privacy" className="text-zinc-500 hover:text-zinc-400">политикой конфиденциальности</Link>
-          </p>
+            <motion.p variants={fadeIn} className="text-[#64748b] text-lg mb-12 max-w-md leading-relaxed">
+              Регистрация занимает 2 минуты. 50 анализов резюме бесплатно — без карты и обязательств.
+            </motion.p>
+
+            {/* Features */}
+            <motion.div variants={fadeIn} className="space-y-5">
+              {[
+                { icon: Sparkles, text: 'AI-оценка по 15+ критериям', color: '#f97316' },
+                { icon: Users, text: 'Интеграция с HeadHunter', color: '#1e3a5f' },
+                { icon: FileText, text: 'Экспорт отчётов в Excel', color: '#059669' },
+                { icon: Clock, text: '100 резюме за 10 минут', color: '#f97316' },
+              ].map((item, i) => (
+                <motion.div
+                  key={i}
+                  className="flex items-center gap-4"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 + i * 0.1 }}
+                >
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center"
+                    style={{ backgroundColor: `${item.color}10` }}
+                  >
+                    <item.icon className="h-5 w-5" style={{ color: item.color }} />
+                  </div>
+                  <span className="text-[#334155] font-medium">{item.text}</span>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            {/* Stats */}
+            <motion.div
+              variants={fadeIn}
+              className="mt-16 flex gap-10"
+            >
+              {[
+                { value: '50', label: 'анализов бесплатно' },
+                { value: '2 мин', label: 'на регистрацию' },
+                { value: '80%', label: 'экономия времени' },
+              ].map((stat, i) => (
+                <div key={i}>
+                  <div
+                    className="text-3xl font-bold text-[#1e3a5f] tabular-nums"
+                    style={{ fontFamily: "'Clash Display', sans-serif" }}
+                  >
+                    {stat.value}
+                  </div>
+                  <div className="text-sm text-[#94a3b8] mt-1">{stat.label}</div>
+                </div>
+              ))}
+            </motion.div>
+          </motion.div>
+
+          {/* Footer */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="text-sm text-[#94a3b8]"
+          >
+            © 2024 timly. AI-скрининг резюме.
           </motion.div>
         </div>
+
+        {/* Right side - Form */}
+        <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
+          <div className="w-full max-w-md">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {/* Mobile header */}
+              <div className="text-center mb-8 lg:hidden">
+                <Link to="/" className="inline-flex items-center gap-3 mb-6">
+                  <TimlyLogo className="h-9 w-auto" />
+                  <span
+                    className="text-xl font-semibold text-[#1e3a5f]"
+                    style={{ fontFamily: "'Clash Display', sans-serif" }}
+                  >
+                    timly
+                  </span>
+                </Link>
+              </div>
+
+              {/* Form header */}
+              <div className="mb-8">
+                <h1
+                  className="text-2xl lg:text-3xl text-[#1e3a5f] mb-2"
+                  style={{ fontFamily: "'Clash Display', sans-serif", fontWeight: 600 }}
+                >
+                  Создать аккаунт
+                </h1>
+                <p className="text-[#64748b]">Начните использовать timly бесплатно</p>
+              </div>
+
+              {/* Mobile Benefits */}
+              <div className="lg:hidden mb-6 p-4 rounded-2xl border border-[#1e3a5f]/10 bg-white/60 backdrop-blur-sm">
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    '50 анализов бесплатно',
+                    'Без кредитной карты',
+                    'Интеграция с HH.ru',
+                    'Экспорт в Excel',
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm text-[#334155]">
+                      <Check className="h-4 w-4 text-[#059669] flex-shrink-0" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Form Card */}
+              <div className="rounded-2xl border border-[#1e3a5f]/10 bg-white/80 backdrop-blur-sm shadow-xl shadow-[#1e3a5f]/5 p-6 lg:p-8">
+                {/* Error */}
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm"
+                  >
+                    {error}
+                  </motion.div>
+                )}
+
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                    <FormField
+                      control={form.control}
+                      name="company_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[#334155] font-medium">Компания</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Название компании"
+                              className="h-12 bg-[#faf8f5] border-[#1e3a5f]/15 text-[#1e3a5f] placeholder:text-[#94a3b8] focus:border-[#f97316] focus:ring-[#f97316]/20 rounded-xl transition-all"
+                              autoComplete="organization"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="full_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[#334155] font-medium">Ваше имя</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Иван Иванов"
+                              className="h-12 bg-[#faf8f5] border-[#1e3a5f]/15 text-[#1e3a5f] placeholder:text-[#94a3b8] focus:border-[#f97316] focus:ring-[#f97316]/20 rounded-xl transition-all"
+                              autoComplete="name"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[#334155] font-medium">Email</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="hr@company.com"
+                              className="h-12 bg-[#faf8f5] border-[#1e3a5f]/15 text-[#1e3a5f] placeholder:text-[#94a3b8] focus:border-[#f97316] focus:ring-[#f97316]/20 rounded-xl transition-all"
+                              autoComplete="email"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[#334155] font-medium">Пароль</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="Минимум 8 символов"
+                                className="h-12 bg-[#faf8f5] border-[#1e3a5f]/15 text-[#1e3a5f] placeholder:text-[#94a3b8] focus:border-[#f97316] focus:ring-[#f97316]/20 rounded-xl transition-all pr-12"
+                                autoComplete="new-password"
+                                {...field}
+                              />
+                              <button
+                                type="button"
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#1e3a5f] transition-colors"
+                                onClick={() => setShowPassword(!showPassword)}
+                              >
+                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                              </button>
+                            </div>
+                          </FormControl>
+                          <FormMessage className="text-red-500" />
+                          <p className="text-xs text-[#94a3b8] mt-1.5">
+                            Строчные, заглавные буквы и цифры
+                          </p>
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full h-12 bg-[#f97316] hover:bg-[#ea580c] text-white font-semibold rounded-xl shadow-lg shadow-[#f97316]/25 transition-all hover:shadow-xl hover:shadow-[#f97316]/30 hover:-translate-y-0.5 mt-2"
+                    >
+                      {loading ? (
+                        <span className="flex items-center gap-2">
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Создание...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          Создать аккаунт
+                          <ArrowRight className="h-5 w-5" />
+                        </span>
+                      )}
+                    </Button>
+                  </form>
+                </Form>
+
+                {/* Divider */}
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-[#1e3a5f]/10" />
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="px-4 bg-white text-sm text-[#94a3b8]">или</span>
+                  </div>
+                </div>
+
+                {/* Links */}
+                <div className="text-center">
+                  <p className="text-[#64748b]">
+                    Уже есть аккаунт?{' '}
+                    <Link
+                      to="/login"
+                      className="text-[#f97316] hover:text-[#ea580c] font-medium transition-colors"
+                    >
+                      Войти
+                    </Link>
+                  </p>
+                </div>
+              </div>
+
+              {/* Back to home */}
+              <div className="mt-6 text-center">
+                <Link
+                  to="/"
+                  className="inline-flex items-center gap-2 text-sm text-[#94a3b8] hover:text-[#1e3a5f] transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Вернуться на главную
+                </Link>
+              </div>
+
+              {/* Terms */}
+              <p className="mt-4 text-xs text-center text-[#94a3b8]">
+                Регистрируясь, вы соглашаетесь с{' '}
+                <Link to="/terms" className="text-[#64748b] hover:text-[#1e3a5f] transition-colors">
+                  условиями использования
+                </Link>
+                {' '}и{' '}
+                <Link to="/privacy" className="text-[#64748b] hover:text-[#1e3a5f] transition-colors">
+                  политикой конфиденциальности
+                </Link>
+              </p>
+            </motion.div>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
