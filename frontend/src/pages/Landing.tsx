@@ -89,7 +89,7 @@ const Landing: React.FC = () => {
             <motion.div initial="hidden" animate="visible" variants={stagger}>
               {/* Removed AI-slop badge - straight to the point */}
 
-              <motion.h1 variants={fadeIn} className="font-display text-[2.75rem] md:text-[3.5rem] leading-[1.05] mb-6 text-[#1e3a5f] font-semibold">
+              <motion.h1 variants={fadeIn} className="font-display text-[2rem] sm:text-[2.5rem] md:text-[3.5rem] leading-[1.08] mb-5 md:mb-6 text-[#1e3a5f] font-semibold">
                 Разберите 100 откликов<br />
                 <span className="text-[#f97316]">за 15 минут</span>
               </motion.h1>
@@ -99,9 +99,10 @@ const Landing: React.FC = () => {
               </motion.p>
 
               <motion.div variants={fadeIn} className="flex flex-col sm:flex-row gap-4 mb-8">
-                <Button asChild size="lg" className="bg-[#f97316] hover:bg-[#ea580c] text-white h-14 px-10 text-base font-semibold rounded-xl shadow-lg shadow-[#f97316]/25 transition-all hover:shadow-xl hover:shadow-[#f97316]/30 hover:-translate-y-0.5">
+                <Button asChild size="lg" className="bg-[#f97316] hover:bg-[#ea580c] text-white h-12 sm:h-14 px-6 sm:px-10 text-sm sm:text-base font-semibold rounded-xl shadow-lg shadow-[#f97316]/25 transition-all hover:shadow-xl hover:shadow-[#f97316]/30 hover:-translate-y-0.5">
                   <Link to="/register">
-                    Проанализировать 50 резюме бесплатно
+                    <span className="hidden sm:inline">Проанализировать 50 резюме бесплатно</span>
+                    <span className="sm:hidden">Попробовать бесплатно</span>
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
@@ -255,17 +256,17 @@ const Landing: React.FC = () => {
             <motion.p variants={fadeIn} className="text-[#1e3a5f]/60 mb-12 max-w-lg">
               AI анализирует резюме как опытный рекрутер — смотрит на картину целиком, а не ищет ключевые слова.
             </motion.p>
-            <motion.div variants={fadeIn} className="grid md:grid-cols-4 gap-4">
+            <motion.div variants={fadeIn} className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               {[
                 { icon: Briefcase, title: 'Релевантный опыт', desc: 'Соответствие требованиям вакансии' },
                 { icon: TrendingUp, title: 'Карьерный рост', desc: 'Динамика развития кандидата' },
                 { icon: Target, title: 'Стабильность', desc: 'Частота смены работы в контексте' },
                 { icon: BarChart3, title: 'Потенциальные риски', desc: 'Красные флаги и что уточнить' },
               ].map((item, i) => (
-                <div key={i} className="p-5 rounded-xl bg-white border border-[#1e3a5f]/5 hover:border-[#f97316]/30 hover:shadow-lg hover:shadow-[#f97316]/5 transition-all">
-                  <item.icon className="w-5 h-5 text-[#f97316] mb-3" />
-                  <h3 className="font-semibold text-[#1e3a5f] mb-1">{item.title}</h3>
-                  <p className="text-sm text-[#1e3a5f]/50">{item.desc}</p>
+                <div key={i} className="p-4 md:p-5 rounded-xl bg-white border border-[#1e3a5f]/5 hover:border-[#f97316]/30 hover:shadow-lg hover:shadow-[#f97316]/5 transition-all">
+                  <item.icon className="w-5 h-5 text-[#f97316] mb-2 md:mb-3" />
+                  <h3 className="font-semibold text-[#1e3a5f] mb-1 text-sm md:text-base">{item.title}</h3>
+                  <p className="text-xs md:text-sm text-[#1e3a5f]/50">{item.desc}</p>
                 </div>
               ))}
             </motion.div>
@@ -421,33 +422,33 @@ const Landing: React.FC = () => {
             viewport={{ once: true, margin: "-100px" }}
             variants={stagger}
           >
-            <motion.div variants={fadeIn} className="grid md:grid-cols-4 gap-6">
-              <div className="flex items-start gap-3">
-                <Eye className="w-5 h-5 text-[#1e3a5f]/40 mt-0.5 flex-shrink-0" />
+            <motion.div variants={fadeIn} className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              <div className="flex items-start gap-2 md:gap-3">
+                <Eye className="w-4 md:w-5 h-4 md:h-5 text-[#1e3a5f]/40 mt-0.5 flex-shrink-0" />
                 <div>
-                  <h3 className="font-medium text-[#1e3a5f] mb-1">Только чтение</h3>
-                  <p className="text-sm text-[#1e3a5f]/50">Не можем изменять или удалять данные</p>
+                  <h3 className="font-medium text-[#1e3a5f] mb-0.5 md:mb-1 text-sm md:text-base">Только чтение</h3>
+                  <p className="text-xs md:text-sm text-[#1e3a5f]/50">Не можем изменять данные</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <Lock className="w-5 h-5 text-[#1e3a5f]/40 mt-0.5 flex-shrink-0" />
+              <div className="flex items-start gap-2 md:gap-3">
+                <Lock className="w-4 md:w-5 h-4 md:h-5 text-[#1e3a5f]/40 mt-0.5 flex-shrink-0" />
                 <div>
-                  <h3 className="font-medium text-[#1e3a5f] mb-1">Не пишем кандидатам</h3>
-                  <p className="text-sm text-[#1e3a5f]/50">Никаких действий от вашего имени</p>
+                  <h3 className="font-medium text-[#1e3a5f] mb-0.5 md:mb-1 text-sm md:text-base">Не пишем кандидатам</h3>
+                  <p className="text-xs md:text-sm text-[#1e3a5f]/50">Никаких действий от вас</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <Shield className="w-5 h-5 text-[#1e3a5f]/40 mt-0.5 flex-shrink-0" />
+              <div className="flex items-start gap-2 md:gap-3">
+                <Shield className="w-4 md:w-5 h-4 md:h-5 text-[#1e3a5f]/40 mt-0.5 flex-shrink-0" />
                 <div>
-                  <h3 className="font-medium text-[#1e3a5f] mb-1">Данные в России</h3>
-                  <p className="text-sm text-[#1e3a5f]/50">Серверы в РФ, ФЗ-152</p>
+                  <h3 className="font-medium text-[#1e3a5f] mb-0.5 md:mb-1 text-sm md:text-base">Данные в России</h3>
+                  <p className="text-xs md:text-sm text-[#1e3a5f]/50">Серверы в РФ, ФЗ-152</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-[#1e3a5f]/40 mt-0.5 flex-shrink-0" />
+              <div className="flex items-start gap-2 md:gap-3">
+                <CheckCircle2 className="w-4 md:w-5 h-4 md:h-5 text-[#1e3a5f]/40 mt-0.5 flex-shrink-0" />
                 <div>
-                  <h3 className="font-medium text-[#1e3a5f] mb-1">Отключение в клик</h3>
-                  <p className="text-sm text-[#1e3a5f]/50">Отзовите доступ в настройках HH</p>
+                  <h3 className="font-medium text-[#1e3a5f] mb-0.5 md:mb-1 text-sm md:text-base">Отключение в клик</h3>
+                  <p className="text-xs md:text-sm text-[#1e3a5f]/50">Отзовите доступ в HH</p>
                 </div>
               </div>
             </motion.div>
@@ -471,9 +472,9 @@ const Landing: React.FC = () => {
             <motion.p variants={fadeIn} className="text-[#1e3a5f]/60 mb-10 max-w-lg">
               Начните бесплатно. Без привязки карты, без автоматических списаний.
             </motion.p>
-            <motion.div variants={fadeIn} className="grid md:grid-cols-3 gap-5">
+            <motion.div variants={fadeIn} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
               {/* Free */}
-              <div className="p-6 rounded-2xl bg-white border border-[#1e3a5f]/10">
+              <div className="p-5 md:p-6 rounded-2xl bg-white border border-[#1e3a5f]/10">
                 <p className="text-sm font-medium text-[#1e3a5f]/50 mb-2">Бесплатно</p>
                 <div className="flex items-baseline gap-1 mb-4">
                   <span className="text-4xl font-display font-semibold text-[#1e3a5f]">0 ₽</span>
@@ -493,7 +494,7 @@ const Landing: React.FC = () => {
               </div>
 
               {/* Starter */}
-              <div className="p-6 rounded-2xl bg-white border border-[#1e3a5f]/10">
+              <div className="p-5 md:p-6 rounded-2xl bg-white border border-[#1e3a5f]/10">
                 <p className="text-sm font-medium text-[#1e3a5f]/50 mb-2">Starter</p>
                 <div className="flex items-baseline gap-1 mb-4">
                   <span className="text-4xl font-display font-semibold text-[#1e3a5f]">2 999 ₽</span>
@@ -514,7 +515,7 @@ const Landing: React.FC = () => {
               </div>
 
               {/* Professional */}
-              <div className="p-6 rounded-2xl bg-[#1e3a5f] text-white relative">
+              <div className="p-5 md:p-6 rounded-2xl bg-[#1e3a5f] text-white relative sm:col-span-2 lg:col-span-1">
                 <div className="absolute -top-3 left-6 px-3 py-1 bg-[#f97316] text-white text-xs font-semibold rounded-full shadow-lg">
                   Популярный
                 </div>
@@ -616,16 +617,17 @@ const Landing: React.FC = () => {
             variants={stagger}
             className="text-center"
           >
-            <motion.h2 variants={fadeIn} className="font-display text-3xl md:text-4xl mb-4 text-white font-semibold">
+            <motion.h2 variants={fadeIn} className="font-display text-2xl sm:text-3xl md:text-4xl mb-4 text-white font-semibold">
               Попробуйте на своих откликах
             </motion.h2>
-            <motion.p variants={fadeIn} className="text-white/70 mb-8 max-w-md mx-auto text-lg">
+            <motion.p variants={fadeIn} className="text-white/70 mb-8 max-w-md mx-auto text-base md:text-lg px-4">
               50 резюме бесплатно. Без карты. Результат через 15 минут.
             </motion.p>
             <motion.div variants={fadeIn}>
-              <Button asChild size="lg" className="bg-[#f97316] hover:bg-[#ea580c] text-white h-14 px-10 text-base font-semibold rounded-xl shadow-lg shadow-[#f97316]/30 transition-all hover:shadow-xl hover:-translate-y-0.5">
+              <Button asChild size="lg" className="bg-[#f97316] hover:bg-[#ea580c] text-white h-12 sm:h-14 px-6 sm:px-10 text-sm sm:text-base font-semibold rounded-xl shadow-lg shadow-[#f97316]/30 transition-all hover:shadow-xl hover:-translate-y-0.5">
                 <Link to="/register">
-                  Проанализировать 50 резюме бесплатно
+                  <span className="hidden sm:inline">Проанализировать 50 резюме бесплатно</span>
+                  <span className="sm:hidden">Попробовать бесплатно</span>
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
@@ -637,8 +639,8 @@ const Landing: React.FC = () => {
       {/* Footer */}
       <footer className="bg-[#0f1c2e] text-white/60">
         <div className="max-w-5xl mx-auto px-5 py-12">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div className="md:col-span-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 mb-8">
+            <div className="col-span-2">
               <div className="flex items-center gap-2.5 mb-4">
                 <img src="/timly-logo.png" alt="timly" className="h-9 w-9 rounded-xl" />
                 <span className="text-xl font-display font-semibold text-white">timly</span>
@@ -683,10 +685,10 @@ const Landing: React.FC = () => {
             exit={{ y: 100, opacity: 0 }}
             className="fixed bottom-0 left-0 right-0 p-4 bg-[#faf8f5]/95 backdrop-blur-sm border-t border-[#1e3a5f]/10 lg:hidden z-40"
           >
-            <Button asChild size="lg" className="w-full bg-[#f97316] hover:bg-[#ea580c] text-white h-12 text-base font-semibold shadow-lg rounded-xl">
+            <Button asChild size="lg" className="w-full bg-[#f97316] hover:bg-[#ea580c] text-white h-12 text-sm font-semibold shadow-lg rounded-xl">
               <Link to="/register">
-                Проанализировать 50 резюме бесплатно
-                <ArrowRight className="ml-2 h-5 w-5" />
+                Попробовать бесплатно
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </motion.div>
