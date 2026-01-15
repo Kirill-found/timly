@@ -87,13 +87,28 @@ class AIAnalyzer:
         companies = []
         for i, exp in enumerate(exp_list[:5]):
             if isinstance(exp, dict):
-                company = exp.get('company', {}).get('name', '?') if isinstance(exp.get('company'), dict) else '?'
+                # company может быть dict или string
+                company_raw = exp.get('company', '?')
+                company = company_raw.get('name', '?') if isinstance(company_raw, dict) else (company_raw or '?')
                 companies.append(company)
                 pos = exp.get('position', '?')
                 desc = exp.get('description', '') or ''
-                start = exp.get('start', {})
-                end = exp.get('end', {})
-                period = f"{start.get('month', '')}/{start.get('year', '')} - {end.get('month', '') if end else ''}/{end.get('year', 'н.в.') if end else 'н.в.'}"
+                # start/end могут быть dict {"month": 1, "year": 2022} или string "2022-01-01"
+                start = exp.get('start')
+                end = exp.get('end')
+                if isinstance(start, dict):
+                    period_start = f"{start.get('month', '')}/{start.get('year', '')}"
+                elif isinstance(start, str):
+                    period_start = start[:7] if len(start) >= 7 else start  # "2022-01"
+                else:
+                    period_start = '?'
+                if isinstance(end, dict):
+                    period_end = f"{end.get('month', '')}/{end.get('year', '')}"
+                elif isinstance(end, str):
+                    period_end = end[:7] if len(end) >= 7 else end
+                else:
+                    period_end = 'н.в.'
+                period = f"{period_start} - {period_end}"
                 work_history += f"\n### {company} | {pos} | {period}\n{desc}\n"
 
         tier1 = self._detect_tier1(work_history + ' '.join(companies))
@@ -105,12 +120,15 @@ class AIAnalyzer:
             skills.append(s.get('name', '') if isinstance(s, dict) else s)
         skills_text = ', '.join(skills) or 'Не указаны'
 
-        # Зарплата (NET → GROSS)
-        salary = (resume.get('salary') or {}).get('amount', 0)
+        # Зарплата (NET → GROSS) - может быть dict или None
+        salary_data = resume.get('salary')
+        salary = salary_data.get('amount', 0) if isinstance(salary_data, dict) else 0
         salary_gross = int(salary * 1.15) if salary else 0
 
-        # Опыт
-        months = (resume.get('total_experience') or {}).get('months', 0)
+        # Опыт - может быть dict или None
+        exp_data = resume.get('total_experience')
+        months = exp_data.get('months', 0) if isinstance(exp_data, dict) else 0
+        months = months or 0  # защита от None
         years, rem = months // 12, months % 12
 
         # Junior mode
