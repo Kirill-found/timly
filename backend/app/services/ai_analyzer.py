@@ -1,7 +1,7 @@
 """
-AI сервис для анализа резюме v5.2
+AI сервис для анализа резюме v6.0-lite
 Интеграция с OpenAI GPT-4o для анализа кандидатов
-Фокус: релевантность опыта, метрики как бонус
+Фокус: категоризация позиций, GHOST_SKILL детекция, прозрачный скоринг
 """
 import json
 import time
@@ -44,7 +44,7 @@ class AIAnalyzer:
     def _get_cache_key(self, vacancy_data: Dict, resume_data: Dict) -> str:
         vh = hashlib.md5(json.dumps(vacancy_data, sort_keys=True).encode()).hexdigest()[:8]
         rh = hashlib.md5(json.dumps(resume_data, sort_keys=True).encode()).hexdigest()[:8]
-        return f"analysis:v52:{vh}:{rh}"
+        return f"analysis:v60:{vh}:{rh}"
 
     def _get_cached(self, key: str) -> Optional[Dict]:
         if not self.cache:
@@ -63,7 +63,7 @@ class AIAnalyzer:
                 pass
 
     def _build_prompt(self, vacancy: Dict, resume: Dict, strictness: str = "balanced") -> str:
-        """Построение промпта v5.1"""
+        """Построение промпта v6.0-lite"""
         if isinstance(resume, str):
             resume = json.loads(resume) if resume else {}
 
@@ -72,18 +72,16 @@ class AIAnalyzer:
         work_history = ""
         for i, exp in enumerate(exp_list[:5]):
             if isinstance(exp, dict):
-                # company может быть dict или string
                 company_raw = exp.get('company', '?')
                 company = company_raw.get('name', '?') if isinstance(company_raw, dict) else (company_raw or '?')
                 pos = exp.get('position', '?')
                 desc = exp.get('description', '') or ''
-                # start/end могут быть dict {"month": 1, "year": 2022} или string "2022-01-01"
                 start = exp.get('start')
                 end = exp.get('end')
                 if isinstance(start, dict):
                     period_start = f"{start.get('month', '')}/{start.get('year', '')}"
                 elif isinstance(start, str):
-                    period_start = start[:7] if len(start) >= 7 else start  # "2022-01"
+                    period_start = start[:7] if len(start) >= 7 else start
                 else:
                     period_start = '?'
                 if isinstance(end, dict):
@@ -95,69 +93,175 @@ class AIAnalyzer:
                 period = f"{period_start} - {period_end}"
                 work_history += f"\n### {company} | {pos} | {period}\n{desc}\n"
 
-        # Навыки
+        # Навыки (список)
         skills = []
         for s in resume.get('skill_set', []):
             skills.append(s.get('name', '') if isinstance(s, dict) else s)
         skills_text = ', '.join(skills) or 'Не указаны'
 
-        # Зарплата (NET → GROSS) - может быть dict или None
+        # Зарплата кандидата (NET → GROSS)
         salary_data = resume.get('salary')
         salary = salary_data.get('amount', 0) if isinstance(salary_data, dict) else 0
         salary_gross = int(salary * 1.15) if salary else 0
 
-        # Опыт - может быть dict или None
+        # Общий опыт
         exp_data = resume.get('total_experience')
         months = exp_data.get('months', 0) if isinstance(exp_data, dict) else 0
-        months = months or 0  # защита от None
+        months = months or 0
         years, rem = months // 12, months % 12
 
-        # Junior mode
-        title_lower = vacancy.get('title', '').lower()
-        is_junior = any(w in title_lower for w in ['junior', 'джуниор', 'стажер', 'trainee', 'intern'])
-        junior_flag = "🎓 JUNIOR MODE: Активен" if is_junior else ""
+        # Локация кандидата
+        candidate_area = resume.get('area', {})
+        candidate_city = candidate_area.get('name', '?') if isinstance(candidate_area, dict) else str(candidate_area or '?')
 
-        # Cover letter
+        # Готовность к переезду
+        relocation = resume.get('relocation', {})
+        relocation_ready = relocation.get('type', {}).get('id', '') if isinstance(relocation, dict) else ''
+        relocation_text = "готов к переезду" if relocation_ready == 'relocation_possible' else "не готов к переезду"
+
+        # Сопроводительное письмо
         cover = resume.get('cover_letter', '') or resume.get('message', '') or 'Не указано'
 
         # Вакансия
         v_skills = ', '.join(vacancy.get('key_skills', [])) or 'Не указаны'
+        v_description = vacancy.get('description', '')[:800] if vacancy.get('description') else ''
         sal_from = vacancy.get('salary_from', 0) or 0
         sal_to = vacancy.get('salary_to', 0) or 0
-
-        # Режим строгости
-        strictness_instructions = {
-            "strict": "РЕЖИМ: STRICT. Штрафуй за отсутствие цифр и достижений. Unverified навык = жёлтый флаг. Требуй доказательства.",
-            "balanced": "РЕЖИМ: BALANCED. Ищи баланс между фактами и потенциалом. Давай шанс если есть косвенные подтверждения.",
-            "lenient": "РЕЖИМ: LENIENT. Фокус на стабильности и мотивации. Прощай отсутствие деталей если общий профиль адекватен."
-        }
-        strictness_text = strictness_instructions.get(strictness, strictness_instructions["balanced"])
+        v_area = vacancy.get('area', '?')
 
         return f"""# РОЛЬ
-Ты — практичный HR-аналитик. Твоя задача — найти подходящих кандидатов, а не идеальных.
 
-Твои принципы:
-- Главное — РЕЛЕВАНТНОСТЬ опыта задачам вакансии
-- Цифры и достижения — это БОНУС, который выделяет лучших
-- Отсутствие цифр — не приговор, если опыт релевантен
-- Прилагательные ("успешный", "эффективный") игнорируй — смотри на факты
-- Оценивай потенциал, а не только прошлые заслуги
+Ты — алгоритм первичного скрининга резюме. Не HR с мнением, а система с чёткой логикой.
 
-{strictness_text}
+Твоя задача: определить, стоит ли рекрутеру тратить 15 минут на звонок этому кандидату.
 
-# ЗАДАЧА
-Проанализируй кандидата для вакансии. Найди тех, кто МОЖЕТ справиться с задачами.
+Принципы:
+1. Факты > мнения. Оценивай только написанное, не додумывай.
+2. Навык в списке ≠ опыт с навыком. Проверяй в описании работы.
+3. Разные позиции — разная логика оценки.
+4. Лучше лишний YELLOW, чем ложный GREEN.
+
+---
+
+# ШАГ 1: ОПРЕДЕЛИ ТИП ПОЗИЦИИ
+
+| Тип | Кто | Как оценивать |
+|-----|-----|---------------|
+| RESULTS | Продажи, маркетинг, закупки, e-commerce, менеджеры МП | Цифры важны. Нет цифр = уточнить |
+| EXPERTISE | Разработка, аналитика, дизайн, инженеры | Глубина навыков > цифры. Проверяй в опыте |
+| OPERATIONS | Водители, склад, операторы, бухгалтеры | Стаж + допуски. Цифры не важны |
+| COMMUNICATION | HR, поддержка, ассистенты, PR | Контекст (B2B/B2C) + soft skills |
+
+---
+
+# ШАГ 2: БЛОКИРУЮЩИЕ ПРОВЕРКИ
+
+## 2.1 Локация
+- Вакансия: {v_area}
+- Кандидат: {candidate_city}, {relocation_text}
+- Если формат работы требует присутствия, а кандидат в другом городе и не готов к переезду → RED
+
+## 2.2 MUST-HAVE требования
+Извлеки 2-4 критичных требования из вакансии.
+Для каждого определи статус:
+- ✅ CONFIRMED — есть в опыте с доказательством
+- ⚠️ UNCLEAR — возможно есть, нужно уточнить
+- ❌ MISSING — нет
+
+**Любой MUST-HAVE = MISSING → автоматический RED**
+
+---
+
+# ШАГ 3: ПРОВЕРКА НАВЫКОВ
+
+⚠️ Навык в блоке "Skills" — заявка. Факт — упоминание в описании опыта.
+
+| В навыках | В опыте | Статус | Флаг |
+|-----------|---------|--------|------|
+| ✅ | ✅ с контекстом | VERIFIED | — |
+| ✅ | ❌ или без контекста | MENTIONED | GHOST_SKILL |
+| ❌ | ✅ | VERIFIED | — |
+| ❌ | ❌ | MISSING | — |
+
+**GHOST_SKILL** = навык-призрак. Указан в списке, но не используется в описании опыта.
+- 1-2 призрака → вопросы на интервью
+- 3+ призрака в ключевых навыках → понижение вердикта
+
+---
+
+# ШАГ 4: СКОРИНГ
+
+## Формула:
+total = (MUST_HAVE × 0.40) + (RELEVANCE × 0.30) + (QUALITY × 0.20) + (OTHER × 0.10)
+
+## MUST_HAVE (40%):
+- Все CONFIRMED → 100
+- Один UNCLEAR → 70
+- Любой MISSING → 0
+
+## RELEVANCE (30%):
+- Идентичная роль + индустрия → 100
+- Похожая роль ИЛИ другая индустрия → 70
+- Смежный опыт с пересечением задач → 50
+- Косвенно релевантный → 30
+- Нерелевантный → 0
+
+## QUALITY (20%) — зависит от типа позиции:
+- RESULTS: Есть цифры → 100, Факты без цифр → 60, Только обязанности → 30
+- EXPERTISE: Навыки VERIFIED → 100, Есть GHOST_SKILL → 50, Не подтверждены → 20
+- OPERATIONS: Стаж 3+ лет, стабильно → 100, 1-3 года → 70, Частая смена → 30
+- COMMUNICATION: Похожий контекст → 100, Частично похож → 60, Другой контекст → 30
+
+## OTHER (10%):
+- Зарплата в вилке → +30
+- Зарплата +1-20% выше → +15
+- Зарплата +20-30% → 0
+- Зарплата +30%+ → -20
+- Nice-to-have навыки → до +40
+
+---
+
+# ШАГ 5: ФЛАГИ
+
+## Красные (понижают вердикт на ступень):
+- 3+ смены работы за 2 года без причины
+- Зарплата +30% при score <70
+- 3+ GHOST_SKILL в ключевых навыках
+- Деградация позиций (Senior → Junior)
+
+## Жёлтые (добавляют вопросы, не меняют вердикт):
+- Gap >6 месяцев
+- Короткий срок на последнем месте (<6 мес)
+- Overqualified
+- 1-2 GHOST_SKILL
+
+---
+
+# ШАГ 6: ВЕРДИКТ
+
+| Score | Вердикт | Значение |
+|-------|---------|----------|
+| 70-100 | GREEN | Звонить. Высокая вероятность соответствия |
+| 45-69 | YELLOW | Есть потенциал, нужно уточнить |
+| 0-44 | RED | Не звонить. Явное несоответствие |
+
+---
 
 # ВАКАНСИЯ
 Позиция: {vacancy.get('title', '?')}
-Требования: {v_skills or vacancy.get('description', '')[:500]}
-Уровень: {vacancy.get('experience', '?')}
-Бюджет: {sal_from} - {sal_to} RUB gross
+Локация: {v_area}
+Требования: {v_skills}
+Описание: {v_description}
+Зарплата: {sal_from} - {sal_to} RUB gross
 
 # КАНДИДАТ
 {resume.get('first_name', '')} {resume.get('last_name', '')} | {resume.get('title', '?')}
-Опыт: {years} лет {rem} мес | Ожидания: {salary_gross} RUB gross
-{junior_flag}
+Локация: {candidate_city} | {relocation_text}
+Опыт: {years} лет {rem} мес
+Ожидания: {salary_gross} RUB gross
+
+## Навыки (из блока Skills):
+{skills_text}
 
 ## Опыт работы:
 {work_history or 'Не указан'}
@@ -165,107 +269,128 @@ class AIAnalyzer:
 ## Сопроводительное:
 {cover}
 
-# АЛГОРИТМ АНАЛИЗА
-
-## 1. ЧТО НУЖНО РАБОТОДАТЕЛЮ?
-Выдели 3 главных задачи из вакансии.
-
-## 2. ОЦЕНИ РЕЛЕВАНТНОСТЬ
-Главный вопрос: сможет ли кандидат выполнять эти задачи?
-- Есть прямой опыт в похожей роли?
-- Работал с нужными инструментами/площадками?
-- Длительность и свежесть релевантного опыта?
-
-## 3. ИЗВЛЕКИ МЕТРИКИ (если есть)
-⚠️ ВАЖНО: Пиши цифру ТОЛЬКО если она ЯВНО указана в тексте.
-ЗАПРЕЩЕНО угадывать или экстраполировать. Нет данных = null.
-Ищи: объём (товары, заказы), деньги (выручка, бюджет), рост (%), команда.
-
-## 4. ЛОГИКА ВЕРДИКТА
-GREEN — релевантный опыт + (цифры ИЛИ стабильная карьера)
-YELLOW — есть релевантный опыт, но нужно уточнить детали
-RED — нет релевантного опыта ИЛИ критические несоответствия (зарплата, локация)
-
-⚠️ Отсутствие цифр само по себе НЕ причина для RED. Это причина для уточняющих вопросов.
-
-## 5. ВЫВОД
-Кратко: почему стоит/не стоит звать на интервью.
-
-# ПРАВИЛА ФОРМУЛИРОВОК
-
-В плюсах/минусах пиши КОНКРЕТНО:
-❌ "Успешный опыт работы на маркетплейсе"
-✅ "WB 2 года: менеджер категории" или "WB: рост выручки 500K→2M/мес"
-
-❌ "Работал в крупной компании"
-✅ "Ozon 2023-2024, менеджер по закупкам"
+---
 
 # ФОРМАТ ОТВЕТА (только JSON)
 
 {{
-  "vacancy_needs": ["задача 1", "задача 2", "задача 3"],
-  "candidate_metrics": [
-    {{"name": "метрика", "value": "значение или null", "period": "2023-2024 или null"}}
+  "position_type": "RESULTS | EXPERTISE | OPERATIONS | COMMUNICATION",
+
+  "location_check": {{
+    "compatible": true,
+    "flag": null,
+    "reason": null
+  }},
+
+  "must_have": [
+    {{"requirement": "...", "status": "CONFIRMED|UNCLEAR|MISSING", "evidence": "цитата или null"}}
   ],
+
+  "skills_check": [
+    {{"skill": "...", "status": "VERIFIED|MENTIONED|MISSING", "ghost": false, "evidence": "..."}}
+  ],
+
+  "scoring": {{
+    "must_have": {{"score": 0, "reason": "..."}},
+    "relevance": {{"score": 0, "reason": "..."}},
+    "quality": {{"score": 0, "reason": "..."}},
+    "other": {{"score": 0, "reason": "..."}},
+    "total": 0,
+    "flags_applied": null
+  }},
+
   "verdict": "GREEN | YELLOW | RED",
-  "verdict_reason": "Звонить/Уточнить/Отказ: [главный факт]",
-  "scores": {{"relevance": 1-5, "experience_quality": 1-5, "recency": 1-5}},
-  "pros": ["Конкретный факт из резюме"],
-  "cons": ["Конкретный пробел или риск"],
-  "missing_info": ["Что уточнить на интервью"],
-  "salary_fit": {{"status": "в бюджете | выше бюджета | ниже бюджета", "delta_percent": 0}},
-  "interview_questions": ["Вопрос на проверку"]
+  "verdict_reason": "Одно предложение — главная причина",
+
+  "strengths": ["конкретный факт 1", "конкретный факт 2"],
+  "concerns": ["сомнение 1", "сомнение 2"],
+
+  "salary_fit": {{
+    "status": "в вилке | выше на X% | ниже | не указано",
+    "impact": 0
+  }},
+
+  "interview_questions": [
+    {{
+      "question": "...",
+      "why": "что проверяем",
+      "good_answer": "что хотим услышать",
+      "bad_answer": "что насторожит"
+    }}
+  ]
 }}"""
 
-    def _calculate_score(self, scores: Dict[str, int]) -> Dict[str, Any]:
-        # Новые веса для v5.1: relevance, experience_quality, recency
-        weights = {"relevance": 0.45, "experience_quality": 0.35, "recency": 0.20}
-        weighted = sum(scores.get(k, 3) * w for k, w in weights.items())
-        rank = max(0, min(100, int((weighted - 1) * 25)))
+    def _calculate_score(self, scoring: Dict) -> int:
+        """Вычисление итогового score из компонентов v6.0"""
+        must_have = scoring.get("must_have", {}).get("score", 0)
+        relevance = scoring.get("relevance", {}).get("score", 0)
+        quality = scoring.get("quality", {}).get("score", 0)
+        other = scoring.get("other", {}).get("score", 0)
 
-        tier = "A" if weighted >= 4.0 else "B" if weighted >= 3.0 else "C"
-        rec = "hire" if rank >= 75 else "interview" if rank >= 55 else "maybe" if rank >= 40 else "reject"
-
-        return {"rank_score": rank, "tier": tier, "recommendation": rec, "weighted_average": round(weighted, 2)}
+        total = int(must_have * 0.40 + relevance * 0.30 + quality * 0.20 + other * 0.10)
+        return max(0, min(100, total))
 
     def _enrich(self, result: Dict) -> Dict:
-        """Обогащение результата v5.1"""
-        scores = result.get("scores", {})
-        if not scores:
-            return result
+        """Обогащение результата v6.0"""
 
-        composite = self._calculate_score(scores)
-        result.update(composite)
-        result["score"] = composite["rank_score"]
+        # Пересчитываем score если нужно
+        scoring = result.get("scoring", {})
+        if scoring and not scoring.get("total"):
+            scoring["total"] = self._calculate_score(scoring)
+            result["scoring"] = scoring
 
-        # Метрики кандидата — считаем заполненность
-        metrics = result.get("candidate_metrics", [])
-        filled = sum(1 for m in metrics if m.get("value") and m.get("value") != "null")
-        result["metrics_filled"] = filled
-        result["has_metrics"] = filled > 0
+        # Основной score для сортировки
+        result["score"] = scoring.get("total", 0) if scoring else 0
+        result["rank_score"] = result["score"]
+
+        # Recommendation на основе вердикта
+        verdict = result.get("verdict", "YELLOW")
+        result["recommendation"] = {
+            "GREEN": "interview",
+            "YELLOW": "maybe",
+            "RED": "reject"
+        }.get(verdict, "maybe")
+
+        # Tier для совместимости
+        score = result["score"]
+        result["tier"] = "A" if score >= 70 else "B" if score >= 45 else "C"
 
         # Совместимость со старым форматом для Excel
-        result["strengths"] = result.get("pros", [])
-        result["weaknesses"] = result.get("cons", [])
+        result["pros"] = result.get("strengths", [])
+        result["cons"] = result.get("concerns", [])
+        result["weaknesses"] = result.get("concerns", [])
         result["summary_one_line"] = result.get("verdict_reason", "")
 
-        # salary_fit — извлекаем статус
+        # Ghost skills count
+        skills_check = result.get("skills_check", [])
+        ghost_count = sum(1 for s in skills_check if s.get("ghost"))
+        result["ghost_skills_count"] = ghost_count
+        result["has_ghost_skills"] = ghost_count > 0
+
+        # Must-have status
+        must_have = result.get("must_have", [])
+        missing_count = sum(1 for m in must_have if m.get("status") == "MISSING")
+        unclear_count = sum(1 for m in must_have if m.get("status") == "UNCLEAR")
+        result["must_have_missing"] = missing_count
+        result["must_have_unclear"] = unclear_count
+
+        # Salary fit
         sal = result.get("salary_fit", {})
         if isinstance(sal, dict):
             result["salary_status"] = sal.get("status", "—")
-            result["salary_delta"] = sal.get("delta_percent", 0)
+            result["salary_delta"] = sal.get("impact", 0)
         else:
-            result["salary_status"] = sal
+            result["salary_status"] = str(sal) if sal else "—"
             result["salary_delta"] = 0
+
+        # Position type
+        result["position_type"] = result.get("position_type", "RESULTS")
 
         return result
 
     async def analyze_resume(self, vacancy: Dict, resume: Dict, force: bool = False, strictness: str = "balanced") -> Dict:
         """
-        strictness: "strict" | "balanced" | "lenient"
-        - strict: для топовых позиций, требует доказательств
-        - balanced: стандартный режим (по умолчанию)
-        - lenient: для массового найма, фокус на адекватности
+        Анализ резюме v6.0-lite
         """
         start = time.time()
         key = self._get_cache_key(vacancy, resume)
@@ -285,7 +410,7 @@ RED — нет релевантного опыта ИЛИ критические
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.3,
-                max_tokens=2000,
+                max_tokens=2500,
                 response_format={"type": "json_object"}
             )
 
@@ -295,11 +420,13 @@ RED — нет релевантного опыта ИЛИ критические
                 "ai_model": self.model,
                 "ai_tokens": resp.usage.total_tokens,
                 "processing_ms": int((time.time() - start) * 1000),
-                "prompt_version": "5.2"
+                "prompt_version": "6.0"
             })
 
             self._set_cache(key, result)
-            logger.info(f"AI v5.1: {result.get('verdict')} score={result.get('rank_score')} metrics={result.get('metrics_filled', 0)}/3 {resp.usage.total_tokens}tok")
+
+            ghost = result.get("ghost_skills_count", 0)
+            logger.info(f"AI v6.0: {result.get('verdict')} score={result.get('score')} type={result.get('position_type')} ghosts={ghost} {resp.usage.total_tokens}tok")
             return result
 
         except openai.RateLimitError:
