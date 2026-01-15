@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 
     # External APIs
     OPENAI_API_KEY: str
-    OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_MODEL: str = "gpt-4o"
     OPENAI_PROXY_URL: str = ""  # HTTP прокси для OpenAI (необязательно)
 
     # HH.ru Integration
