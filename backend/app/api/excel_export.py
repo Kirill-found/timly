@@ -1,17 +1,17 @@
 """
-Excel экспорт для AI анализа резюме v4.0
-Редизайн: Editorial/Magazine + Data Dashboard
+Excel экспорт для AI анализа резюме v5.0
+Редизайн под критику HR-директора
 
-Product-driven:
-- JTBD: "За 5 секунд понять кого звонить первым"
-- Фокус на Tier A/B/C как главном решении
-- Executive Summary с ключевыми метриками
+Ключевые изменения:
+- Светофор 🟢/🟡/🔴 вместо абстрактных Tier
+- SCORE (0-100) виден сразу
+- ОПЫТ, ПОЗИЦИЯ, ЗП — ключевые данные
+- Verified/Unverified навыки
+- Red Flags колонка
+- Убраны аббревиатуры
+- Дашборд: 3 цифры вместо 15 графиков
 
-Design:
-- Aesthetic: Editorial/Magazine (Bloomberg, FT, McKinsey)
-- Typography: Calibri (современный, читаемый)
-- Spacing: Щедрые отступы, высокие строки
-- Hierarchy: Tier крупно, остальное — поддержка
+HR-принцип: "Мне не нужны 15 графиков. Мне нужно 3 цифры."
 """
 from fastapi import HTTPException, status
 from fastapi.responses import FileResponse
@@ -27,14 +27,14 @@ def create_excel_export(
     recommendation_filter: Optional[str] = None
 ) -> str:
     """
-    Создание Excel файла с результатами анализа v4.0
-    Editorial/Magazine design
+    Создание Excel файла с результатами анализа v5.0
+    HR-ориентированный дизайн
 
     Returns:
         str: путь к временному файлу
     """
     import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, NamedStyle
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
 
     # ========== СОЗДАНИЕ КНИГИ ==========
@@ -43,52 +43,40 @@ def create_excel_export(
 
     candidates_ws = wb.create_sheet("Кандидаты", 0)
     details_ws = wb.create_sheet("Детали", 1)
-    dashboard_ws = wb.create_sheet("Дашборд", 2)
+    dashboard_ws = wb.create_sheet("Сводка", 2)
 
     # ========== ЦВЕТОВАЯ ПАЛИТРА ==========
-    # Editorial style: сдержанные цвета, акценты только на важном
     COLORS = {
-        'primary': '1A1A2E',      # Deep Navy (заголовки)
-        'accent': 'E94560',       # Coral Red (акценты)
+        'primary': '1A1A2E',
         'success': '16A34A',      # Green
-        'warning': 'D97706',      # Amber
-        'muted': '6B7280',        # Gray
-        'light_bg': 'F8FAFC',     # Light gray bg
+        'warning': 'D97706',      # Amber/Yellow
+        'danger': 'DC2626',       # Red
+        'muted': '6B7280',
+        'light_bg': 'F8FAFC',
         'white': 'FFFFFF',
-        'border': 'E2E8F0',       # Light border
+        'border': 'E2E8F0',
 
-        # Tier colors (пастельные, не кричащие)
-        'tier_a_bg': 'DCFCE7',    # Light green
-        'tier_a_text': '166534',  # Dark green
-        'tier_b_bg': 'DBEAFE',    # Light blue
-        'tier_b_text': '1E40AF',  # Dark blue
-        'tier_c_bg': 'F3F4F6',    # Light gray
-        'tier_c_text': '4B5563',  # Dark gray
-
-        # Recommendations
-        'hire_bg': 'DCFCE7',
-        'hire_text': '166534',
-        'interview_bg': 'FEF3C7',
-        'interview_text': '92400E',
-        'maybe_bg': 'FED7AA',
-        'maybe_text': '9A3412',
-        'reject_bg': 'F3F4F6',
-        'reject_text': '6B7280',
+        # Светофор
+        'green_bg': 'DCFCE7',
+        'green_text': '166534',
+        'yellow_bg': 'FEF3C7',
+        'yellow_text': '92400E',
+        'red_bg': 'FEE2E2',
+        'red_text': 'DC2626',
     }
 
     # ========== ТИПОГРАФИКА ==========
-    # Calibri — современный, профессиональный, хорошо читается
     FONTS = {
-        'title': Font(name='Calibri', size=22, bold=True, color=COLORS['primary']),
-        'subtitle': Font(name='Calibri', size=14, color=COLORS['muted']),
-        'header': Font(name='Calibri', size=11, bold=True, color=COLORS['white']),
+        'title': Font(name='Calibri', size=20, bold=True, color=COLORS['primary']),
+        'subtitle': Font(name='Calibri', size=12, color=COLORS['muted']),
+        'header': Font(name='Calibri', size=10, bold=True, color=COLORS['white']),
         'subheader': Font(name='Calibri', size=11, bold=True, color=COLORS['primary']),
-        'body': Font(name='Calibri', size=11, color='374151'),
-        'body_small': Font(name='Calibri', size=10, color=COLORS['muted']),
-        'link': Font(name='Calibri', size=11, color=COLORS['accent'], underline='single'),
-        'tier_large': Font(name='Calibri', size=16, bold=True),
-        'metric_value': Font(name='Calibri', size=28, bold=True, color=COLORS['primary']),
-        'metric_label': Font(name='Calibri', size=10, color=COLORS['muted']),
+        'body': Font(name='Calibri', size=10, color='374151'),
+        'body_small': Font(name='Calibri', size=9, color=COLORS['muted']),
+        'link': Font(name='Calibri', size=10, color='2563EB', underline='single'),
+        'score_large': Font(name='Calibri', size=14, bold=True),
+        'metric_value': Font(name='Calibri', size=36, bold=True, color=COLORS['primary']),
+        'metric_label': Font(name='Calibri', size=11, color=COLORS['muted']),
     }
 
     # ========== СТИЛИ ==========
@@ -112,9 +100,16 @@ def create_excel_export(
         raw = getattr(analysis, 'raw_result', None) or {}
         return raw.get(key, default)
 
-    def get_score(analysis, score_name):
-        scores = get_raw(analysis, 'scores', {})
-        return scores.get(score_name, 0)
+    def get_nested(analysis, *keys, default=None):
+        """Получение вложенных ключей"""
+        raw = getattr(analysis, 'raw_result', None) or {}
+        result = raw
+        for key in keys:
+            if isinstance(result, dict):
+                result = result.get(key)
+            else:
+                return default
+        return result if result is not None else default
 
     def format_bullets(items, max_items=5):
         if not items:
@@ -124,22 +119,14 @@ def create_excel_export(
         items = items[:max_items]
         return "\n".join([f"• {item}" for item in items if item])
 
-    def get_tier_style(tier):
+    def get_verdict_style(verdict):
+        """Стиль для светофора"""
         styles = {
-            'A': (COLORS['tier_a_bg'], COLORS['tier_a_text']),
-            'B': (COLORS['tier_b_bg'], COLORS['tier_b_text']),
-            'C': (COLORS['tier_c_bg'], COLORS['tier_c_text']),
+            'GREEN': (COLORS['green_bg'], COLORS['green_text'], '🟢'),
+            'YELLOW': (COLORS['yellow_bg'], COLORS['yellow_text'], '🟡'),
+            'RED': (COLORS['red_bg'], COLORS['red_text'], '🔴'),
         }
-        return styles.get(tier, styles['C'])
-
-    def get_rec_style(rec):
-        styles = {
-            'hire': (COLORS['hire_bg'], COLORS['hire_text'], 'НАНЯТЬ'),
-            'interview': (COLORS['interview_bg'], COLORS['interview_text'], 'ИНТЕРВЬЮ'),
-            'maybe': (COLORS['maybe_bg'], COLORS['maybe_text'], 'ВОЗМОЖНО'),
-            'reject': (COLORS['reject_bg'], COLORS['reject_text'], 'ОТКЛОНИТЬ'),
-        }
-        return styles.get(rec, styles.get('maybe', (COLORS['reject_bg'], COLORS['reject_text'], 'Н/Д')))
+        return styles.get(verdict, styles['YELLOW'])
 
     def apply_cell_style(cell, font=None, fill=None, alignment=None, border=None):
         if font:
@@ -153,155 +140,159 @@ def create_excel_export(
 
     # ========== ПОДСЧЁТ СТАТИСТИКИ ==========
     total = len(results)
-    tier_a = len([r for r, _ in results if get_raw(r, 'tier') == 'A'])
-    tier_b = len([r for r, _ in results if get_raw(r, 'tier') == 'B'])
-    tier_c = total - tier_a - tier_b
-
-    hire_count = len([r for r, _ in results if (get_raw(r, 'recommendation') or r.recommendation) == 'hire'])
-    interview_count = len([r for r, _ in results if (get_raw(r, 'recommendation') or r.recommendation) == 'interview'])
+    green_count = len([r for r, _ in results if get_raw(r, 'verdict') == 'GREEN'])
+    yellow_count = len([r for r, _ in results if get_raw(r, 'verdict') == 'YELLOW'])
+    red_count = total - green_count - yellow_count
 
     # ═══════════════════════════════════════════════════════════════
-    # ЛИСТ 1: КАНДИДАТЫ (Быстрое решение)
+    # ЛИСТ 1: КАНДИДАТЫ (Быстрое решение за 5 секунд)
     # ═══════════════════════════════════════════════════════════════
     ws = candidates_ws
 
-    # Ширины колонок
-    col_widths = {'A': 6, 'B': 8, 'C': 28, 'D': 14, 'E': 35, 'F': 25, 'G': 12}
+    # Ширины колонок: Светофор, Score, Имя, Опыт, Позиция, ЗП, Резюме, Ссылка
+    col_widths = {'A': 4, 'B': 8, 'C': 24, 'D': 8, 'E': 22, 'F': 12, 'G': 35, 'H': 10}
     for col, width in col_widths.items():
         ws.column_dimensions[col].width = width
 
-    # --- HEADER SECTION ---
-    # Row 1: Title
-    ws.merge_cells('A1:G1')
-    title_cell = ws.cell(row=1, column=1, value="TIMLY")
+    # --- HEADER ---
+    ws.merge_cells('A1:H1')
+    title_cell = ws.cell(row=1, column=1, value=f"TIMLY | {vacancy.title}")
     apply_cell_style(title_cell, font=FONTS['title'], alignment=center)
-    ws.row_dimensions[1].height = 35
+    ws.row_dimensions[1].height = 30
 
-    # Row 2: Vacancy name
-    ws.merge_cells('A2:G2')
-    vacancy_cell = ws.cell(row=2, column=1, value=f"Анализ кандидатов: {vacancy.title}")
-    apply_cell_style(vacancy_cell, font=FONTS['subtitle'], alignment=center, fill=light_fill)
-    ws.row_dimensions[2].height = 25
+    ws.merge_cells('A2:H2')
+    summary_text = f"🟢 Звонить: {green_count}  │  🟡 Рассмотреть: {yellow_count}  │  🔴 Отклонить: {red_count}  │  Всего: {total}"
+    ws.cell(row=2, column=1, value=summary_text)
+    apply_cell_style(ws.cell(row=2, column=1), font=FONTS['subtitle'], alignment=center, fill=light_fill)
+    ws.row_dimensions[2].height = 22
 
-    # Row 3: Executive Summary (key metrics)
-    ws.merge_cells('A3:G3')
-    summary_text = f"Всего: {total}  │  Tier A: {tier_a}  │  Tier B: {tier_b}  │  Tier C: {tier_c}  │  Дата: {datetime.now().strftime('%d.%m.%Y')}"
-    summary_cell = ws.cell(row=3, column=1, value=summary_text)
-    apply_cell_style(summary_cell, font=FONTS['body_small'], alignment=center, fill=light_fill)
-    ws.row_dimensions[3].height = 22
+    ws.row_dimensions[3].height = 8
 
-    # Row 4: Spacer
-    ws.row_dimensions[4].height = 10
-
-    # Row 5: Table headers
-    headers = ['№', 'TIER', 'КАНДИДАТ', 'РЕШЕНИЕ', 'КРАТКОЕ РЕЗЮМЕ', 'КОНТАКТЫ', 'ССЫЛКА']
+    # Table headers
+    headers = ['', 'SCORE', 'КАНДИДАТ', 'ОПЫТ', 'ПОЗИЦИЯ', 'ЗП ОЖ.', 'ВЕРДИКТ', 'ССЫЛКА']
     for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=5, column=col, value=header)
+        cell = ws.cell(row=4, column=col, value=header)
         apply_cell_style(cell, font=FONTS['header'], fill=header_fill, alignment=center, border=thin_border)
-    ws.row_dimensions[5].height = 30
-    ws.freeze_panes = 'A6'
+    ws.row_dimensions[4].height = 26
+    ws.freeze_panes = 'A5'
 
-    # --- DATA ROWS ---
-    # Сортировка по Tier: A первые, потом B, потом C
-    def tier_sort_key(item):
-        tier = get_raw(item[0], 'tier', 'C')
-        return {'A': 0, 'B': 1, 'C': 2}.get(tier, 2)
+    # Сортировка: GREEN первые, потом YELLOW, потом RED
+    def verdict_sort_key(item):
+        verdict = get_raw(item[0], 'verdict', 'RED')
+        return {'GREEN': 0, 'YELLOW': 1, 'RED': 2}.get(verdict, 2)
 
-    sorted_results = sorted(results, key=tier_sort_key)
+    sorted_results = sorted(results, key=verdict_sort_key)
 
     for idx, (analysis, application) in enumerate(sorted_results, 1):
-        row = idx + 5
-        tier = get_raw(analysis, 'tier', 'C')
-        tier_bg, tier_text = get_tier_style(tier)
-        rec = get_raw(analysis, 'recommendation') or analysis.recommendation or 'unknown'
-        rec_bg, rec_text, rec_label = get_rec_style(rec)
+        row = idx + 4
+        verdict = get_raw(analysis, 'verdict', 'YELLOW')
+        verdict_bg, verdict_text, verdict_emoji = get_verdict_style(verdict)
+        rank_score = get_raw(analysis, 'rank_score', 0) or getattr(analysis, 'rank_score', 0) or 0
 
-        # Alternating row colors
         row_fill = white_fill if idx % 2 == 1 else light_fill
 
-        # № (index)
-        cell = ws.cell(row=row, column=1, value=idx)
-        apply_cell_style(cell, font=FONTS['body_small'], fill=row_fill, alignment=center, border=thin_border)
+        # Светофор (эмодзи)
+        cell = ws.cell(row=row, column=1, value=verdict_emoji)
+        verdict_fill = PatternFill(start_color=verdict_bg, end_color=verdict_bg, fill_type="solid")
+        apply_cell_style(cell, font=Font(name='Calibri', size=14), fill=verdict_fill, alignment=center, border=thin_border)
 
-        # TIER (large, colored)
-        cell = ws.cell(row=row, column=2, value=tier)
-        tier_fill = PatternFill(start_color=tier_bg, end_color=tier_bg, fill_type="solid")
-        tier_font = Font(name='Calibri', size=16, bold=True, color=tier_text)
-        apply_cell_style(cell, font=tier_font, fill=tier_fill, alignment=center, border=thin_border)
+        # SCORE
+        cell = ws.cell(row=row, column=2, value=rank_score)
+        score_color = COLORS['success'] if rank_score >= 75 else (COLORS['warning'] if rank_score >= 50 else COLORS['danger'])
+        apply_cell_style(cell, font=Font(name='Calibri', size=12, bold=True, color=score_color),
+                        fill=row_fill, alignment=center, border=thin_border)
 
         # КАНДИДАТ
         name = application.candidate_name or "Не указано"
         cell = ws.cell(row=row, column=3, value=name)
         apply_cell_style(cell, font=FONTS['subheader'], fill=row_fill, alignment=left, border=thin_border)
 
-        # РЕШЕНИЕ (colored badge)
-        cell = ws.cell(row=row, column=4, value=rec_label)
-        rec_fill = PatternFill(start_color=rec_bg, end_color=rec_bg, fill_type="solid")
-        rec_font = Font(name='Calibri', size=10, bold=True, color=rec_text)
-        apply_cell_style(cell, font=rec_font, fill=rec_fill, alignment=center, border=thin_border)
+        # ОПЫТ (лет)
+        exp_summary = get_raw(analysis, 'experience_summary', {})
+        total_years = exp_summary.get('total_years', 0) if isinstance(exp_summary, dict) else 0
+        cell = ws.cell(row=row, column=4, value=f"{total_years} лет" if total_years else "—")
+        apply_cell_style(cell, font=FONTS['body'], fill=row_fill, alignment=center, border=thin_border)
 
-        # КРАТКОЕ РЕЗЮМЕ
-        summary = get_raw(analysis, 'summary') or get_raw(analysis, 'summary_one_line') or "—"
-        cell = ws.cell(row=row, column=5, value=summary)
-        apply_cell_style(cell, font=FONTS['body'], fill=row_fill, alignment=left, border=thin_border)
+        # ПОЗИЦИЯ
+        last_position = exp_summary.get('last_position', '') if isinstance(exp_summary, dict) else ''
+        last_company = exp_summary.get('last_company', '') if isinstance(exp_summary, dict) else ''
+        position_text = last_position[:25] + "..." if len(last_position) > 25 else last_position
+        if last_company:
+            position_text += f"\n@ {last_company[:20]}"
+        cell = ws.cell(row=row, column=5, value=position_text or "—")
+        apply_cell_style(cell, font=FONTS['body_small'], fill=row_fill, alignment=left, border=thin_border)
 
-        # КОНТАКТЫ
-        contacts = []
-        if application.candidate_phone:
-            contacts.append(application.candidate_phone)
-        if application.candidate_email:
-            contacts.append(application.candidate_email)
-        cell = ws.cell(row=row, column=6, value="\n".join(contacts) if contacts else "—")
+        # ЗП ОЖИДАНИЯ
+        salary_analysis = get_raw(analysis, 'salary_analysis', {})
+        candidate_salary = salary_analysis.get('candidate_net', 0) if isinstance(salary_analysis, dict) else 0
+        if candidate_salary:
+            salary_text = f"{candidate_salary // 1000}k"
+            salary_match = salary_analysis.get('match', 'unknown')
+            if salary_match == 'above':
+                salary_text += " ⬆️"
+            elif salary_match == 'below':
+                salary_text += " ⬇️"
+        else:
+            salary_text = "—"
+        cell = ws.cell(row=row, column=6, value=salary_text)
+        apply_cell_style(cell, font=FONTS['body'], fill=row_fill, alignment=center, border=thin_border)
+
+        # ВЕРДИКТ (одна строка)
+        verdict_reason = get_raw(analysis, 'verdict_reason', '') or get_raw(analysis, 'summary_for_recruiter', '') or ''
+        cell = ws.cell(row=row, column=7, value=verdict_reason[:60] + "..." if len(verdict_reason) > 60 else verdict_reason)
         apply_cell_style(cell, font=FONTS['body'], fill=row_fill, alignment=left, border=thin_border)
 
         # ССЫЛКА
         if application.resume_url:
-            cell = ws.cell(row=row, column=7, value="Резюме →")
+            cell = ws.cell(row=row, column=8, value="Открыть →")
             cell.hyperlink = application.resume_url
             apply_cell_style(cell, font=FONTS['link'], fill=row_fill, alignment=center, border=thin_border)
         else:
-            cell = ws.cell(row=row, column=7, value="—")
+            cell = ws.cell(row=row, column=8, value="—")
             apply_cell_style(cell, font=FONTS['body_small'], fill=row_fill, alignment=center, border=thin_border)
 
-        ws.row_dimensions[row].height = 45
+        ws.row_dimensions[row].height = 38
 
-    ws.auto_filter.ref = f"A5:G{len(results) + 5}"
+    ws.auto_filter.ref = f"A4:H{len(results) + 4}"
 
     # ═══════════════════════════════════════════════════════════════
     # ЛИСТ 2: ДЕТАЛИ (Подготовка к интервью)
     # ═══════════════════════════════════════════════════════════════
     ws = details_ws
 
-    # Ширины колонок
-    col_widths = {'A': 6, 'B': 22, 'C': 8, 'D': 8, 'E': 8, 'F': 8, 'G': 8, 'H': 40, 'I': 40, 'J': 40}
+    # Колонки: №, Кандидат, Светофор, Score, Навыки ✓, Навыки ?, Навыки ✗, Red Flags, Плюсы, Минусы, Вопросы
+    col_widths = {
+        'A': 4, 'B': 20, 'C': 4, 'D': 7,
+        'E': 30, 'F': 25, 'G': 20,
+        'H': 20, 'I': 30, 'J': 30, 'K': 35
+    }
     for col, width in col_widths.items():
         ws.column_dimensions[col].width = width
 
     # Header
-    ws.merge_cells('A1:J1')
-    title_cell = ws.cell(row=1, column=1, value=f"TIMLY | Детальный анализ: {vacancy.title}")
-    apply_cell_style(title_cell, font=FONTS['title'], alignment=center)
-    ws.row_dimensions[1].height = 35
+    ws.merge_cells('A1:K1')
+    ws.cell(row=1, column=1, value=f"TIMLY | Детальный анализ: {vacancy.title}")
+    apply_cell_style(ws.cell(row=1, column=1), font=FONTS['title'], alignment=center)
+    ws.row_dimensions[1].height = 30
 
-    ws.merge_cells('A2:J2')
-    ws.cell(row=2, column=1, value="Оценки по шкале 1-5 │ Вопросы помогут раскрыть gaps кандидата")
-    apply_cell_style(ws.cell(row=2, column=1), font=FONTS['body_small'], alignment=center, fill=light_fill)
-    ws.row_dimensions[2].height = 22
+    ws.row_dimensions[2].height = 8
 
-    ws.row_dimensions[3].height = 8
-
-    # Table headers
-    headers = ['№', 'КАНДИДАТ', 'TIER', 'РЕЛ.', 'ЭКСП.', 'ТРАЕК.', 'СТАБ.', 'ПЛЮСЫ', 'МИНУСЫ', 'ВОПРОСЫ ДЛЯ ИНТЕРВЬЮ']
+    # Table headers — БЕЗ АББРЕВИАТУР!
+    headers = ['№', 'КАНДИДАТ', '', 'SCORE',
+               'НАВЫКИ ✓', 'НАВЫКИ ?', 'НАВЫКИ ✗',
+               'RED FLAGS', 'ПЛЮСЫ', 'МИНУСЫ', 'ВОПРОСЫ ДЛЯ ИНТЕРВЬЮ']
     for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=4, column=col, value=header)
+        cell = ws.cell(row=3, column=col, value=header)
         apply_cell_style(cell, font=FONTS['header'], fill=header_fill, alignment=center, border=thin_border)
-    ws.row_dimensions[4].height = 28
-    ws.freeze_panes = 'A5'
+    ws.row_dimensions[3].height = 26
+    ws.freeze_panes = 'A4'
 
     for idx, (analysis, application) in enumerate(sorted_results, 1):
-        row = idx + 4
-        tier = get_raw(analysis, 'tier', 'C')
-        tier_bg, tier_text = get_tier_style(tier)
+        row = idx + 3
+        verdict = get_raw(analysis, 'verdict', 'YELLOW')
+        verdict_bg, verdict_text, verdict_emoji = get_verdict_style(verdict)
+        rank_score = get_raw(analysis, 'rank_score', 0) or getattr(analysis, 'rank_score', 0) or 0
+
         row_fill = white_fill if idx % 2 == 1 else light_fill
 
         # №
@@ -312,204 +303,160 @@ def create_excel_export(
         cell = ws.cell(row=row, column=2, value=application.candidate_name or "Не указано")
         apply_cell_style(cell, font=FONTS['subheader'], fill=row_fill, alignment=left, border=thin_border)
 
-        # Tier
-        cell = ws.cell(row=row, column=3, value=tier)
-        tier_fill = PatternFill(start_color=tier_bg, end_color=tier_bg, fill_type="solid")
-        tier_font = Font(name='Calibri', size=14, bold=True, color=tier_text)
-        apply_cell_style(cell, font=tier_font, fill=tier_fill, alignment=center, border=thin_border)
+        # Светофор
+        cell = ws.cell(row=row, column=3, value=verdict_emoji)
+        verdict_fill = PatternFill(start_color=verdict_bg, end_color=verdict_bg, fill_type="solid")
+        apply_cell_style(cell, font=Font(name='Calibri', size=12), fill=verdict_fill, alignment=center, border=thin_border)
 
-        # 4 оценки
-        scores = [
-            get_score(analysis, 'relevance'),
-            get_score(analysis, 'expertise'),
-            get_score(analysis, 'trajectory'),
-            get_score(analysis, 'stability'),
-        ]
-        for col_idx, score in enumerate(scores, 4):
-            cell = ws.cell(row=row, column=col_idx, value=score if score else "—")
-            score_color = COLORS['success'] if score and score >= 4 else (COLORS['warning'] if score and score == 3 else COLORS['muted'])
-            score_font = Font(name='Calibri', size=12, bold=True, color=score_color)
-            apply_cell_style(cell, font=score_font, fill=row_fill, alignment=center, border=thin_border)
+        # Score
+        cell = ws.cell(row=row, column=4, value=rank_score)
+        score_color = COLORS['success'] if rank_score >= 75 else (COLORS['warning'] if rank_score >= 50 else COLORS['danger'])
+        apply_cell_style(cell, font=Font(name='Calibri', size=11, bold=True, color=score_color),
+                        fill=row_fill, alignment=center, border=thin_border)
+
+        # Навыки анализ
+        skills_analysis = get_raw(analysis, 'skills_analysis', {})
+
+        # Навыки ✓ (verified)
+        verified = skills_analysis.get('verified', []) if isinstance(skills_analysis, dict) else []
+        cell = ws.cell(row=row, column=5, value=format_bullets(verified, 4))
+        apply_cell_style(cell, font=Font(name='Calibri', size=9, color=COLORS['success']),
+                        fill=row_fill, alignment=left_top, border=thin_border)
+
+        # Навыки ? (unverified)
+        unverified = skills_analysis.get('unverified', []) if isinstance(skills_analysis, dict) else []
+        cell = ws.cell(row=row, column=6, value=format_bullets(unverified, 3))
+        apply_cell_style(cell, font=Font(name='Calibri', size=9, color=COLORS['warning']),
+                        fill=row_fill, alignment=left_top, border=thin_border)
+
+        # Навыки ✗ (missing)
+        missing = skills_analysis.get('missing', []) if isinstance(skills_analysis, dict) else []
+        cell = ws.cell(row=row, column=7, value=format_bullets(missing, 3))
+        apply_cell_style(cell, font=Font(name='Calibri', size=9, color=COLORS['danger']),
+                        fill=row_fill, alignment=left_top, border=thin_border)
+
+        # Red Flags
+        red_flags = get_raw(analysis, 'red_flags', [])
+        yellow_flags = get_raw(analysis, 'yellow_flags', [])
+        all_flags = (red_flags or []) + (yellow_flags or [])
+        cell = ws.cell(row=row, column=8, value=format_bullets(all_flags, 3) if all_flags else "—")
+        flag_font = Font(name='Calibri', size=9, color=COLORS['danger']) if red_flags else Font(name='Calibri', size=9, color=COLORS['warning'])
+        apply_cell_style(cell, font=flag_font, fill=row_fill, alignment=left_top, border=thin_border)
 
         # Плюсы
-        pros = get_raw(analysis, 'pros') or analysis.strengths or []
-        cell = ws.cell(row=row, column=8, value=format_bullets(pros, 4))
+        pros = get_raw(analysis, 'pros', []) or getattr(analysis, 'strengths', []) or []
+        cell = ws.cell(row=row, column=9, value=format_bullets(pros, 4))
         apply_cell_style(cell, font=FONTS['body'], fill=row_fill, alignment=left_top, border=thin_border)
 
         # Минусы
-        cons = get_raw(analysis, 'cons') or analysis.weaknesses or []
-        cell = ws.cell(row=row, column=9, value=format_bullets(cons, 4))
+        cons = get_raw(analysis, 'cons', []) or getattr(analysis, 'weaknesses', []) or []
+        cell = ws.cell(row=row, column=10, value=format_bullets(cons, 4))
         apply_cell_style(cell, font=FONTS['body'], fill=row_fill, alignment=left_top, border=thin_border)
 
         # Вопросы для интервью
         questions = get_raw(analysis, 'interview_questions', [])
-        cell = ws.cell(row=row, column=10, value=format_bullets(questions, 3))
-        questions_font = Font(name='Calibri', size=11, color=COLORS['primary'])
-        apply_cell_style(cell, font=questions_font, fill=row_fill, alignment=left_top, border=thin_border)
+        cell = ws.cell(row=row, column=11, value=format_bullets(questions, 3))
+        apply_cell_style(cell, font=Font(name='Calibri', size=10, color=COLORS['primary']),
+                        fill=row_fill, alignment=left_top, border=thin_border)
 
-        ws.row_dimensions[row].height = 85
+        ws.row_dimensions[row].height = 90
 
-    ws.auto_filter.ref = f"A4:J{len(results) + 4}"
+    ws.auto_filter.ref = f"A3:K{len(results) + 3}"
 
     # ═══════════════════════════════════════════════════════════════
-    # ЛИСТ 3: ДАШБОРД (Для руководителя)
+    # ЛИСТ 3: СВОДКА (3 цифры для руководителя)
     # ═══════════════════════════════════════════════════════════════
     ws = dashboard_ws
 
-    for col in range(1, 7):
-        ws.column_dimensions[get_column_letter(col)].width = 18
+    # "Мне не нужны 15 графиков. Мне нужно 3 цифры."
+    for col in range(1, 5):
+        ws.column_dimensions[get_column_letter(col)].width = 20
 
     # Header
-    ws.merge_cells('A1:F1')
-    title_cell = ws.cell(row=1, column=1, value="TIMLY | ДАШБОРД")
-    apply_cell_style(title_cell, font=FONTS['title'], alignment=center)
-    ws.row_dimensions[1].height = 40
+    ws.merge_cells('A1:D1')
+    ws.cell(row=1, column=1, value=f"TIMLY | {vacancy.title}")
+    apply_cell_style(ws.cell(row=1, column=1), font=FONTS['title'], alignment=center)
+    ws.row_dimensions[1].height = 35
 
-    ws.merge_cells('A2:F2')
-    ws.cell(row=2, column=1, value=f"Вакансия: {vacancy.title} │ {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    ws.merge_cells('A2:D2')
+    ws.cell(row=2, column=1, value=f"Дата: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
     apply_cell_style(ws.cell(row=2, column=1), font=FONTS['subtitle'], alignment=center, fill=light_fill)
-    ws.row_dimensions[2].height = 28
+    ws.row_dimensions[2].height = 25
 
-    ws.row_dimensions[3].height = 15
+    ws.row_dimensions[3].height = 20
 
-    # --- METRIC CARDS ---
-    def create_metric_card(ws, start_row, col, value, label, color=None):
-        """Создаёт карточку метрики"""
-        # Value cell
-        cell = ws.cell(row=start_row, column=col, value=value)
-        value_font = Font(name='Calibri', size=32, bold=True, color=color or COLORS['primary'])
-        apply_cell_style(cell, font=value_font, alignment=center, fill=white_fill, border=thin_border)
+    # === 3 ГЛАВНЫЕ МЕТРИКИ ===
+    ws.row_dimensions[4].height = 70
+    ws.row_dimensions[5].height = 30
 
-        # Label cell
-        cell = ws.cell(row=start_row + 1, column=col, value=label)
-        apply_cell_style(cell, font=FONTS['metric_label'], alignment=center, fill=light_fill, border=thin_border)
+    # 🟢 Звонить сегодня
+    cell = ws.cell(row=4, column=1, value=green_count)
+    apply_cell_style(cell, font=Font(name='Calibri', size=48, bold=True, color=COLORS['success']),
+                    alignment=center, fill=white_fill, border=thin_border)
+    cell = ws.cell(row=5, column=1, value="🟢 ЗВОНИТЬ")
+    apply_cell_style(cell, font=Font(name='Calibri', size=12, bold=True, color=COLORS['success']),
+                    alignment=center, fill=PatternFill(start_color=COLORS['green_bg'], fill_type="solid"), border=thin_border)
 
-    # Row heights for metric cards
-    ws.row_dimensions[4].height = 55
-    ws.row_dimensions[5].height = 28
+    # 🟡 Рассмотреть
+    cell = ws.cell(row=4, column=2, value=yellow_count)
+    apply_cell_style(cell, font=Font(name='Calibri', size=48, bold=True, color=COLORS['warning']),
+                    alignment=center, fill=white_fill, border=thin_border)
+    cell = ws.cell(row=5, column=2, value="🟡 РАССМОТРЕТЬ")
+    apply_cell_style(cell, font=Font(name='Calibri', size=12, bold=True, color=COLORS['warning']),
+                    alignment=center, fill=PatternFill(start_color=COLORS['yellow_bg'], fill_type="solid"), border=thin_border)
 
-    # Key metrics row 1
-    create_metric_card(ws, 4, 1, total, "ВСЕГО", COLORS['primary'])
-    create_metric_card(ws, 4, 2, tier_a, "TIER A", COLORS['tier_a_text'])
-    create_metric_card(ws, 4, 3, tier_b, "TIER B", COLORS['tier_b_text'])
-    create_metric_card(ws, 4, 4, tier_c, "TIER C", COLORS['tier_c_text'])
-    create_metric_card(ws, 4, 5, hire_count, "НАНЯТЬ", COLORS['success'])
-    create_metric_card(ws, 4, 6, interview_count, "ИНТЕРВЬЮ", COLORS['warning'])
+    # 🔴 Отклонить
+    cell = ws.cell(row=4, column=3, value=red_count)
+    apply_cell_style(cell, font=Font(name='Calibri', size=48, bold=True, color=COLORS['danger']),
+                    alignment=center, fill=white_fill, border=thin_border)
+    cell = ws.cell(row=5, column=3, value="🔴 ОТКЛОНИТЬ")
+    apply_cell_style(cell, font=Font(name='Calibri', size=12, bold=True, color=COLORS['danger']),
+                    alignment=center, fill=PatternFill(start_color=COLORS['red_bg'], fill_type="solid"), border=thin_border)
 
-    # Spacer
-    ws.row_dimensions[6].height = 20
+    # ВСЕГО
+    cell = ws.cell(row=4, column=4, value=total)
+    apply_cell_style(cell, font=Font(name='Calibri', size=48, bold=True, color=COLORS['primary']),
+                    alignment=center, fill=white_fill, border=thin_border)
+    cell = ws.cell(row=5, column=4, value="ВСЕГО")
+    apply_cell_style(cell, font=Font(name='Calibri', size=12, bold=True, color=COLORS['muted']),
+                    alignment=center, fill=light_fill, border=thin_border)
 
-    # --- TIER DISTRIBUTION ---
-    ws.merge_cells('A7:F7')
-    cell = ws.cell(row=7, column=1, value="РАСПРЕДЕЛЕНИЕ ПО TIER")
-    apply_cell_style(cell, font=FONTS['subheader'], alignment=center, fill=header_fill)
-    cell.font = FONTS['header']
+    ws.row_dimensions[6].height = 25
+
+    # === ТОП-5 КАНДИДАТОВ (Зелёные) ===
+    ws.merge_cells('A7:D7')
+    cell = ws.cell(row=7, column=1, value="🟢 ТОП КАНДИДАТЫ (звонить первыми)")
+    apply_cell_style(cell, font=FONTS['header'], alignment=center, fill=header_fill)
     ws.row_dimensions[7].height = 28
 
-    # Visual bar representation
-    ws.row_dimensions[8].height = 35
+    green_candidates = [r for r in sorted_results if get_raw(r[0], 'verdict') == 'GREEN'][:5]
 
-    # Calculate percentages
-    pct_a = round(tier_a / total * 100) if total > 0 else 0
-    pct_b = round(tier_b / total * 100) if total > 0 else 0
-    pct_c = 100 - pct_a - pct_b
-
-    # Tier A bar
-    ws.merge_cells('A8:B8')
-    cell = ws.cell(row=8, column=1, value=f"A: {tier_a} ({pct_a}%)")
-    tier_a_fill = PatternFill(start_color=COLORS['tier_a_bg'], end_color=COLORS['tier_a_bg'], fill_type="solid")
-    apply_cell_style(cell, font=Font(name='Calibri', size=14, bold=True, color=COLORS['tier_a_text']),
-                     fill=tier_a_fill, alignment=center, border=thin_border)
-
-    # Tier B bar
-    ws.merge_cells('C8:D8')
-    cell = ws.cell(row=8, column=3, value=f"B: {tier_b} ({pct_b}%)")
-    tier_b_fill = PatternFill(start_color=COLORS['tier_b_bg'], end_color=COLORS['tier_b_bg'], fill_type="solid")
-    apply_cell_style(cell, font=Font(name='Calibri', size=14, bold=True, color=COLORS['tier_b_text']),
-                     fill=tier_b_fill, alignment=center, border=thin_border)
-
-    # Tier C bar
-    ws.merge_cells('E8:F8')
-    cell = ws.cell(row=8, column=5, value=f"C: {tier_c} ({pct_c}%)")
-    tier_c_fill = PatternFill(start_color=COLORS['tier_c_bg'], end_color=COLORS['tier_c_bg'], fill_type="solid")
-    apply_cell_style(cell, font=Font(name='Calibri', size=14, bold=True, color=COLORS['tier_c_text']),
-                     fill=tier_c_fill, alignment=center, border=thin_border)
-
-    # Spacer
-    ws.row_dimensions[9].height = 20
-
-    # --- AVERAGE SCORES ---
-    ws.merge_cells('A10:F10')
-    cell = ws.cell(row=10, column=1, value="СРЕДНИЕ ОЦЕНКИ (шкала 1-5)")
-    apply_cell_style(cell, font=FONTS['header'], alignment=center, fill=header_fill)
-    ws.row_dimensions[10].height = 28
-
-    def avg_score(score_name):
-        scores = [get_score(r, score_name) for r, _ in results if get_score(r, score_name)]
-        return round(sum(scores) / len(scores), 1) if scores else 0
-
-    avg_scores = [
-        ('Релевантность', avg_score('relevance')),
-        ('Экспертиза', avg_score('expertise')),
-        ('Траектория', avg_score('trajectory')),
-        ('Стабильность', avg_score('stability')),
-    ]
-
-    ws.row_dimensions[11].height = 45
-    ws.row_dimensions[12].height = 25
-
-    for col, (label, value) in enumerate(avg_scores, 1):
-        # Value
-        cell = ws.cell(row=11, column=col, value=value)
-        score_color = COLORS['success'] if value >= 4 else (COLORS['warning'] if value >= 3 else COLORS['muted'])
-        apply_cell_style(cell, font=Font(name='Calibri', size=24, bold=True, color=score_color),
-                         alignment=center, fill=white_fill, border=thin_border)
-        # Label
-        cell = ws.cell(row=12, column=col, value=label)
-        apply_cell_style(cell, font=FONTS['metric_label'], alignment=center, fill=light_fill, border=thin_border)
-
-    # Empty columns 5-6
-    ws.cell(row=11, column=5, value="")
-    ws.cell(row=11, column=6, value="")
-    ws.cell(row=12, column=5, value="")
-    ws.cell(row=12, column=6, value="")
-
-    # Spacer
-    ws.row_dimensions[13].height = 20
-
-    # --- TOP CANDIDATES ---
-    ws.merge_cells('A14:F14')
-    cell = ws.cell(row=14, column=1, value="ТОП-5 КАНДИДАТОВ (TIER A)")
-    apply_cell_style(cell, font=FONTS['header'], alignment=center, fill=header_fill)
-    ws.row_dimensions[14].height = 28
-
-    top_candidates = [r for r in sorted_results if get_raw(r[0], 'tier') == 'A'][:5]
-
-    if top_candidates:
-        for idx, (analysis, application) in enumerate(top_candidates, 1):
-            row = 14 + idx
-            ws.merge_cells(f'A{row}:C{row}')
+    if green_candidates:
+        for idx, (analysis, application) in enumerate(green_candidates, 1):
+            row_num = 7 + idx
+            ws.merge_cells(f'A{row_num}:B{row_num}')
 
             name = application.candidate_name or "Не указано"
-            cell = ws.cell(row=row, column=1, value=f"{idx}. {name}")
+            score = get_raw(analysis, 'rank_score', 0) or getattr(analysis, 'rank_score', 0)
+            cell = ws.cell(row=row_num, column=1, value=f"{idx}. {name} (Score: {score})")
             apply_cell_style(cell, font=FONTS['subheader'], alignment=left, fill=white_fill, border=thin_border)
 
-            ws.merge_cells(f'D{row}:F{row}')
-            summary = get_raw(analysis, 'summary') or "—"
-            cell = ws.cell(row=row, column=4, value=summary[:60] + "..." if len(summary) > 60 else summary)
+            ws.merge_cells(f'C{row_num}:D{row_num}')
+            verdict_reason = get_raw(analysis, 'verdict_reason', '') or get_raw(analysis, 'summary_for_recruiter', '')
+            cell = ws.cell(row=row_num, column=3, value=verdict_reason[:50] + "..." if len(verdict_reason) > 50 else verdict_reason)
             apply_cell_style(cell, font=FONTS['body_small'], alignment=left, fill=light_fill, border=thin_border)
 
-            ws.row_dimensions[row].height = 28
+            ws.row_dimensions[row_num].height = 26
     else:
-        ws.merge_cells('A15:F15')
-        cell = ws.cell(row=15, column=1, value="Нет кандидатов Tier A")
-        apply_cell_style(cell, font=FONTS['body_small'], alignment=center, fill=light_fill)
-        ws.row_dimensions[15].height = 28
+        ws.merge_cells('A8:D8')
+        cell = ws.cell(row=8, column=1, value="Нет зелёных кандидатов. Рассмотрите жёлтых.")
+        apply_cell_style(cell, font=FONTS['body'], alignment=center, fill=light_fill)
+        ws.row_dimensions[8].height = 26
 
-    # --- FOOTER ---
-    footer_row = 14 + max(len(top_candidates), 1) + 2
-    ws.merge_cells(f'A{footer_row}:F{footer_row}')
-    cell = ws.cell(row=footer_row, column=1, value="Создано с помощью TIMLY — AI-платформа для скрининга резюме │ timly-hr.ru")
+    # Footer
+    footer_row = 7 + max(len(green_candidates), 1) + 2
+    ws.merge_cells(f'A{footer_row}:D{footer_row}')
+    cell = ws.cell(row=footer_row, column=1, value="TIMLY — AI-скрининг резюме │ timly-hr.ru")
     apply_cell_style(cell, font=Font(name='Calibri', size=9, italic=True, color=COLORS['muted']), alignment=center)
 
     # ========== СОХРАНЕНИЕ ==========
