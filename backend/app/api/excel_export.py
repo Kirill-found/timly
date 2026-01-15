@@ -1,10 +1,10 @@
 """
-Excel экспорт v6.0 — Premium HR Design
-Принципы: Luxury/Refined + Industrial/Utilitarian
+Excel экспорт v7.0 — HR отчёт
+Полностью на русском языке
 
 2 вкладки:
-- Summary: Shortlist за 30 секунд
-- Deep Dive: Полный анализ под капотом
+- Сводка: Быстрый shortlist за 30 секунд
+- Детальный анализ: Полная информация
 """
 from fastapi.responses import FileResponse
 from typing import Optional
@@ -22,8 +22,8 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
 
-    summary_ws = wb.create_sheet("Summary", 0)
-    deep_ws = wb.create_sheet("Deep Dive", 1)
+    summary_ws = wb.create_sheet("Сводка", 0)
+    deep_ws = wb.create_sheet("Детальный анализ", 1)
 
     # ══════════════════════════════════════════════════════════════
     # DESIGN SYSTEM — Refined, not generic
@@ -126,8 +126,8 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
     # ══════════════════════════════════════════════════════════════
     ws = summary_ws
 
-    # Column widths
-    widths = {'A': 5, 'B': 25, 'C': 20, 'D': 8, 'E': 12, 'F': 35, 'G': 30, 'H': 15}
+    # Column widths (подогнаны под русский текст)
+    widths = {'A': 5, 'B': 25, 'C': 28, 'D': 7, 'E': 14, 'F': 40, 'G': 35, 'H': 12}
     for col, w in widths.items():
         ws.column_dimensions[col].width = w
 
@@ -147,8 +147,8 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
     # Spacer
     ws.row_dimensions[3].height = 6
 
-    # Headers: Verdict | Name | Role | Score | Salary | Key Pro | Key Risk | Status
-    headers = ['', 'NAME', 'ROLE', 'SCORE', 'SALARY', 'KEY PRO', 'KEY RISK', 'STATUS']
+    # Headers: Verdict | Имя | Должность | Балл | Зарплата | Плюс | Риск | Статус
+    headers = ['', 'ИМЯ', 'ДОЛЖНОСТЬ', 'БАЛЛ', 'ЗАРПЛАТА', 'КЛЮЧЕВОЙ ПЛЮС', 'КЛЮЧЕВОЙ РИСК', 'СТАТУС']
     for i, h in enumerate(headers, 1):
         c = ws.cell(row=4, column=i, value=h)
         cell_style(c, font=FONT['header'], fill=FILL['header'], align=ALIGN['center'], border=BORDER)
@@ -176,24 +176,33 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
         else:
             cell_style(c, font=FONT['name'], fill=row_fill, align=ALIGN['left'], border=BORDER)
 
-        # Role
-        exp = raw(analysis, 'experience_summary', {}) or {}
-        role = exp.get('last_position', '') if isinstance(exp, dict) else ''
-        company = exp.get('best_company') or exp.get('last_company', '')
-        role_text = f"{role[:22]}..." if len(role) > 22 else role
-        if company:
-            role_text += f"\n@ {company[:18]}"
-        c = ws.cell(row=row, column=3, value=role_text or "—")
-        cell_style(c, font=FONT['small'], fill=row_fill, align=ALIGN['left'], border=BORDER)
+        # Должность — берём из resume_data кандидата
+        resume = app.resume_data or {}
+        if isinstance(resume, str):
+            import json
+            try:
+                resume = json.loads(resume)
+            except:
+                resume = {}
+        candidate_title = resume.get('title', '') or ''
+        if len(candidate_title) > 30:
+            candidate_title = candidate_title[:28] + "..."
+        c = ws.cell(row=row, column=3, value=candidate_title or "—")
+        cell_style(c, font=FONT['body'], fill=row_fill, align=ALIGN['left'], border=BORDER)
 
         # Score
         c = ws.cell(row=row, column=4, value=score)
         score_color = PALETTE['green'] if score >= 75 else (PALETTE['amber'] if score >= 50 else PALETTE['coral'])
         cell_style(c, font=Font(name='Segoe UI', size=12, bold=True, color=score_color), fill=row_fill, align=ALIGN['center'], border=BORDER)
 
-        # Salary
+        # Зарплата — ожидания кандидата vs бюджет
         sal = raw(analysis, 'salary_fit', '—')
-        sal_text = {'в бюджете': '✓ В бюджете', 'выше бюджета': '↑ Дорого', 'ниже рынка': '↓ Дёшево'}.get(sal, sal)
+        sal_map = {
+            'в бюджете': 'Соответствует',
+            'выше бюджета': 'Выше бюджета',
+            'ниже рынка': 'Ниже бюджета'
+        }
+        sal_text = sal_map.get(sal, sal if sal != '—' else '—')
         c = ws.cell(row=row, column=5, value=sal_text)
         cell_style(c, font=FONT['body'], fill=row_fill, align=ALIGN['center'], border=BORDER)
 
@@ -243,14 +252,14 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
 
     # Title
     ws.merge_cells('A1:K1')
-    c = ws.cell(row=1, column=1, value=f"Deep Dive: {vacancy.title}")
+    c = ws.cell(row=1, column=1, value=f"Детальный анализ: {vacancy.title}")
     cell_style(c, font=FONT['title'], align=ALIGN['center'])
     ws.row_dimensions[1].height = 32
 
     ws.row_dimensions[2].height = 6
 
-    # Headers
-    headers = ['#', 'NAME', '', 'SCORE', 'PAIN POINTS', 'VERIFIED SKILLS', 'UNVERIFIED', 'MISSING', 'PROS', 'CONS', 'INTERVIEW Q']
+    # Headers (все на русском)
+    headers = ['№', 'ИМЯ', '', 'БАЛЛ', 'ВЫЗОВЫ ВАКАНСИИ', 'ПОДТВЕРЖДЁННЫЕ', 'КОСВЕННЫЕ', 'ОТСУТСТВУЮТ', 'ПЛЮСЫ', 'МИНУСЫ', 'ВОПРОСЫ']
     for i, h in enumerate(headers, 1):
         c = ws.cell(row=3, column=i, value=h)
         cell_style(c, font=FONT['header'], fill=FILL['header'], align=ALIGN['center'], border=BORDER)
