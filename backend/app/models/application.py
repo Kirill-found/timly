@@ -128,7 +128,7 @@ class AnalysisResult(Base):
         return f"<AnalysisResult(id={self.id}, score={self.score}, recommendation={self.recommendation})>"
 
     def to_dict(self):
-        """Сериализация для API"""
+        """Сериализация для API (v2 - с композитным скорингом)"""
         return {
             "id": str(self.id),
             "application_id": str(self.application_id),
@@ -146,6 +146,8 @@ class AnalysisResult(Base):
             "ai_cost_rub": float(self.ai_cost_rub) if self.ai_cost_rub else None,
             "processing_time_ms": self.processing_time_ms,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            # v2: Полный ответ AI с tier, scores, confidence, interview_questions
+            "raw_result": self.raw_result,
         }
 
 

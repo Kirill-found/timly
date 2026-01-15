@@ -32,19 +32,19 @@ class AnalysisRequest(BaseModel):
 
 
 class AnalysisResult(BaseModel):
-    """Результат AI анализа резюме"""
+    """Результат AI анализа резюме (v2 - композитный скоринг)"""
     id: str = Field(..., description="UUID результата анализа")
     application_id: str = Field(..., description="UUID отклика")
 
     # Основные оценки (0-100)
-    score: Optional[int] = Field(None, ge=0, le=100, description="Общая оценка кандидата")
+    score: Optional[int] = Field(None, ge=0, le=100, description="Общая оценка кандидата (rank_score)")
     skills_match: Optional[int] = Field(None, ge=0, le=100, description="Соответствие навыков")
     experience_match: Optional[int] = Field(None, ge=0, le=100, description="Соответствие опыта")
     salary_match: Optional[str] = Field(None, description="Соответствие зарплаты")
 
     # Детальный анализ
-    strengths: List[str] = Field(default_factory=list, description="Сильные стороны кандидата")
-    weaknesses: List[str] = Field(default_factory=list, description="Слабые стороны")
+    strengths: List[str] = Field(default_factory=list, description="Сильные стороны / плюсы")
+    weaknesses: List[str] = Field(default_factory=list, description="Слабые стороны / минусы")
     red_flags: List[str] = Field(default_factory=list, description="Красные флаги")
     recommendation: Optional[str] = Field(None, description="Рекомендация: hire/interview/maybe/reject")
     reasoning: Optional[str] = Field(None, description="Обоснование оценки")
@@ -55,6 +55,9 @@ class AnalysisResult(BaseModel):
     ai_cost_cents: Optional[int] = Field(None, description="Стоимость в копейках")
     processing_time_ms: Optional[int] = Field(None, description="Время обработки в мс")
     created_at: Optional[datetime] = Field(None, description="Время создания анализа")
+
+    # === НОВОЕ v2: Полный ответ AI с композитным скорингом ===
+    raw_result: Optional[Dict[str, Any]] = Field(None, description="Полный ответ AI (tier, scores, confidence, interview_questions, etc.)")
 
     class Config:
         schema_extra = {

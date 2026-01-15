@@ -73,24 +73,65 @@ export interface Application {
   created_at?: string;
 }
 
-// Результаты AI анализа
+// Композитные оценки AI (v2)
+export interface AIScores {
+  relevance: number;   // Релевантность позиции (1-5)
+  expertise: number;   // Экспертиза в навыках (1-5)
+  trajectory: number;  // Карьерная траектория (1-5)
+  stability: number;   // Стабильность и риски (1-5)
+}
+
+// Анализ навыков
+export interface SkillsAnalysis {
+  matching: string[];     // Совпадающие навыки
+  missing: string[];      // Недостающие навыки
+  match_percent: number;  // Процент совпадения (0-100)
+}
+
+// Уровень уверенности AI в оценке
+export type ConfidenceLevel = 'high' | 'medium' | 'low';
+
+// Tier кандидата (A - лучшие, B - хорошие, C - слабые)
+export type CandidateTier = 'A' | 'B' | 'C';
+
+// Результаты AI анализа (v2 - композитный скоринг)
 export interface AnalysisResult {
   id: string;
   application_id: string;
-  score?: number;
-  skills_match?: number;
-  experience_match?: number;
+
+  // === НОВЫЕ ПОЛЯ v2 ===
+  tier?: CandidateTier;                    // Tier A/B/C
+  scores?: AIScores;                       // 4 оценки по 1-5
+  confidence?: ConfidenceLevel;            // Уверенность AI
+  skills_analysis?: SkillsAnalysis;        // Детальный анализ навыков
+  pros?: string[];                         // Плюсы (конкретные факты)
+  cons?: string[];                         // Минусы (конкретные факты)
+  green_flags?: string[];                  // Зелёные флаги (бонусы)
+  interview_questions?: string[];          // Вопросы для интервью
+  summary?: string;                        // Короткое резюме (10-15 слов)
+
+  // === Обратная совместимость (v1) ===
+  score?: number;                          // rank_score 0-100
+  skills_match?: number;                   // % совпадения навыков
+  experience_match?: number;               // % совпадения опыта
   salary_match?: 'match' | 'higher' | 'lower' | 'unknown';
-  strengths: string[];
-  weaknesses: string[];
+  strengths: string[];                     // = pros
+  weaknesses: string[];                    // = cons
   red_flags: string[];
   recommendation?: 'hire' | 'interview' | 'maybe' | 'reject';
-  reasoning?: string;
+  reasoning?: string;                      // Длинное обоснование
+
+  // Метаданные AI
   ai_model?: string;
   ai_tokens_used?: number;
   ai_cost_cents?: number;
   processing_time_ms?: number;
+
+  // Полный ответ AI (для отладки)
+  raw_result?: Record<string, any>;
+
   created_at?: string;
+
   // Данные кандидата из связанного отклика
   application?: {
     candidate_name?: string;
@@ -99,13 +140,13 @@ export interface AnalysisResult {
     resume_url?: string;
     created_at?: string;
   };
+
   // Альтернативные поля для совместимости с разными API ответами
   candidate_name?: string;
   candidate_email?: string;
   candidate_phone?: string;
   resume_url?: string;
   analyzed_at?: string;
-  summary?: string;
 }
 
 // Статистика анализа
@@ -143,6 +184,7 @@ export interface AnalysisFilter {
   vacancy_id?: string;
   min_score?: number;
   max_score?: number;
+  tier?: CandidateTier;  // Фильтр по Tier A/B/C
   recommendation?: 'hire' | 'interview' | 'maybe' | 'reject';
   has_red_flags?: boolean;
   analyzed_after?: string;

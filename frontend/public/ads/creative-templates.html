@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timly - Рекламные креативы РСЯ</title>
+    <link href="https://api.fontshare.com/v2/css?f[]=clash-display@700,600&f[]=satoshi@500,700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Satoshi', sans-serif;
+            background: #e5e5e5;
+            padding: 40px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 40px;
+            justify-content: center;
+        }
+
+        h1 {
+            width: 100%;
+            text-align: center;
+            font-family: 'Clash Display', sans-serif;
+            color: #1e3a5f;
+            margin-bottom: 20px;
+        }
+
+        .creative-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .creative-label {
+            font-weight: 700;
+            color: #1e3a5f;
+            font-size: 14px;
+        }
+
+        .creative {
+            width: 450px;
+            height: 450px;
+            border-radius: 0;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        /* Креатив 1: Проблема-Решение */
+        .creative-1 {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d4a6f 100%);
+            display: flex;
+            flex-direction: column;
+            padding: 32px;
+        }
+
+        .creative-1 .problem {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .creative-1 .problem-label {
+            color: #fca5a5;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .creative-1 .problem-text {
+            color: white;
+            font-family: 'Clash Display', sans-serif;
+            font-size: 22px;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .creative-1 .arrow {
+            text-align: center;
+            color: #f97316;
+            font-size: 28px;
+            margin: 8px 0;
+        }
+
+        .creative-1 .solution {
+            background: rgba(249, 115, 22, 0.2);
+            border: 2px solid #f97316;
+            border-radius: 16px;
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .creative-1 .solution-label {
+            color: #f97316;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .creative-1 .solution-text {
+            color: white;
+            font-family: 'Clash Display', sans-serif;
+            font-size: 22px;
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 16px;
+        }
+
+        .creative-1 .stats {
+            display: flex;
+            gap: 16px;
+            margin-top: auto;
+        }
+
+        .creative-1 .stat {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 12px 16px;
+            flex: 1;
+            text-align: center;
+        }
+
+        .creative-1 .stat-value {
+            color: #f97316;
+            font-family: 'Clash Display', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .creative-1 .stat-label {
+            color: rgba(255,255,255,0.7);
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        .creative-1 .cta {
+            background: #f97316;
+            color: white;
+            font-family: 'Clash Display', sans-serif;
+            font-weight: 600;
+            font-size: 16px;
+            padding: 14px 24px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        /* Креатив 2: Интерфейс с оценкой */
+        .creative-2 {
+            background: linear-gradient(180deg, #faf8f5 0%, #f5f0e8 100%);
+            display: flex;
+            flex-direction: column;
+            padding: 28px;
+        }
+
+        .creative-2 .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .creative-2 .logo {
+            width: 40px;
+            height: 40px;
+            background: #1e3a5f;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .creative-2 .logo svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .creative-2 .brand {
+            font-family: 'Clash Display', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e3a5f;
+        }
+
+        .creative-2 .headline {
+            font-family: 'Clash Display', sans-serif;
+            font-size: 26px;
+            font-weight: 700;
+            color: #1e3a5f;
+            line-height: 1.2;
+            margin-bottom: 20px;
+        }
+
+        .creative-2 .headline span {
+            color: #f97316;
+        }
+
+        .creative-2 .interface-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(30, 58, 95, 0.1);
+            flex: 1;
+        }
+
+        .creative-2 .candidate-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .creative-2 .candidate-row:last-child {
+            border-bottom: none;
+        }
+
+        .creative-2 .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            margin-right: 12px;
+        }
+
+        .creative-2 .candidate-info {
+            flex: 1;
+        }
+
+        .creative-2 .candidate-name {
+            font-weight: 600;
+            color: #1e3a5f;
+            font-size: 14px;
+        }
+
+        .creative-2 .candidate-role {
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .creative-2 .score {
+            font-family: 'Clash Display', sans-serif;
+            font-weight: 700;
+            font-size: 18px;
+            padding: 6px 12px;
+            border-radius: 8px;
+        }
+
+        .creative-2 .score.high {
+            background: rgba(5, 150, 105, 0.1);
+            color: #059669;
+        }
+
+        .creative-2 .score.medium {
+            background: rgba(249, 115, 22, 0.1);
+            color: #f97316;
+        }
+
+        .creative-2 .score.low {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .creative-2 .cta {
+            background: #f97316;
+            color: white;
+            font-family: 'Clash Display', sans-serif;
+            font-weight: 600;
+            font-size: 15px;
+            padding: 14px 24px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 16px;
+        }
+
+        /* Креатив 3: Статистика и цифры */
+        .creative-3 {
+            background: linear-gradient(135deg, #1e3a5f 0%, #0f2942 100%);
+            display: flex;
+            flex-direction: column;
+            padding: 32px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .creative-3::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -30%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(249, 115, 22, 0.2) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .creative-3 .badge {
+            background: rgba(249, 115, 22, 0.2);
+            border: 1px solid #f97316;
+            color: #f97316;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 16px;
+            width: fit-content;
+        }
+
+        .creative-3 .headline {
+            font-family: 'Clash Display', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+            line-height: 1.2;
+            margin-bottom: 8px;
+        }
+
+        .creative-3 .subheadline {
+            color: rgba(255,255,255,0.7);
+            font-size: 15px;
+            margin-bottom: 24px;
+            line-height: 1.4;
+        }
+
+        .creative-3 .big-stat {
+            text-align: center;
+            padding: 24px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .creative-3 .big-stat-value {
+            font-family: 'Clash Display', sans-serif;
+            font-size: 72px;
+            font-weight: 700;
+            color: #f97316;
+            line-height: 1;
+        }
+
+        .creative-3 .big-stat-label {
+            color: rgba(255,255,255,0.8);
+            font-size: 16px;
+            margin-top: 8px;
+        }
+
+        .creative-3 .features {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .creative-3 .feature {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: rgba(255,255,255,0.9);
+            font-size: 14px;
+        }
+
+        .creative-3 .feature-check {
+            width: 20px;
+            height: 20px;
+            background: rgba(5, 150, 105, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #10b981;
+            font-size: 12px;
+        }
+
+        .creative-3 .cta {
+            background: #f97316;
+            color: white;
+            font-family: 'Clash Display', sans-serif;
+            font-weight: 600;
+            font-size: 16px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: auto;
+        }
+
+        /* Креатив 4: Срочность и FOMO */
+        .creative-4 {
+            background: #faf8f5;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .creative-4 .top-banner {
+            background: linear-gradient(90deg, #f97316 0%, #fb923c 100%);
+            color: white;
+            font-family: 'Clash Display', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .creative-4 .content {
+            padding: 28px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .creative-4 .headline {
+            font-family: 'Clash Display', sans-serif;
+            font-size: 32px;
+            font-weight: 700;
+            color: #1e3a5f;
+            line-height: 1.15;
+            margin-bottom: 16px;
+        }
+
+        .creative-4 .headline span {
+            color: #f97316;
+        }
+
+        .creative-4 .benefit-list {
+            margin-bottom: 20px;
+        }
+
+        .creative-4 .benefit {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .creative-4 .benefit-icon {
+            width: 24px;
+            height: 24px;
+            background: rgba(5, 150, 105, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #059669;
+            font-size: 14px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .creative-4 .benefit-text {
+            color: #374151;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        .creative-4 .social-proof {
+            background: #1e3a5f;
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .creative-4 .avatars {
+            display: flex;
+        }
+
+        .creative-4 .avatars .av {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid #1e3a5f;
+            margin-left: -8px;
+        }
+
+        .creative-4 .avatars .av:first-child {
+            margin-left: 0;
+        }
+
+        .creative-4 .avatars .av-1 { background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%); }
+        .creative-4 .avatars .av-2 { background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%); }
+        .creative-4 .avatars .av-3 { background: linear-gradient(135deg, #d9f99d 0%, #bef264 100%); }
+        .creative-4 .avatars .av-4 { background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%); }
+
+        .creative-4 .social-text {
+            color: white;
+            font-size: 13px;
+        }
+
+        .creative-4 .social-text strong {
+            color: #f97316;
+        }
+
+        .creative-4 .cta {
+            background: linear-gradient(90deg, #f97316 0%, #ea580c 100%);
+            color: white;
+            font-family: 'Clash Display', sans-serif;
+            font-weight: 600;
+            font-size: 16px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: auto;
+            box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+        }
+
+        .instructions {
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 20px;
+        }
+
+        .instructions h2 {
+            font-family: 'Clash Display', sans-serif;
+            color: #1e3a5f;
+            margin-bottom: 16px;
+        }
+
+        .instructions p {
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .instructions code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Timly — Рекламные креативы для РСЯ (450×450)</h1>
+
+    <!-- Креатив 1: Проблема-Решение -->
+    <div class="creative-wrapper">
+        <div class="creative-label">Креатив A: Проблема → Решение</div>
+        <div class="creative creative-1">
+            <div class="problem">
+                <div class="problem-label">❌ Проблема</div>
+                <div class="problem-text">Тратите часы на просмотр сотен резюме вручную?</div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="solution">
+                <div class="solution-label">✓ Решение</div>
+                <div class="solution-text">ИИ отберёт лучших кандидатов за вас за 2 минуты</div>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value">−70%</div>
+                        <div class="stat-label">времени на скрининг</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">2x</div>
+                        <div class="stat-label">больше откликов</div>
+                    </div>
+                </div>
+            </div>
+            <div class="cta">Попробовать бесплатно →</div>
+        </div>
+    </div>
+
+    <!-- Креатив 2: Интерфейс -->
+    <div class="creative-wrapper">
+        <div class="creative-label">Креатив B: Демо интерфейса</div>
+        <div class="creative creative-2">
+            <div class="header">
+                <div class="logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                        <circle cx="12" cy="8" r="4"/>
+                        <circle cx="5" cy="18" r="3"/>
+                        <circle cx="19" cy="18" r="3"/>
+                        <path d="M12 12v3M8 15l-1.5 1.5M16 15l1.5 1.5"/>
+                    </svg>
+                </div>
+                <div class="brand">timly</div>
+            </div>
+            <div class="headline">ИИ оценит резюме <span>за секунды</span></div>
+            <div class="interface-card">
+                <div class="candidate-row">
+                    <div class="avatar"></div>
+                    <div class="candidate-info">
+                        <div class="candidate-name">Анна Петрова</div>
+                        <div class="candidate-role">Product Manager, 5 лет</div>
+                    </div>
+                    <div class="score high">94%</div>
+                </div>
+                <div class="candidate-row">
+                    <div class="avatar" style="background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);"></div>
+                    <div class="candidate-info">
+                        <div class="candidate-name">Михаил Сидоров</div>
+                        <div class="candidate-role">Project Manager, 3 года</div>
+                    </div>
+                    <div class="score medium">72%</div>
+                </div>
+                <div class="candidate-row">
+                    <div class="avatar" style="background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);"></div>
+                    <div class="candidate-info">
+                        <div class="candidate-name">Елена Козлова</div>
+                        <div class="candidate-role">HR Manager, 2 года</div>
+                    </div>
+                    <div class="score low">45%</div>
+                </div>
+            </div>
+            <div class="cta">Начать бесплатно →</div>
+        </div>
+    </div>
+
+    <!-- Креатив 3: Большая цифра -->
+    <div class="creative-wrapper">
+        <div class="creative-label">Креатив C: Статистика</div>
+        <div class="creative creative-3">
+            <div class="badge">ИИ для HR</div>
+            <div class="headline">Автоматический скрининг резюме с hh.ru</div>
+            <div class="subheadline">Экономьте время на рутине — фокусируйтесь на лучших кандидатах</div>
+            <div class="big-stat">
+                <div class="big-stat-value">−70%</div>
+                <div class="big-stat-label">времени на отбор резюме</div>
+            </div>
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-check">✓</div>
+                    <span>Интеграция с hh.ru в 1 клик</span>
+                </div>
+                <div class="feature">
+                    <div class="feature-check">✓</div>
+                    <span>ИИ-оценка соответствия вакансии</span>
+                </div>
+            </div>
+            <div class="cta">Попробовать бесплатно →</div>
+        </div>
+    </div>
+
+    <!-- Креатив 4: FOMO и социальное доказательство -->
+    <div class="creative-wrapper">
+        <div class="creative-label">Креатив D: Социальное доказательство</div>
+        <div class="creative creative-4">
+            <div class="top-banner">🎁 Бесплатный период — без карты</div>
+            <div class="content">
+                <div class="headline">HR-ы уже <span>экономят 10+ часов</span> в неделю</div>
+                <div class="benefit-list">
+                    <div class="benefit">
+                        <div class="benefit-icon">✓</div>
+                        <div class="benefit-text">ИИ сам скачает отклики с hh.ru</div>
+                    </div>
+                    <div class="benefit">
+                        <div class="benefit-icon">✓</div>
+                        <div class="benefit-text">Оценит каждого по вашим критериям</div>
+                    </div>
+                    <div class="benefit">
+                        <div class="benefit-icon">✓</div>
+                        <div class="benefit-text">Покажет топ-кандидатов первыми</div>
+                    </div>
+                </div>
+                <div class="social-proof">
+                    <div class="avatars">
+                        <div class="av av-1"></div>
+                        <div class="av av-2"></div>
+                        <div class="av av-3"></div>
+                        <div class="av av-4"></div>
+                    </div>
+                    <div class="social-text"><strong>500+ HR-ов</strong> уже используют timly</div>
+                </div>
+                <div class="cta">Начать бесплатно →</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="instructions">
+        <h2>Инструкция по экспорту</h2>
+        <p><strong>Способ 1:</strong> Откройте эту страницу в Chrome, нажмите правой кнопкой на креатив → "Сделать скриншот узла" (или используйте DevTools → выберите элемент → Ctrl+Shift+P → "Capture node screenshot")</p>
+        <p><strong>Способ 2:</strong> Используйте расширение <code>GoFullPage</code> или <code>Fireshot</code> для захвата отдельных блоков</p>
+        <p><strong>Способ 3:</strong> Откройте в Figma через плагин <code>html.to" и доработайте</code></p>
+        <p><strong>Рекомендуемые размеры для РСЯ:</strong> 450×450 (минимум), 1080×1080 (оптимально для качества)</p>
+    </div>
+</body>
+</html>
