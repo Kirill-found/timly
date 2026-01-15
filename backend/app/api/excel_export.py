@@ -1,6 +1,6 @@
 """
-Excel экспорт для AI анализа резюме v2.0
-Улучшенное форматирование с 3 листами: Сводка, Детальный анализ, Статистика
+Excel экспорт для AI анализа резюме v3.0
+Обновлённый формат с композитным скорингом (Tier A/B/C)
 """
 from fastapi import HTTPException, status
 from fastapi.responses import FileResponse
@@ -16,7 +16,7 @@ def create_excel_export(
     recommendation_filter: Optional[str] = None
 ) -> str:
     """
-    Создание Excel файла с результатами анализа v2.0
+    Создание Excel файла с результатами анализа v3.0
 
     Returns:
         str: путь к временному файлу
@@ -34,32 +34,40 @@ def create_excel_export(
     stats_ws = wb.create_sheet("Статистика", 2)
 
     # ========== СТИЛИ ==========
-    BRAND_PRIMARY = "6366F1"
-    HEADER_BG = "4F46E5"
-    LIGHT_BG = "F3F4F6"
+    BRAND_PRIMARY = "1E3A5F"  # Deep Navy
+    BRAND_ACCENT = "F97316"   # Warm Orange
+    HEADER_BG = "1E3A5F"
+    LIGHT_BG = "FAF8F5"
 
     title_font = Font(bold=True, size=18, color="FFFFFF", name="Arial")
     header_font = Font(bold=True, size=11, color="FFFFFF", name="Arial")
-    subheader_font = Font(bold=True, size=10, color="374151", name="Arial")
+    subheader_font = Font(bold=True, size=10, color="1E3A5F", name="Arial")
     normal_font = Font(size=10, color="374151", name="Arial")
-    link_font = Font(size=10, color="2563EB", underline="single")
+    link_font = Font(size=10, color="F97316", underline="single", bold=True)
 
     header_fill = PatternFill(start_color=HEADER_BG, end_color=HEADER_BG, fill_type="solid")
     brand_fill = PatternFill(start_color=BRAND_PRIMARY, end_color=BRAND_PRIMARY, fill_type="solid")
     light_fill = PatternFill(start_color=LIGHT_BG, end_color=LIGHT_BG, fill_type="solid")
+    accent_fill = PatternFill(start_color=BRAND_ACCENT, end_color=BRAND_ACCENT, fill_type="solid")
+
+    # Стили для Tier (A/B/C)
+    tier_styles = {
+        'A': {'fill': PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid"), 'font': Font(bold=True, size=14, color="065F46")},
+        'B': {'fill': PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid"), 'font': Font(bold=True, size=14, color="92400E")},
+        'C': {'fill': PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid"), 'font': Font(bold=True, size=14, color="991B1B")},
+    }
 
     rec_styles = {
         'hire': {'fill': PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid"), 'font': Font(bold=True, size=10, color="065F46"), 'text': "НАНЯТЬ"},
         'interview': {'fill': PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid"), 'font': Font(bold=True, size=10, color="92400E"), 'text': "СОБЕСЕДОВАНИЕ"},
-        'maybe': {'fill': PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid"), 'font': Font(bold=True, size=10, color="991B1B"), 'text': "ВОЗМОЖНО"},
+        'maybe': {'fill': PatternFill(start_color="FED7AA", end_color="FED7AA", fill_type="solid"), 'font': Font(bold=True, size=10, color="9A3412"), 'text': "ВОЗМОЖНО"},
         'reject': {'fill': PatternFill(start_color="E5E7EB", end_color="E5E7EB", fill_type="solid"), 'font': Font(bold=True, size=10, color="6B7280"), 'text': "ОТКЛОНИТЬ"}
     }
 
-    career_styles = {
-        'growth': {'fill': PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid"), 'font': Font(bold=True, size=10, color="065F46"), 'text': "Рост"},
-        'stable': {'fill': PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid"), 'font': Font(bold=True, size=10, color="92400E"), 'text': "Стабильно"},
-        'decline': {'fill': PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid"), 'font': Font(bold=True, size=10, color="991B1B"), 'text': "Снижение"},
-        'unknown': {'fill': PatternFill(start_color="E5E7EB", end_color="E5E7EB", fill_type="solid"), 'font': Font(size=10, color="6B7280"), 'text': "Н/Д"}
+    confidence_styles = {
+        'high': {'fill': PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid"), 'font': Font(size=10, color="065F46"), 'text': "Высокая"},
+        'medium': {'fill': PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid"), 'font': Font(size=10, color="92400E"), 'text': "Средняя"},
+        'low': {'fill': PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid"), 'font': Font(size=10, color="991B1B"), 'text': "Низкая"},
     }
 
     center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
@@ -75,6 +83,8 @@ def create_excel_export(
         """Форматирует список в строку с буллетами"""
         if not items:
             return "—"
+        if isinstance(items, str):
+            return items
         return "\n".join([f"• {item}" for item in items if item])
 
     def safe_get(obj, attr, default="—"):
@@ -82,8 +92,18 @@ def create_excel_export(
         val = getattr(obj, attr, None)
         return val if val is not None else default
 
+    def get_raw(analysis, key, default=None):
+        """Получение значения из raw_result JSON"""
+        raw = getattr(analysis, 'raw_result', None) or {}
+        return raw.get(key, default)
+
+    def get_score(analysis, score_name):
+        """Получение оценки 1-5 из raw_result.scores"""
+        scores = get_raw(analysis, 'scores', {})
+        return scores.get(score_name, 0)
+
     # ========== ЛИСТ 1: СВОДКА ==========
-    summary_ws.merge_cells('A1:K2')
+    summary_ws.merge_cells('A1:L2')
     title_cell = summary_ws.cell(row=1, column=1, value=f"TIMLY | Анализ кандидатов: {vacancy.title}")
     title_cell.font = title_font
     title_cell.fill = brand_fill
@@ -91,17 +111,17 @@ def create_excel_export(
     summary_ws.row_dimensions[1].height = 25
     summary_ws.row_dimensions[2].height = 25
 
-    summary_ws.merge_cells('A3:K3')
+    summary_ws.merge_cells('A3:L3')
     date_cell = summary_ws.cell(row=3, column=1, value=f"Дата экспорта: {datetime.now().strftime('%d.%m.%Y %H:%M')} | Всего кандидатов: {len(results)}")
     date_cell.font = Font(size=10, color="6B7280", italic=True)
     date_cell.alignment = center_align
     date_cell.fill = light_fill
 
-    # Заголовки с фиксированными ширинами
+    # Заголовки v3.0
     summary_headers = [
-        ("№", 5), ("Кандидат", 25), ("Контакты", 30), ("Оценка", 10),
-        ("Навыки %", 10), ("Опыт %", 10), ("Карьера", 15),
-        ("Рекомендация", 18), ("Зарплата", 15), ("Ключевое", 40), ("Резюме", 12)
+        ("№", 5), ("Tier", 8), ("Кандидат", 25), ("Контакты", 28),
+        ("Релев.", 8), ("Эксп.", 8), ("Траект.", 8), ("Стаб.", 8),
+        ("Рекомендация", 16), ("Уверенность", 12), ("Резюме", 40), ("Ссылка", 10)
     ]
 
     for col, (header, width) in enumerate(summary_headers, 1):
@@ -120,7 +140,17 @@ def create_excel_export(
         row = idx + 5
 
         summary_ws.cell(row=row, column=1, value=idx).alignment = center_align
-        summary_ws.cell(row=row, column=2, value=application.candidate_name or "Не указано").font = subheader_font
+
+        # Tier (A/B/C)
+        tier = get_raw(analysis, 'tier', 'C')
+        tier_style = tier_styles.get(tier, tier_styles['C'])
+        tier_cell = summary_ws.cell(row=row, column=2, value=tier)
+        tier_cell.fill = tier_style['fill']
+        tier_cell.font = tier_style['font']
+        tier_cell.alignment = center_align
+
+        # Кандидат
+        summary_ws.cell(row=row, column=3, value=application.candidate_name or "Не указано").font = subheader_font
 
         # Контакты
         contacts = []
@@ -128,69 +158,64 @@ def create_excel_export(
             contacts.append(application.candidate_email)
         if application.candidate_phone:
             contacts.append(application.candidate_phone)
-        summary_ws.cell(row=row, column=3, value="\n".join(contacts) if contacts else "—").alignment = left_align
+        summary_ws.cell(row=row, column=4, value="\n".join(contacts) if contacts else "—").alignment = left_align
 
-        # Оценка
-        score_cell = summary_ws.cell(row=row, column=4, value=analysis.score or 0)
-        score_cell.alignment = center_align
-        score_cell.font = Font(bold=True, size=12)
+        # Оценки 1-5 (из scores)
+        relevance = get_score(analysis, 'relevance')
+        expertise = get_score(analysis, 'expertise')
+        trajectory = get_score(analysis, 'trajectory')
+        stability = get_score(analysis, 'stability')
 
-        # Навыки и опыт
-        summary_ws.cell(row=row, column=5, value=analysis.skills_match or 0).alignment = center_align
-        summary_ws.cell(row=row, column=6, value=analysis.experience_match or 0).alignment = center_align
-
-        # Карьерная траектория
-        career = safe_get(analysis, 'career_trajectory', 'unknown')
-        career_style = career_styles.get(career, career_styles['unknown'])
-        career_cell = summary_ws.cell(row=row, column=7, value=career_style['text'])
-        career_cell.fill = career_style['fill']
-        career_cell.font = career_style['font']
-        career_cell.alignment = center_align
+        for col_idx, score_val in enumerate([relevance, expertise, trajectory, stability], 5):
+            score_cell = summary_ws.cell(row=row, column=col_idx, value=score_val or "—")
+            score_cell.alignment = center_align
+            if isinstance(score_val, int) and score_val >= 4:
+                score_cell.font = Font(bold=True, size=11, color="065F46")
+            elif isinstance(score_val, int) and score_val <= 2:
+                score_cell.font = Font(bold=True, size=11, color="991B1B")
+            else:
+                score_cell.font = Font(size=11, color="374151")
 
         # Рекомендация
-        rec = analysis.recommendation or 'unknown'
+        rec = get_raw(analysis, 'recommendation') or analysis.recommendation or 'unknown'
         rec_style = rec_styles.get(rec, rec_styles.get('maybe'))
-        rec_cell = summary_ws.cell(row=row, column=8, value=rec_style['text'])
+        rec_cell = summary_ws.cell(row=row, column=9, value=rec_style['text'])
         rec_cell.fill = rec_style['fill']
         rec_cell.font = rec_style['font']
         rec_cell.alignment = center_align
 
-        # Зарплата
-        salary_map = {'match': 'Совпадает', 'higher': 'Выше', 'lower': 'Ниже', 'unknown': 'Н/Д'}
-        summary_ws.cell(row=row, column=9, value=salary_map.get(analysis.salary_match, 'Н/Д')).alignment = center_align
+        # Уверенность
+        confidence = get_raw(analysis, 'confidence', 'medium')
+        conf_style = confidence_styles.get(confidence, confidence_styles['medium'])
+        conf_cell = summary_ws.cell(row=row, column=10, value=conf_style['text'])
+        conf_cell.fill = conf_style['fill']
+        conf_cell.font = conf_style['font']
+        conf_cell.alignment = center_align
 
-        # Ключевое обоснование
-        reasoning_cell = summary_ws.cell(row=row, column=10, value=analysis.reasoning or "—")
-        reasoning_cell.alignment = left_align
-        reasoning_cell.font = normal_font
+        # Резюме (summary)
+        summary_text = get_raw(analysis, 'summary') or get_raw(analysis, 'summary_one_line') or analysis.reasoning or "—"
+        summary_cell = summary_ws.cell(row=row, column=11, value=summary_text)
+        summary_cell.alignment = left_align
+        summary_cell.font = normal_font
 
         # Ссылка на резюме
         if application.resume_url:
-            link_cell = summary_ws.cell(row=row, column=11, value="Открыть")
+            link_cell = summary_ws.cell(row=row, column=12, value="Открыть")
             link_cell.hyperlink = application.resume_url
             link_cell.font = link_font
             link_cell.alignment = center_align
         else:
-            summary_ws.cell(row=row, column=11, value="—").alignment = center_align
+            summary_ws.cell(row=row, column=12, value="—").alignment = center_align
 
         # Границы
-        for col in range(1, 12):
+        for col in range(1, 13):
             summary_ws.cell(row=row, column=col).border = thin_border
-        summary_ws.row_dimensions[row].height = 45
+        summary_ws.row_dimensions[row].height = 50
 
-    # Условное форматирование для оценок
-    score_rule = ColorScaleRule(
-        start_type='num', start_value=0, start_color='FEE2E2',
-        mid_type='num', mid_value=60, mid_color='FEF3C7',
-        end_type='num', end_value=100, end_color='D1FAE5'
-    )
-    summary_ws.conditional_formatting.add(f"D6:D{len(results) + 5}", score_rule)
-    summary_ws.conditional_formatting.add(f"E6:E{len(results) + 5}", score_rule)
-    summary_ws.conditional_formatting.add(f"F6:F{len(results) + 5}", score_rule)
-    summary_ws.auto_filter.ref = f"A5:K{len(results) + 5}"
+    summary_ws.auto_filter.ref = f"A5:L{len(results) + 5}"
 
     # ========== ЛИСТ 2: ДЕТАЛЬНЫЙ АНАЛИЗ ==========
-    details_ws.merge_cells('A1:H2')
+    details_ws.merge_cells('A1:I2')
     title_cell = details_ws.cell(row=1, column=1, value=f"TIMLY | Детальный анализ: {vacancy.title}")
     title_cell.font = title_font
     title_cell.fill = brand_fill
@@ -199,11 +224,11 @@ def create_excel_export(
     details_ws.row_dimensions[2].height = 25
 
     # Ширины колонок
-    detail_widths = [5, 25, 12, 18, 35, 35, 35, 35]
+    detail_widths = [5, 25, 8, 16, 35, 35, 30, 35, 35]
     for col, width in enumerate(detail_widths, 1):
         details_ws.column_dimensions[get_column_letter(col)].width = width
 
-    detail_headers = ["№", "Кандидат", "Оценка", "Рекомендация", "Сильные стороны", "Слабые стороны", "Skill Gaps", "Вопросы для интервью"]
+    detail_headers = ["№", "Кандидат", "Tier", "Рекомендация", "Плюсы", "Минусы", "Навыки (gaps)", "Вопросы для интервью", "Red Flags"]
     for col, header in enumerate(detail_headers, 1):
         cell = details_ws.cell(row=4, column=col, value=header)
         cell.font = header_font
@@ -221,47 +246,70 @@ def create_excel_export(
         name_cell.font = subheader_font
         name_cell.alignment = left_align
 
-        score_cell = details_ws.cell(row=row, column=3, value=analysis.score or 0)
-        score_cell.alignment = center_align
-        score_cell.font = Font(bold=True, size=14)
+        # Tier
+        tier = get_raw(analysis, 'tier', 'C')
+        tier_style = tier_styles.get(tier, tier_styles['C'])
+        tier_cell = details_ws.cell(row=row, column=3, value=tier)
+        tier_cell.fill = tier_style['fill']
+        tier_cell.font = tier_style['font']
+        tier_cell.alignment = center_align
 
-        rec = analysis.recommendation or 'unknown'
+        # Рекомендация
+        rec = get_raw(analysis, 'recommendation') or analysis.recommendation or 'unknown'
         rec_style = rec_styles.get(rec, rec_styles.get('maybe'))
         rec_cell = details_ws.cell(row=row, column=4, value=rec_style['text'])
         rec_cell.fill = rec_style['fill']
         rec_cell.font = rec_style['font']
         rec_cell.alignment = center_align
 
-        # Сильные стороны с буллетами
-        strengths_cell = details_ws.cell(row=row, column=5, value=format_list_as_bullets(analysis.strengths or []))
-        strengths_cell.alignment = left_align
-        strengths_cell.font = normal_font
+        # Плюсы (pros или strengths)
+        pros = get_raw(analysis, 'pros') or analysis.strengths or []
+        pros_cell = details_ws.cell(row=row, column=5, value=format_list_as_bullets(pros))
+        pros_cell.alignment = left_align
+        pros_cell.font = normal_font
 
-        # Слабые стороны с буллетами
-        weaknesses_cell = details_ws.cell(row=row, column=6, value=format_list_as_bullets(analysis.weaknesses or []))
-        weaknesses_cell.alignment = left_align
-        weaknesses_cell.font = normal_font
+        # Минусы (cons или weaknesses)
+        cons = get_raw(analysis, 'cons') or analysis.weaknesses or []
+        cons_cell = details_ws.cell(row=row, column=6, value=format_list_as_bullets(cons))
+        cons_cell.alignment = left_align
+        cons_cell.font = normal_font
 
-        # Skill Gaps (новое поле v2.0)
-        skill_gaps = safe_get(analysis, 'skill_gaps', [])
-        skill_gaps_text = format_list_as_bullets(skill_gaps) if isinstance(skill_gaps, list) else "—"
-        skill_gaps_cell = details_ws.cell(row=row, column=7, value=skill_gaps_text)
-        skill_gaps_cell.alignment = left_align
-        skill_gaps_cell.font = normal_font
+        # Навыки (gaps)
+        skills_analysis = get_raw(analysis, 'skills_analysis', {})
+        missing_skills = skills_analysis.get('missing', []) if isinstance(skills_analysis, dict) else []
+        matching_skills = skills_analysis.get('matching', []) if isinstance(skills_analysis, dict) else []
+        match_percent = skills_analysis.get('match_percent', 0) if isinstance(skills_analysis, dict) else 0
 
-        # Вопросы для интервью (новое поле v2.0)
-        interview_questions = safe_get(analysis, 'interview_questions', [])
-        questions_text = format_list_as_bullets(interview_questions) if isinstance(interview_questions, list) else "—"
-        questions_cell = details_ws.cell(row=row, column=8, value=questions_text)
+        skills_text = f"Совпадение: {match_percent}%\n\n"
+        if matching_skills:
+            skills_text += "✓ " + ", ".join(matching_skills[:5]) + "\n"
+        if missing_skills:
+            skills_text += "✗ " + ", ".join(missing_skills[:5])
+
+        skills_cell = details_ws.cell(row=row, column=7, value=skills_text.strip())
+        skills_cell.alignment = left_align
+        skills_cell.font = normal_font
+
+        # Вопросы для интервью
+        interview_questions = get_raw(analysis, 'interview_questions', [])
+        questions_cell = details_ws.cell(row=row, column=8, value=format_list_as_bullets(interview_questions))
         questions_cell.alignment = left_align
         questions_cell.font = normal_font
 
-        for col in range(1, 9):
-            details_ws.cell(row=row, column=col).border = thin_border
-        details_ws.row_dimensions[row].height = 80
+        # Red Flags
+        red_flags = get_raw(analysis, 'red_flags') or analysis.red_flags or []
+        red_flags_cell = details_ws.cell(row=row, column=9, value=format_list_as_bullets(red_flags) if red_flags else "—")
+        red_flags_cell.alignment = left_align
+        if red_flags:
+            red_flags_cell.font = Font(size=10, color="991B1B")
+        else:
+            red_flags_cell.font = normal_font
 
-    details_ws.conditional_formatting.add(f"C5:C{len(results) + 4}", score_rule)
-    details_ws.auto_filter.ref = f"A4:H{len(results) + 4}"
+        for col in range(1, 10):
+            details_ws.cell(row=row, column=col).border = thin_border
+        details_ws.row_dimensions[row].height = 90
+
+    details_ws.auto_filter.ref = f"A4:I{len(results) + 4}"
 
     # ========== ЛИСТ 3: СТАТИСТИКА ==========
     stats_ws.merge_cells('A1:D2')
@@ -281,34 +329,54 @@ def create_excel_export(
     for col in range(1, 5):
         stats_ws.column_dimensions[get_column_letter(col)].width = 25
 
-    # Подсчёт статистики
+    # Подсчёт статистики v3.0
     total_count = len(results)
-    hire_count = len([r for r, _ in results if r.recommendation == 'hire'])
-    interview_count = len([r for r, _ in results if r.recommendation == 'interview'])
-    maybe_count = len([r for r, _ in results if r.recommendation == 'maybe'])
-    reject_count = len([r for r, _ in results if r.recommendation == 'reject'])
 
-    scores = [r.score for r, _ in results if r.score is not None]
-    avg_score = sum(scores) / len(scores) if scores else 0
-    max_score = max(scores) if scores else 0
-    min_score_val = min(scores) if scores else 0
+    # Tier статистика
+    tier_a = len([r for r, _ in results if get_raw(r, 'tier') == 'A'])
+    tier_b = len([r for r, _ in results if get_raw(r, 'tier') == 'B'])
+    tier_c = len([r for r, _ in results if get_raw(r, 'tier') == 'C' or get_raw(r, 'tier') is None])
 
-    growth_count = len([r for r, _ in results if safe_get(r, 'career_trajectory') == 'growth'])
-    stable_count = len([r for r, _ in results if safe_get(r, 'career_trajectory') == 'stable'])
-    decline_count = len([r for r, _ in results if safe_get(r, 'career_trajectory') == 'decline'])
+    # Рекомендации
+    hire_count = len([r for r, _ in results if (get_raw(r, 'recommendation') or r.recommendation) == 'hire'])
+    interview_count = len([r for r, _ in results if (get_raw(r, 'recommendation') or r.recommendation) == 'interview'])
+    maybe_count = len([r for r, _ in results if (get_raw(r, 'recommendation') or r.recommendation) == 'maybe'])
+    reject_count = len([r for r, _ in results if (get_raw(r, 'recommendation') or r.recommendation) == 'reject'])
+
+    # Средние оценки
+    def avg_score(score_name):
+        scores = [get_score(r, score_name) for r, _ in results if get_score(r, score_name)]
+        return round(sum(scores) / len(scores), 1) if scores else 0
+
+    avg_relevance = avg_score('relevance')
+    avg_expertise = avg_score('expertise')
+    avg_trajectory = avg_score('trajectory')
+    avg_stability = avg_score('stability')
+
+    # Confidence
+    high_conf = len([r for r, _ in results if get_raw(r, 'confidence') == 'high'])
+    medium_conf = len([r for r, _ in results if get_raw(r, 'confidence') == 'medium'])
+    low_conf = len([r for r, _ in results if get_raw(r, 'confidence') == 'low'])
 
     stats_data = [
         ("ОБЩИЕ МЕТРИКИ", "", "", ""),
-        ("Всего кандидатов", total_count, "Средний балл", f"{avg_score:.1f}"),
-        ("Макс. балл", max_score, "Мин. балл", min_score_val),
+        ("Всего кандидатов", total_count, "", ""),
+        ("", "", "", ""),
+        ("РАСПРЕДЕЛЕНИЕ ПО TIER", "", "", ""),
+        ("Tier A (топ)", tier_a, "Tier B (средние)", tier_b),
+        ("Tier C (слабые)", tier_c, "", ""),
         ("", "", "", ""),
         ("РЕКОМЕНДАЦИИ", "", "", ""),
         ("Нанять", hire_count, "Собеседование", interview_count),
         ("Возможно", maybe_count, "Отклонить", reject_count),
         ("", "", "", ""),
-        ("КАРЬЕРНАЯ ДИНАМИКА", "", "", ""),
-        ("Рост", growth_count, "Стабильно", stable_count),
-        ("Снижение", decline_count, "", ""),
+        ("СРЕДНИЕ ОЦЕНКИ (1-5)", "", "", ""),
+        ("Релевантность", avg_relevance, "Экспертиза", avg_expertise),
+        ("Траектория", avg_trajectory, "Стабильность", avg_stability),
+        ("", "", "", ""),
+        ("УВЕРЕННОСТЬ ОЦЕНКИ", "", "", ""),
+        ("Высокая", high_conf, "Средняя", medium_conf),
+        ("Низкая", low_conf, "", ""),
     ]
 
     row = 5
@@ -318,10 +386,10 @@ def create_excel_export(
             if col in [1, 3]:
                 cell.font = subheader_font
             else:
-                cell.font = Font(bold=True, size=12, color="4F46E5")
+                cell.font = Font(bold=True, size=12, color="F97316")
             cell.alignment = center_align
 
-            if str(val) in ["ОБЩИЕ МЕТРИКИ", "РЕКОМЕНДАЦИИ", "КАРЬЕРНАЯ ДИНАМИКА"]:
+            if str(val) in ["ОБЩИЕ МЕТРИКИ", "РАСПРЕДЕЛЕНИЕ ПО TIER", "РЕКОМЕНДАЦИИ", "СРЕДНИЕ ОЦЕНКИ (1-5)", "УВЕРЕННОСТЬ ОЦЕНКИ"]:
                 stats_ws.merge_cells(f'A{row}:D{row}')
                 cell.font = Font(bold=True, size=12, color="FFFFFF")
                 cell.fill = brand_fill
