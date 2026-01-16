@@ -386,7 +386,9 @@ class AIAnalyzer:
     async def analyze_resume(self, vacancy: Dict, resume: Dict, force: bool = False, strictness: str = "balanced") -> Dict:
         """
         Анализ резюме v7.0 (Hybrid Expert)
+        С retry логикой для rate limit
         """
+        import asyncio
         start = time.time()
         key = self._get_cache_key(vacancy, resume)
 
@@ -397,37 +399,48 @@ class AIAnalyzer:
 
         prompt = self._build_prompt(vacancy, resume, strictness)
 
-        try:
-            resp = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "Ты опытный HR-эксперт. Отвечай ТОЛЬКО валидным JSON. Без markdown, без комментариев."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.4,
-                max_tokens=2500,
-                response_format={"type": "json_object"}
-            )
+        # Retry с exponential backoff
+        max_retries = 5
+        base_delay = 2  # секунды
 
-            result = json.loads(resp.choices[0].message.content)
-            result = self._enrich(result)
-            result.update({
-                "ai_model": self.model,
-                "ai_tokens": resp.usage.total_tokens,
-                "processing_ms": int((time.time() - start) * 1000),
-                "prompt_version": "7.0"
-            })
+        for attempt in range(max_retries):
+            try:
+                resp = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": "Ты опытный HR-эксперт. Отвечай ТОЛЬКО валидным JSON. Без markdown, без комментариев."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.4,
+                    max_tokens=2500,
+                    response_format={"type": "json_object"}
+                )
 
-            self._set_cache(key, result)
+                result = json.loads(resp.choices[0].message.content)
+                result = self._enrich(result)
+                result.update({
+                    "ai_model": self.model,
+                    "ai_tokens": resp.usage.total_tokens,
+                    "processing_ms": int((time.time() - start) * 1000),
+                    "prompt_version": "7.0"
+                })
 
-            logger.info(f"AI v7.0: {result.get('verdict')} score={result.get('score')} missing={result.get('must_have_missing')} {resp.usage.total_tokens}tok")
-            return result
+                self._set_cache(key, result)
 
-        except openai.RateLimitError:
-            raise AIAnalysisError("Rate limit OpenAI")
-        except Exception as e:
-            logger.error(f"AI error: {e}")
-            raise AIAnalysisError(str(e))
+                logger.info(f"AI v7.0: {result.get('verdict')} score={result.get('score')} missing={result.get('must_have_missing')} {resp.usage.total_tokens}tok")
+                return result
+
+            except openai.RateLimitError as e:
+                delay = base_delay * (2 ** attempt)  # 2, 4, 8, 16, 32 секунды
+                if attempt < max_retries - 1:
+                    logger.warning(f"Rate limit hit, retry {attempt + 1}/{max_retries} after {delay}s")
+                    await asyncio.sleep(delay)
+                else:
+                    logger.error(f"Rate limit after {max_retries} retries")
+                    raise AIAnalysisError("Rate limit OpenAI - исчерпаны retry")
+            except Exception as e:
+                logger.error(f"AI error: {e}")
+                raise AIAnalysisError(str(e))
 
     async def analyze_batch(self, vacancy: Dict, resumes: List[Dict], max_concurrent: int = 3) -> List[Dict]:
         import asyncio

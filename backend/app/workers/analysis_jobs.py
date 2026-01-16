@@ -61,6 +61,7 @@ def run_ai_analysis_batch(
         print(f"[DEBUG] Event loop created")
 
         try:
+            import time as time_module
             for i, application_id in enumerate(application_ids):
                 print(f"[DEBUG] Processing application {i+1}/{len(application_ids)}: {application_id}")
                 try:
@@ -85,6 +86,10 @@ def run_ai_analysis_batch(
 
                     results["processed_applications"] += 1
 
+                    # Задержка между запросами для избежания rate limit (1 секунда)
+                    if i < len(application_ids) - 1:
+                        time_module.sleep(1)
+
                 except Exception as e:
                     error_msg = f"Ошибка анализа заявки {application_id}: {e}"
                     logger.error(error_msg)
@@ -93,6 +98,8 @@ def run_ai_analysis_batch(
                     traceback.print_exc()
                     results["errors"].append(error_msg)
                     results["failed_analyses"] += 1
+                    # При ошибке тоже делаем паузу
+                    time_module.sleep(2)
         finally:
             loop.close()
             print(f"[DEBUG] Event loop closed")
