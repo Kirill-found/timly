@@ -1,21 +1,29 @@
 /**
- * Analysis - Анализ резюме v3
+ * Analysis - AI Resume Analyzer v7.0 (Hybrid Expert)
  * Design: Dark Industrial + Data Dashboard
  *
- * Product-driven redesign:
- * - Tier A/B/C как главный элемент принятия решения
- * - 4 композитные оценки с визуальными dot indicators
- * - Confidence level для доверия к оценке
- * - Interview Questions для подготовки к собеседованию
+ * v7.0 Features:
+ * - Verdict-based evaluation (High/Medium/Low/Mismatch)
+ * - Must-haves validation with visual status
+ * - Holistic analysis with career trajectory
+ * - Reasoning for HR as primary explanation
+ * - Interview questions with context
  */
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, ExternalLink, Phone, Square, Play, ChevronDown, ChevronUp, AlertCircle, MessageSquare, Shield, TrendingUp, Briefcase, Target } from 'lucide-react';
+import {
+  Download, ExternalLink, Phone, Square, Play, ChevronDown, ChevronUp,
+  AlertCircle, MessageSquare, CheckCircle2, HelpCircle, XCircle,
+  TrendingUp, TrendingDown, Minus, User, FileText, Sparkles
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiClient } from '@/services/api';
-import { Vacancy, AnalysisResult, AnalysisFilter, CandidateTier, ConfidenceLevel, AIScores } from '@/types';
+import {
+  Vacancy, AnalysisResult, AnalysisFilter, Verdict, MustHave,
+  HolisticAnalysis, InterviewQuestion
+} from '@/types';
 import { useApp } from '@/store/AppContext';
 import { LimitExceededModal } from '@/components/LimitExceededModal';
 
@@ -29,128 +37,289 @@ interface AnalysisWithApplication extends AnalysisResult {
   };
 }
 
-// === HELPER COMPONENTS ===
-
-// Tier Badge - главный элемент принятия решения
-const TierBadge: React.FC<{ tier?: CandidateTier; size?: 'sm' | 'md' | 'lg' }> = ({ tier, size = 'md' }) => {
-  const styles = {
-    A: 'bg-emerald-500 text-white shadow-emerald-500/30',
-    B: 'bg-blue-500 text-white shadow-blue-500/30',
-    C: 'bg-zinc-600 text-zinc-300 shadow-zinc-600/20',
+// === v7.0 VERDICT BADGE ===
+const VerdictBadge: React.FC<{ verdict?: Verdict; size?: 'sm' | 'md' | 'lg' }> = ({ verdict, size = 'md' }) => {
+  const config = {
+    High: {
+      bg: 'bg-emerald-500/15',
+      border: 'border-emerald-500/40',
+      text: 'text-emerald-400',
+      glow: 'shadow-emerald-500/20',
+      label: 'Рекомендую',
+      icon: <CheckCircle2 className="w-3.5 h-3.5" />
+    },
+    Medium: {
+      bg: 'bg-blue-500/15',
+      border: 'border-blue-500/40',
+      text: 'text-blue-400',
+      glow: 'shadow-blue-500/20',
+      label: 'На рассмотрение',
+      icon: <HelpCircle className="w-3.5 h-3.5" />
+    },
+    Low: {
+      bg: 'bg-amber-500/15',
+      border: 'border-amber-500/40',
+      text: 'text-amber-400',
+      glow: 'shadow-amber-500/20',
+      label: 'Сомнительно',
+      icon: <AlertCircle className="w-3.5 h-3.5" />
+    },
+    Mismatch: {
+      bg: 'bg-red-500/15',
+      border: 'border-red-500/40',
+      text: 'text-red-400',
+      glow: 'shadow-red-500/20',
+      label: 'Не подходит',
+      icon: <XCircle className="w-3.5 h-3.5" />
+    }
   };
+
+  const c = verdict ? config[verdict] : config.Low;
+
   const sizes = {
-    sm: 'w-6 h-6 text-xs',
-    md: 'w-8 h-8 text-sm',
-    lg: 'w-10 h-10 text-base',
+    sm: 'px-2 py-0.5 text-[10px] gap-1',
+    md: 'px-3 py-1 text-xs gap-1.5',
+    lg: 'px-4 py-1.5 text-sm gap-2'
   };
-
-  if (!tier) return null;
 
   return (
-    <div className={`${sizes[size]} ${styles[tier]} rounded-lg font-bold flex items-center justify-center shadow-lg`}>
-      {tier}
+    <div className={`
+      inline-flex items-center ${sizes[size]} rounded-lg font-medium
+      ${c.bg} ${c.border} ${c.text} border shadow-lg ${c.glow}
+      transition-all duration-200
+    `}>
+      {c.icon}
+      <span>{c.label}</span>
     </div>
   );
 };
 
-// Score Dots - визуализация оценки 1-5
-const ScoreDots: React.FC<{ score: number; label: string; icon?: React.ReactNode }> = ({ score, label, icon }) => {
-  const clampedScore = Math.max(1, Math.min(5, score || 0));
+// === MUST-HAVE STATUS ICON ===
+const MustHaveIcon: React.FC<{ status: 'yes' | 'maybe' | 'no' }> = ({ status }) => {
+  const config = {
+    yes: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-emerald-400' },
+    maybe: { icon: <HelpCircle className="w-4 h-4" />, color: 'text-amber-400' },
+    no: { icon: <XCircle className="w-4 h-4" />, color: 'text-red-400' }
+  };
+  const c = config[status];
+  return <span className={c.color}>{c.icon}</span>;
+};
+
+// === MUST-HAVES BLOCK ===
+const MustHavesBlock: React.FC<{ mustHaves: MustHave[] }> = ({ mustHaves }) => {
+  if (!mustHaves?.length) return null;
+
+  const hasAnyNo = mustHaves.some(m => m.status === 'no');
 
   return (
-    <div className="flex items-center gap-2">
-      {icon && <span className="text-zinc-500">{icon}</span>}
-      <div className="flex-1 min-w-0">
-        <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 truncate">{label}</div>
-        <div className="flex items-center gap-1">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div
-              key={i}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                i <= clampedScore
-                  ? clampedScore >= 4 ? 'bg-emerald-500' : clampedScore >= 3 ? 'bg-amber-500' : 'bg-red-500'
-                  : 'bg-zinc-700'
-              }`}
-            />
-          ))}
-          <span className="text-xs text-zinc-400 ml-1 tabular-nums">{clampedScore}/5</span>
-        </div>
+    <div className={`
+      p-4 rounded-xl border
+      ${hasAnyNo ? 'bg-red-500/5 border-red-500/20' : 'bg-zinc-800/30 border-zinc-700/30'}
+    `}>
+      <div className="flex items-center gap-2 mb-3">
+        <Sparkles className={`w-4 h-4 ${hasAnyNo ? 'text-red-400' : 'text-zinc-400'}`} />
+        <span className={`text-[11px] font-semibold uppercase tracking-wider ${hasAnyNo ? 'text-red-400' : 'text-zinc-400'}`}>
+          Ключевые требования
+        </span>
+      </div>
+      <div className="space-y-2.5">
+        {mustHaves.map((mh, i) => (
+          <div key={i} className="flex items-start gap-3">
+            <MustHaveIcon status={mh.status} />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-zinc-200 leading-snug">{mh.requirement}</div>
+              {mh.evidence && (
+                <div className="text-xs text-zinc-500 mt-0.5 italic">"{mh.evidence}"</div>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 };
 
-// Confidence Badge
-const ConfidenceBadge: React.FC<{ level?: ConfidenceLevel }> = ({ level }) => {
-  if (!level) return null;
+// === REASONING BLOCK (главное для HR) ===
+const ReasoningBlock: React.FC<{ reasoning?: string; verdict?: Verdict }> = ({ reasoning, verdict }) => {
+  if (!reasoning) return null;
 
-  const styles = {
-    high: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    medium: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    low: 'bg-red-500/10 text-red-400 border-red-500/20',
-  };
-  const labels = {
-    high: 'Высокая уверенность',
-    medium: 'Средняя уверенность',
-    low: 'Низкая уверенность',
-  };
+  const borderColor = {
+    High: 'border-l-emerald-500',
+    Medium: 'border-l-blue-500',
+    Low: 'border-l-amber-500',
+    Mismatch: 'border-l-red-500'
+  }[verdict || 'Medium'];
 
   return (
-    <span className={`px-2 py-0.5 rounded text-[10px] border ${styles[level]}`}>
-      {labels[level]}
+    <div className={`
+      p-4 rounded-r-xl bg-zinc-800/40 border-l-4 ${borderColor}
+    `}>
+      <div className="flex items-center gap-2 mb-2">
+        <FileText className="w-4 h-4 text-zinc-400" />
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+          Заключение для HR
+        </span>
+      </div>
+      <p className="text-sm text-zinc-300 leading-relaxed">{reasoning}</p>
+    </div>
+  );
+};
+
+// === INTERVIEW QUESTIONS v7.0 ===
+const InterviewQuestionsBlock: React.FC<{
+  questions?: InterviewQuestion[];
+  legacyQuestions?: string[];
+}> = ({ questions, legacyQuestions }) => {
+  // Поддержка обоих форматов
+  const hasV7Questions = questions && questions.length > 0;
+  const hasLegacyQuestions = legacyQuestions && legacyQuestions.length > 0;
+
+  if (!hasV7Questions && !hasLegacyQuestions) return null;
+
+  return (
+    <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+      <div className="flex items-center gap-2 mb-3">
+        <MessageSquare className="w-4 h-4 text-blue-400" />
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-blue-400">
+          Вопросы для интервью
+        </span>
+      </div>
+
+      {hasV7Questions ? (
+        <div className="space-y-3">
+          {questions!.map((q, i) => (
+            <div key={i} className="pl-3 border-l-2 border-blue-500/30">
+              <div className="text-sm text-zinc-200">{q.question}</div>
+              <div className="text-xs text-blue-400/70 mt-1 flex items-center gap-1">
+                <span className="opacity-60">Проверяем:</span> {q.checks}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {legacyQuestions!.map((q, i) => (
+            <li key={i} className="text-sm text-zinc-300 flex items-start gap-2">
+              <span className="text-blue-400 mt-0.5">•</span>
+              {typeof q === 'string' ? q : (q as any).question || JSON.stringify(q)}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+// === GROWTH PATTERN BADGE ===
+const GrowthPatternBadge: React.FC<{ pattern?: string }> = ({ pattern }) => {
+  if (!pattern) return null;
+
+  const config: Record<string, { icon: React.ReactNode; color: string; bg: string }> = {
+    'растёт': { icon: <TrendingUp className="w-3 h-3" />, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+    'стабилен': { icon: <Minus className="w-3 h-3" />, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+    'деградирует': { icon: <TrendingDown className="w-3 h-3" />, color: 'text-red-400', bg: 'bg-red-500/10' },
+    'непонятно': { icon: <HelpCircle className="w-3 h-3" />, color: 'text-zinc-400', bg: 'bg-zinc-500/10' }
+  };
+
+  const c = config[pattern] || config['непонятно'];
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] ${c.color} ${c.bg}`}>
+      {c.icon}
+      <span>Карьера: {pattern}</span>
     </span>
   );
 };
 
-// Helper to get scores from raw_result or scores field
-const getScores = (r: AnalysisWithApplication): AIScores | null => {
-  if (r.scores) return r.scores;
-  if (r.raw_result?.scores) return r.raw_result.scores as AIScores;
+// === SALARY FIT BADGE ===
+const SalaryFitBadge: React.FC<{ status?: string }> = ({ status }) => {
+  if (!status || status === '—') return null;
+
+  const isMatch = status.includes('вилке') || status.includes('ниже');
+  const isHigh = status.includes('выше');
+
+  return (
+    <span className={`
+      px-2 py-0.5 rounded text-[10px]
+      ${isMatch ? 'bg-emerald-500/10 text-emerald-400' :
+        isHigh ? 'bg-amber-500/10 text-amber-400' :
+        'bg-zinc-500/10 text-zinc-400'}
+    `}>
+      ₽ {status}
+    </span>
+  );
+};
+
+// === HELPERS ===
+const getVerdict = (r: AnalysisWithApplication): Verdict | undefined => {
+  if (r.verdict) return r.verdict;
+  if (r.raw_result?.verdict) return r.raw_result.verdict as Verdict;
+  // Fallback from recommendation
+  if (r.recommendation === 'hire') return 'High';
+  if (r.recommendation === 'interview') return 'Medium';
+  if (r.recommendation === 'maybe') return 'Low';
+  if (r.recommendation === 'reject') return 'Mismatch';
+  return undefined;
+};
+
+const getMustHaves = (r: AnalysisWithApplication): MustHave[] => {
+  if (r.must_haves?.length) return r.must_haves;
+  if (r.raw_result?.must_haves?.length) return r.raw_result.must_haves;
+  return [];
+};
+
+const getHolisticAnalysis = (r: AnalysisWithApplication): HolisticAnalysis | null => {
+  if (r.holistic_analysis) return r.holistic_analysis;
+  if (r.raw_result?.holistic_analysis) return r.raw_result.holistic_analysis;
   return null;
 };
 
-// Helper to get tier
-const getTier = (r: AnalysisWithApplication): CandidateTier | undefined => {
-  if (r.tier) return r.tier;
-  if (r.raw_result?.tier) return r.raw_result.tier as CandidateTier;
-  // Fallback: calculate from score
-  if (r.score !== undefined) {
-    if (r.score >= 82) return 'A';
-    if (r.score >= 58) return 'B';
-    return 'C';
+const getReasoningForHR = (r: AnalysisWithApplication): string | undefined => {
+  if (r.reasoning_for_hr) return r.reasoning_for_hr;
+  if (r.raw_result?.reasoning_for_hr) return r.raw_result.reasoning_for_hr;
+  // Fallback to verdict_reason
+  if (r.raw_result?.verdict_reason) return r.raw_result.verdict_reason;
+  return r.summary || r.reasoning;
+};
+
+const getInterviewQuestionsV7 = (r: AnalysisWithApplication): InterviewQuestion[] => {
+  if (r.interview_questions_v7?.length) return r.interview_questions_v7;
+  if (r.raw_result?.interview_questions?.length) {
+    const qs = r.raw_result.interview_questions;
+    // Check if v7 format
+    if (qs[0]?.checks !== undefined) return qs;
   }
-  return undefined;
+  return [];
 };
 
-// Helper to get confidence
-const getConfidence = (r: AnalysisWithApplication): ConfidenceLevel | undefined => {
-  if (r.confidence) return r.confidence;
-  if (r.raw_result?.confidence) return r.raw_result.confidence as ConfidenceLevel;
-  return undefined;
-};
-
-// Helper to get interview questions
-const getInterviewQuestions = (r: AnalysisWithApplication): string[] => {
+const getLegacyInterviewQuestions = (r: AnalysisWithApplication): string[] => {
   if (r.interview_questions?.length) return r.interview_questions;
-  if (r.raw_result?.interview_questions?.length) return r.raw_result.interview_questions;
+  if (r.raw_result?.interview_questions?.length) {
+    const qs = r.raw_result.interview_questions;
+    // Check if legacy format (strings or objects without checks)
+    if (typeof qs[0] === 'string') return qs;
+    if (qs[0]?.question && qs[0]?.checks === undefined) {
+      return qs.map((q: any) => q.question);
+    }
+  }
   return [];
 };
 
-// Helper to get summary
-const getSummary = (r: AnalysisWithApplication): string | undefined => {
-  if (r.summary) return r.summary;
-  if (r.raw_result?.summary) return r.raw_result.summary;
-  if (r.raw_result?.summary_one_line) return r.raw_result.summary_one_line;
-  return undefined;
+const getSalaryFit = (r: AnalysisWithApplication): string => {
+  if (r.salary_fit?.status) return r.salary_fit.status;
+  if (r.raw_result?.salary_fit?.status) return r.raw_result.salary_fit.status;
+  return '—';
 };
 
-// Helper to get green flags
-const getGreenFlags = (r: AnalysisWithApplication): string[] => {
-  if (r.green_flags?.length) return r.green_flags;
-  if (r.raw_result?.green_flags?.length) return r.raw_result.green_flags;
-  return [];
+const getStrengths = (r: AnalysisWithApplication): string[] => {
+  return r.strengths || r.pros || r.raw_result?.strengths || [];
 };
 
+const getConcerns = (r: AnalysisWithApplication): string[] => {
+  return r.concerns || r.cons || r.weaknesses || r.raw_result?.concerns || [];
+};
+
+// === MAIN COMPONENT ===
 const Analysis: React.FC = () => {
   const app = useApp();
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
@@ -158,8 +327,7 @@ const Analysis: React.FC = () => {
   const [results, setResults] = useState<AnalysisWithApplication[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tierFilter, setTierFilter] = useState<string>('all'); // NEW: Tier filter
-  const [recommendationFilter, setRecommendationFilter] = useState<string>('all');
+  const [verdictFilter, setVerdictFilter] = useState<string>('all');
   const [applicationsStats, setApplicationsStats] = useState<any>(null);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -168,21 +336,20 @@ const Analysis: React.FC = () => {
   const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
   const [limits, setLimits] = useState<any>(null);
 
-  // ========== ИСПРАВЛЕННЫЙ POLLING ==========
-  // Используем useRef для сохранения данных между рендерами
+  // Polling state
   const pollingDataRef = useRef<{
     initialAnalyzed: number | null;
     intervalId: NodeJS.Timeout | null;
     lastProgress: number;
-    noProgressSince: number | null;  // Таймстамп когда перестал быть прогресс
+    noProgressSince: number | null;
   }>({ initialAnalyzed: null, intervalId: null, lastProgress: 0, noProgressSince: null });
 
   const isAnalyzing = app.activeAnalysis !== null && app.activeAnalysis.vacancyId === selectedVacancy;
   const analysisProgress = app.activeAnalysis || { total: 0, analyzed: 0, startTime: 0, vacancyId: '' };
 
-  // Загрузка данных
+  // Effects
   useEffect(() => { loadVacancies(); loadLimits(); }, []);
-  useEffect(() => { loadResults(); }, [selectedVacancy, tierFilter, recommendationFilter]);
+  useEffect(() => { loadResults(); }, [selectedVacancy, verdictFilter]);
   useEffect(() => {
     if (selectedVacancy !== 'all') {
       loadApplicationsStats();
@@ -193,9 +360,8 @@ const Analysis: React.FC = () => {
     }
   }, [selectedVacancy]);
 
-  // ИСПРАВЛЕННЫЙ useEffect для polling
+  // Polling effect
   useEffect(() => {
-    // Если нет активного анализа - очищаем
     if (!app.activeAnalysis) {
       pollingDataRef.current.initialAnalyzed = null;
       pollingDataRef.current.lastProgress = 0;
@@ -215,18 +381,15 @@ const Analysis: React.FC = () => {
         const stats = await apiClient.getApplicationsStats(vacancyId);
         const currentAnalyzed = stats.analyzed_applications;
 
-        // При первом вызове запоминаем начальное значение
         if (pollingDataRef.current.initialAnalyzed === null) {
           pollingDataRef.current.initialAnalyzed = currentAnalyzed;
         }
 
-        // Вычисляем прогресс ОТНОСИТЕЛЬНО старта
         const newlyAnalyzed = currentAnalyzed - pollingDataRef.current.initialAnalyzed;
         const safeProgress = Math.max(0, Math.min(newlyAnalyzed, targetTotal));
 
         app.updateAnalysisProgress({ analyzed: safeProgress });
 
-        // Отслеживаем прогресс - если нет изменений 30 сек, завершаем
         const now = Date.now();
         if (safeProgress > pollingDataRef.current.lastProgress) {
           pollingDataRef.current.lastProgress = safeProgress;
@@ -235,18 +398,15 @@ const Analysis: React.FC = () => {
           pollingDataRef.current.noProgressSince = now;
         }
 
-        // Таймаут 30 секунд без прогресса - завершаем анализ
         const NO_PROGRESS_TIMEOUT = 30000;
-        const noProgressTime = pollingDataRef.current.noProgressSince 
-          ? now - pollingDataRef.current.noProgressSince 
+        const noProgressTime = pollingDataRef.current.noProgressSince
+          ? now - pollingDataRef.current.noProgressSince
           : 0;
 
-        // Проверяем завершение: успех ИЛИ таймаут
         const isComplete = stats.unanalyzed_applications === 0 || safeProgress >= targetTotal;
         const isTimeout = noProgressTime >= NO_PROGRESS_TIMEOUT;
 
         if (isComplete || isTimeout) {
-          // Останавливаем polling
           if (pollingDataRef.current.intervalId) {
             clearInterval(pollingDataRef.current.intervalId);
             pollingDataRef.current.intervalId = null;
@@ -259,27 +419,19 @@ const Analysis: React.FC = () => {
           loadApplicationsStats();
           loadDashboardStats();
           loadLimits();
-          
-          // Если завершили по таймауту и было 0 прогресса - все уже проанализированы
-          if (isTimeout && safeProgress === 0) {
-            console.log('[Analysis] Все отклики уже были проанализированы ранее');
-          }
         }
       } catch (err) {
         console.error('[Analysis] Polling error:', err);
       }
     };
 
-    // Очищаем предыдущий интервал если был
     if (pollingDataRef.current.intervalId) {
       clearInterval(pollingDataRef.current.intervalId);
     }
 
-    // Запускаем новый polling
-    pollStats(); // Сразу первый вызов
+    pollStats();
     pollingDataRef.current.intervalId = setInterval(pollStats, 3000);
 
-    // Cleanup при размонтировании
     return () => {
       if (pollingDataRef.current.intervalId) {
         clearInterval(pollingDataRef.current.intervalId);
@@ -288,6 +440,7 @@ const Analysis: React.FC = () => {
     };
   }, [app.activeAnalysis?.vacancyId, app.activeAnalysis?.total]);
 
+  // API calls
   const loadLimits = async () => {
     try {
       const data = await apiClient.checkLimits();
@@ -312,13 +465,12 @@ const Analysis: React.FC = () => {
     try {
       const filters: AnalysisFilter = { limit: 100 };
       if (selectedVacancy !== 'all') filters.vacancy_id = selectedVacancy;
-      if (recommendationFilter !== 'all') filters.recommendation = recommendationFilter as any;
       let data = await apiClient.getAnalysisResults(filters);
       data = Array.isArray(data) ? data : [];
 
-      // Локальная фильтрация по Tier (если API не поддерживает)
-      if (tierFilter !== 'all') {
-        data = data.filter((r: AnalysisWithApplication) => getTier(r) === tierFilter);
+      // Filter by verdict locally
+      if (verdictFilter !== 'all') {
+        data = data.filter((r: AnalysisWithApplication) => getVerdict(r) === verdictFilter);
       }
 
       setResults(data);
@@ -376,7 +528,6 @@ const Analysis: React.FC = () => {
       return;
     }
 
-    // Проверяем лимит
     const remaining = limits?.analyses_remaining || 0;
     if (!limits?.is_unlimited && remaining <= 0) {
       setLimitExceededInfo(limits);
@@ -384,11 +535,9 @@ const Analysis: React.FC = () => {
       return;
     }
 
-    // Анализируем столько, сколько позволяет лимит
     const actualToAnalyze = limits?.is_unlimited ? toAnalyze : Math.min(toAnalyze, remaining);
 
     setError(null);
-    // Сбрасываем все данные поллинга перед стартом
     pollingDataRef.current.initialAnalyzed = null;
     pollingDataRef.current.lastProgress = 0;
     pollingDataRef.current.noProgressSince = null;
@@ -418,8 +567,7 @@ const Analysis: React.FC = () => {
     if (selectedVacancy === 'all') return;
     setIsDownloading(true);
     try {
-      const filter = recommendationFilter !== 'all' ? recommendationFilter : undefined;
-      const blob = await apiClient.downloadExcelReport(selectedVacancy, filter);
+      const blob = await apiClient.downloadExcelReport(selectedVacancy);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -442,35 +590,7 @@ const Analysis: React.FC = () => {
     setExpandedResults(newSet);
   };
 
-  const getRecommendationStyle = (rec?: string) => {
-    switch (rec) {
-      case 'hire': return 'status-hire';
-      case 'interview': return 'status-interview';
-      case 'maybe': return 'status-maybe';
-      case 'reject': return 'status-reject';
-      default: return 'bg-zinc-800 text-zinc-400';
-    }
-  };
-
-  const getRecommendationText = (rec?: string) => {
-    switch (rec) {
-      case 'hire': return 'Нанять';
-      case 'interview': return 'Собеседование';
-      case 'maybe': return 'Возможно';
-      case 'reject': return 'Отклонить';
-      default: return '—';
-    }
-  };
-
-  const statsData = dashboardStats ? {
-    total: dashboardStats.total_analyzed || 0,
-    hire: dashboardStats.hire_count || 0,
-    interview: dashboardStats.interview_count || 0,
-    maybe: dashboardStats.maybe_count || 0,
-    reject: dashboardStats.reject_count || 0,
-    avgScore: Math.round(dashboardStats.avg_score || 0),
-  } : { total: 0, hire: 0, interview: 0, maybe: 0, reject: 0, avgScore: 0 };
-
+  // Computed values
   const progressPercent = analysisProgress.total > 0
     ? Math.round((analysisProgress.analyzed / analysisProgress.total) * 100)
     : 0;
@@ -489,7 +609,6 @@ const Analysis: React.FC = () => {
     return min > 0 ? `~${min} мин` : `~${sec} сек`;
   };
 
-  // Лимиты - ИСПРАВЛЕННАЯ логика отображения
   const limitsRemaining = limits?.analyses_remaining ?? 0;
   const limitsTotal = limits?.analyses_limit ?? 20;
   const limitsUsed = limits?.analyses_used ?? 0;
@@ -501,13 +620,20 @@ const Analysis: React.FC = () => {
     transition: { duration: 0.3 }
   };
 
+  // Count verdicts for stats
+  const verdictCounts = results.reduce((acc, r) => {
+    const v = getVerdict(r) || 'Low';
+    acc[v] = (acc[v] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <motion.div {...fadeIn} className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-zinc-100">Анализ резюме</h1>
-          <p className="text-sm text-zinc-500 mt-1">AI-оценка кандидатов</p>
+          <h1 className="text-xl font-semibold text-zinc-100">AI-анализ резюме</h1>
+          <p className="text-sm text-zinc-500 mt-1">v7.0 Hybrid Expert</p>
         </div>
         {selectedVacancy !== 'all' && applicationsStats?.analyzed_applications > 0 && (
           <Button
@@ -539,13 +665,12 @@ const Analysis: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* ИСПРАВЛЕННЫЕ Лимиты - понятный блок */}
+      {/* Limits */}
       {limits && !isUnlimited && (
         <motion.div {...fadeIn}>
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-6">
-                {/* Основной показатель - сколько ОСТАЛОСЬ */}
                 <div className="flex-shrink-0">
                   <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-1">
                     Доступно анализов
@@ -561,8 +686,6 @@ const Analysis: React.FC = () => {
                     <span className="text-sm text-zinc-600">/ {limitsTotal}</span>
                   </div>
                 </div>
-
-                {/* Прогресс-бар - показывает ИСПОЛЬЗОВАННОЕ */}
                 <div className="flex-1">
                   <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
                     <div
@@ -581,8 +704,6 @@ const Analysis: React.FC = () => {
                     )}
                   </div>
                 </div>
-
-                {/* Кнопка улучшить - если мало осталось */}
                 {limitsRemaining <= 10 && (
                   <Button
                     variant="outline"
@@ -600,7 +721,7 @@ const Analysis: React.FC = () => {
       )}
 
       {/* Filters */}
-      <motion.div {...fadeIn} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <motion.div {...fadeIn} className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
           <SelectTrigger className="h-11 bg-card border-zinc-800">
             <SelectValue placeholder="Выберите вакансию" />
@@ -613,44 +734,36 @@ const Analysis: React.FC = () => {
           </SelectContent>
         </Select>
 
-        {/* NEW: Tier Filter - главный фильтр для HR */}
-        <Select value={tierFilter} onValueChange={setTierFilter}>
+        <Select value={verdictFilter} onValueChange={setVerdictFilter}>
           <SelectTrigger className="h-11 bg-card border-zinc-800">
-            <SelectValue placeholder="Фильтр по Tier" />
+            <SelectValue placeholder="Фильтр по вердикту" />
           </SelectTrigger>
           <SelectContent className="bg-zinc-900 border-zinc-800">
-            <SelectItem value="all">Все Tier</SelectItem>
-            <SelectItem value="A">
+            <SelectItem value="all">Все вердикты</SelectItem>
+            <SelectItem value="High">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 bg-emerald-500 rounded text-white text-xs font-bold flex items-center justify-center">A</span>
-                <span>Лучшие кандидаты</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Рекомендую</span>
               </div>
             </SelectItem>
-            <SelectItem value="B">
+            <SelectItem value="Medium">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 bg-blue-500 rounded text-white text-xs font-bold flex items-center justify-center">B</span>
-                <span>Хорошие кандидаты</span>
+                <HelpCircle className="w-4 h-4 text-blue-400" />
+                <span>На рассмотрение</span>
               </div>
             </SelectItem>
-            <SelectItem value="C">
+            <SelectItem value="Low">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 bg-zinc-600 rounded text-zinc-300 text-xs font-bold flex items-center justify-center">C</span>
-                <span>Слабые кандидаты</span>
+                <AlertCircle className="w-4 h-4 text-amber-400" />
+                <span>Сомнительно</span>
               </div>
             </SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={recommendationFilter} onValueChange={setRecommendationFilter}>
-          <SelectTrigger className="h-11 bg-card border-zinc-800">
-            <SelectValue placeholder="Фильтр по статусу" />
-          </SelectTrigger>
-          <SelectContent className="bg-zinc-900 border-zinc-800">
-            <SelectItem value="all">Все результаты</SelectItem>
-            <SelectItem value="hire">Нанять</SelectItem>
-            <SelectItem value="interview">Собеседование</SelectItem>
-            <SelectItem value="maybe">Возможно</SelectItem>
-            <SelectItem value="reject">Отклонить</SelectItem>
+            <SelectItem value="Mismatch">
+              <div className="flex items-center gap-2">
+                <XCircle className="w-4 h-4 text-red-400" />
+                <span>Не подходит</span>
+              </div>
+            </SelectItem>
           </SelectContent>
         </Select>
       </motion.div>
@@ -686,16 +799,15 @@ const Analysis: React.FC = () => {
             </div>
             <div className="bg-card p-5">
               <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
-                Средний балл
+                Рекомендую
               </div>
-              <div className="text-3xl font-semibold tracking-tight tabular-nums">
-                {statsData.avgScore}
-                <span className="text-lg text-zinc-500 font-normal">/100</span>
+              <div className="text-3xl font-semibold tracking-tight tabular-nums text-emerald-400">
+                {verdictCounts['High'] || 0}
               </div>
             </div>
           </div>
 
-          {/* Analysis Control - УПРОЩЁННЫЙ */}
+          {/* Analysis Control */}
           {!isAnalyzing ? (
             <Card>
               <CardContent className="p-5">
@@ -703,14 +815,11 @@ const Analysis: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-sm text-zinc-400 mb-1">
-                        {applicationsStats.unanalyzed_applications} {
-                          applicationsStats.unanalyzed_applications === 1 ? 'резюме ожидает' :
-                          applicationsStats.unanalyzed_applications < 5 ? 'резюме ожидают' : 'резюме ожидают'
-                        } анализа
+                        {applicationsStats.unanalyzed_applications} резюме ожидают анализа
                       </div>
                       {!isUnlimited && limitsRemaining < applicationsStats.unanalyzed_applications && (
                         <div className="text-xs text-amber-400">
-                          Лимит позволяет проанализировать {limitsRemaining} из {applicationsStats.unanalyzed_applications}
+                          Лимит: {limitsRemaining} из {applicationsStats.unanalyzed_applications}
                         </div>
                       )}
                     </div>
@@ -730,7 +839,6 @@ const Analysis: React.FC = () => {
               </CardContent>
             </Card>
           ) : (
-            /* Progress Card */
             <Card>
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-4">
@@ -740,12 +848,8 @@ const Analysis: React.FC = () => {
                       {analysisProgress.analyzed} из {analysisProgress.total} резюме
                     </div>
                   </div>
-                  <div className="text-3xl font-semibold tabular-nums">
-                    {progressPercent}%
-                  </div>
+                  <div className="text-3xl font-semibold tabular-nums">{progressPercent}%</div>
                 </div>
-
-                {/* Progress bar */}
                 <div className="h-3 bg-zinc-800 rounded-full overflow-hidden mb-4">
                   <motion.div
                     initial={{ width: 0 }}
@@ -754,12 +858,10 @@ const Analysis: React.FC = () => {
                     className="h-full bg-green-500 rounded-full"
                   />
                 </div>
-
                 <div className="flex items-center justify-between text-xs text-zinc-500 mb-4">
                   <span>Осталось: {getTimeRemaining()}</span>
                   <span>{speed} рез/мин</span>
                 </div>
-
                 <Button
                   onClick={handleStopAnalysis}
                   variant="outline"
@@ -774,31 +876,30 @@ const Analysis: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Distribution */}
-      {selectedVacancy !== 'all' && statsData.total > 0 && (
+      {/* Verdict Distribution */}
+      {selectedVacancy !== 'all' && results.length > 0 && (
         <motion.div {...fadeIn}>
           <Card>
             <CardHeader className="pb-0">
               <CardTitle className="text-[13px] font-medium uppercase tracking-wide">
-                Распределение
+                Распределение вердиктов
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
               <div className="grid grid-cols-4 gap-4">
                 {[
-                  { label: 'Нанять', value: statsData.hire, color: 'bg-green-500' },
-                  { label: 'Собеседование', value: statsData.interview, color: 'bg-blue-500' },
-                  { label: 'Возможно', value: statsData.maybe, color: 'bg-amber-500' },
-                  { label: 'Отклонить', value: statsData.reject, color: 'bg-red-500' },
+                  { key: 'High', label: 'Рекомендую', color: 'bg-emerald-500', textColor: 'text-emerald-400' },
+                  { key: 'Medium', label: 'На рассмотрение', color: 'bg-blue-500', textColor: 'text-blue-400' },
+                  { key: 'Low', label: 'Сомнительно', color: 'bg-amber-500', textColor: 'text-amber-400' },
+                  { key: 'Mismatch', label: 'Не подходит', color: 'bg-red-500', textColor: 'text-red-400' },
                 ].map((item) => (
-                  <div key={item.label} className="text-center">
+                  <div key={item.key} className="text-center">
                     <div className="flex items-center justify-center gap-2 mb-1">
                       <div className={`w-2 h-2 rounded-sm ${item.color}`} />
                       <span className="text-xs text-zinc-500">{item.label}</span>
                     </div>
-                    <div className="text-2xl font-semibold tabular-nums">{item.value}</div>
-                    <div className="text-[11px] text-zinc-600">
-                      {statsData.total > 0 ? Math.round((item.value / statsData.total) * 100) : 0}%
+                    <div className={`text-2xl font-semibold tabular-nums ${item.textColor}`}>
+                      {verdictCounts[item.key] || 0}
                     </div>
                   </div>
                 ))}
@@ -815,7 +916,7 @@ const Analysis: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Results Table - v3 with Tier, Score Dots, Interview Questions */}
+      {/* Results */}
       <motion.div {...fadeIn}>
         <Card>
           <CardHeader className="pb-0 flex flex-row items-center justify-between">
@@ -835,22 +936,25 @@ const Analysis: React.FC = () => {
             ) : (
               <div>
                 {results.map((r) => {
-                  const tier = getTier(r);
-                  const scores = getScores(r);
-                  const confidence = getConfidence(r);
-                  const interviewQuestions = getInterviewQuestions(r);
-                  const summary = getSummary(r);
-                  const greenFlags = getGreenFlags(r);
+                  const verdict = getVerdict(r);
+                  const mustHaves = getMustHaves(r);
+                  const holistic = getHolisticAnalysis(r);
+                  const reasoningForHR = getReasoningForHR(r);
+                  const interviewQuestionsV7 = getInterviewQuestionsV7(r);
+                  const legacyQuestions = getLegacyInterviewQuestions(r);
+                  const salaryFit = getSalaryFit(r);
+                  const strengths = getStrengths(r);
+                  const concerns = getConcerns(r);
 
                   return (
                     <div key={r.id} className="border-b border-zinc-800/50 last:border-b-0">
-                      {/* Card Header - Collapsed View */}
+                      {/* Collapsed View */}
                       <div
                         className="px-5 py-4 flex items-center gap-4 cursor-pointer hover:bg-zinc-900/50 transition-colors"
                         onClick={() => toggleExpanded(r.id)}
                       >
-                        {/* Tier Badge - главный элемент */}
-                        <TierBadge tier={tier} size="lg" />
+                        {/* Verdict Badge */}
+                        <VerdictBadge verdict={verdict} size="md" />
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
@@ -869,32 +973,28 @@ const Analysis: React.FC = () => {
                                 <ExternalLink className="h-3.5 w-3.5" />
                               </a>
                             )}
-                            {/* Confidence Badge */}
-                            <ConfidenceBadge level={confidence} />
+                            <GrowthPatternBadge pattern={holistic?.growth_pattern} />
+                            <SalaryFitBadge status={salaryFit} />
                           </div>
-                          {/* Summary - короткое описание вместо телефона */}
-                          {summary ? (
+                          {/* Career summary */}
+                          {holistic?.career_summary && (
                             <div className="text-xs text-zinc-500 mt-0.5 truncate">
-                              {summary}
-                            </div>
-                          ) : r.application?.candidate_phone && (
-                            <div className="flex items-center gap-1.5 text-xs text-zinc-500 mt-0.5">
-                              <Phone className="h-3 w-3" />
-                              {r.application.candidate_phone}
+                              {holistic.career_summary}
                             </div>
                           )}
                         </div>
 
-                        {/* Score */}
-                        <div className="text-right mr-2">
-                          <div className="text-lg font-semibold tabular-nums">{r.score || '—'}</div>
-                          <div className="text-[10px] text-zinc-500">баллов</div>
-                        </div>
-
-                        {/* Status */}
-                        <span className={`px-2.5 py-1 rounded text-[11px] font-medium ${getRecommendationStyle(r.recommendation)}`}>
-                          {getRecommendationText(r.recommendation)}
-                        </span>
+                        {/* Phone */}
+                        {r.application?.candidate_phone && (
+                          <a
+                            href={`tel:${r.application.candidate_phone}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300"
+                          >
+                            <Phone className="h-3.5 w-3.5" />
+                            <span className="hidden md:inline">{r.application.candidate_phone}</span>
+                          </a>
+                        )}
 
                         {/* Chevron */}
                         {expandedResults.has(r.id) ? (
@@ -904,7 +1004,7 @@ const Analysis: React.FC = () => {
                         )}
                       </div>
 
-                      {/* Expanded View - v3 with Score Dots and Interview Questions */}
+                      {/* Expanded View */}
                       <AnimatePresence>
                         {expandedResults.has(r.id) && (
                           <motion.div
@@ -913,151 +1013,76 @@ const Analysis: React.FC = () => {
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden"
                           >
-                            <div className="px-5 pb-5 pt-2 ml-[52px] space-y-4">
-                              {/* === NEW: 4 Score Dots === */}
-                              {scores && (
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-lg bg-zinc-800/30 border border-zinc-700/30">
-                                  <ScoreDots
-                                    score={scores.relevance}
-                                    label="Релевантность"
-                                    icon={<Target className="h-3.5 w-3.5" />}
-                                  />
-                                  <ScoreDots
-                                    score={scores.expertise}
-                                    label="Экспертиза"
-                                    icon={<Briefcase className="h-3.5 w-3.5" />}
-                                  />
-                                  <ScoreDots
-                                    score={scores.trajectory}
-                                    label="Траектория"
-                                    icon={<TrendingUp className="h-3.5 w-3.5" />}
-                                  />
-                                  <ScoreDots
-                                    score={scores.stability}
-                                    label="Стабильность"
-                                    icon={<Shield className="h-3.5 w-3.5" />}
-                                  />
-                                </div>
-                              )}
+                            <div className="px-5 pb-5 pt-2 space-y-4">
+                              {/* Reasoning for HR - главный блок */}
+                              <ReasoningBlock reasoning={reasoningForHR} verdict={verdict} />
 
-                              {/* Legacy Metrics (fallback if no scores) */}
-                              {!scores && (
-                                <div className="grid grid-cols-3 gap-3">
-                                  <div className="p-3 rounded-lg bg-zinc-800/50">
-                                    <div className="text-[11px] text-zinc-500 mb-1">Навыки</div>
-                                    <div className="flex items-center gap-2">
-                                      <div className="flex-1 h-1.5 bg-zinc-700 rounded-full overflow-hidden">
-                                        <div className="h-full bg-green-500 rounded-full" style={{ width: `${r.skills_match || 0}%` }} />
-                                      </div>
-                                      <span className="text-sm font-medium tabular-nums">{r.skills_match || 0}%</span>
-                                    </div>
-                                  </div>
-                                  <div className="p-3 rounded-lg bg-zinc-800/50">
-                                    <div className="text-[11px] text-zinc-500 mb-1">Опыт</div>
-                                    <div className="flex items-center gap-2">
-                                      <div className="flex-1 h-1.5 bg-zinc-700 rounded-full overflow-hidden">
-                                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${r.experience_match || 0}%` }} />
-                                      </div>
-                                      <span className="text-sm font-medium tabular-nums">{r.experience_match || 0}%</span>
-                                    </div>
-                                  </div>
-                                  <div className="p-3 rounded-lg bg-zinc-800/50">
-                                    <div className="text-[11px] text-zinc-500 mb-1">Зарплата</div>
-                                    <div className="text-sm font-medium">
-                                      {r.salary_match === 'match' ? 'Совпадает' :
-                                       r.salary_match === 'higher' ? 'Выше' :
-                                       r.salary_match === 'lower' ? 'Ниже' : 'Не указана'}
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
+                              {/* Must-haves */}
+                              <MustHavesBlock mustHaves={mustHaves} />
 
-                              {/* === NEW: Interview Questions — killer feature! === */}
-                              {interviewQuestions.length > 0 && (
-                                <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <MessageSquare className="h-4 w-4 text-blue-400" />
-                                    <span className="text-[11px] font-medium text-blue-400 uppercase tracking-wider">
-                                      Вопросы для интервью
-                                    </span>
-                                  </div>
-                                  <ul className="space-y-2">
-                                    {interviewQuestions.map((q, i) => (
-                                      <li key={i} className="text-sm text-zinc-300 flex items-start gap-2">
-                                        <span className="text-blue-400 mt-0.5">•</span>
-                                        {q}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
+                              {/* Interview Questions */}
+                              <InterviewQuestionsBlock
+                                questions={interviewQuestionsV7}
+                                legacyQuestions={legacyQuestions}
+                              />
 
-                              {/* Tags - Pros/Cons/Flags */}
-                              <div className="space-y-3">
-                                {/* Green Flags (NEW) */}
-                                {greenFlags.length > 0 && (
-                                  <div>
-                                    <div className="text-[11px] text-emerald-500 mb-2">✓ Зелёные флаги</div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {greenFlags.map((f, i) => (
-                                        <span key={i} className="px-2 py-0.5 text-xs bg-emerald-500/10 text-emerald-400 rounded border border-emerald-500/20">
-                                          {f}
-                                        </span>
-                                      ))}
+                              {/* Strengths & Concerns */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {strengths.length > 0 && (
+                                  <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+                                    <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400 mb-2">
+                                      + Сильные стороны
                                     </div>
-                                  </div>
-                                )}
-
-                                {/* Strengths/Pros */}
-                                {(r.strengths?.length > 0 || r.pros?.length > 0) && (
-                                  <div>
-                                    <div className="text-[11px] text-green-500 mb-2">+ Плюсы</div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {(r.pros || r.strengths || []).map((s, i) => (
-                                        <span key={i} className="px-2 py-0.5 text-xs bg-green-500/10 text-green-400 rounded">
+                                    <ul className="space-y-1.5">
+                                      {strengths.slice(0, 5).map((s, i) => (
+                                        <li key={i} className="text-sm text-zinc-300 flex items-start gap-2">
+                                          <span className="text-emerald-400 mt-0.5">•</span>
                                           {s}
-                                        </span>
+                                        </li>
                                       ))}
-                                    </div>
+                                    </ul>
                                   </div>
                                 )}
 
-                                {/* Weaknesses/Cons */}
-                                {(r.weaknesses?.length > 0 || r.cons?.length > 0) && (
-                                  <div>
-                                    <div className="text-[11px] text-amber-500 mb-2">− Минусы</div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {(r.cons || r.weaknesses || []).map((w, i) => (
-                                        <span key={i} className="px-2 py-0.5 text-xs bg-amber-500/10 text-amber-400 rounded">
-                                          {w}
-                                        </span>
-                                      ))}
+                                {concerns.length > 0 && (
+                                  <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                                    <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-400 mb-2">
+                                      − Сомнения
                                     </div>
-                                  </div>
-                                )}
-
-                                {/* Red Flags */}
-                                {r.red_flags?.length > 0 && (
-                                  <div>
-                                    <div className="text-[11px] text-red-500 mb-2">⚠ Красные флаги</div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {r.red_flags.map((f, i) => (
-                                        <span key={i} className="px-2 py-0.5 text-xs bg-red-500/10 text-red-400 rounded border border-red-500/20">
-                                          {f}
-                                        </span>
+                                    <ul className="space-y-1.5">
+                                      {concerns.slice(0, 5).map((c, i) => (
+                                        <li key={i} className="text-sm text-zinc-300 flex items-start gap-2">
+                                          <span className="text-amber-400 mt-0.5">•</span>
+                                          {c}
+                                        </li>
                                       ))}
-                                    </div>
+                                    </ul>
                                   </div>
                                 )}
                               </div>
 
-                              {/* Contact Info + Resume Link */}
+                              {/* Red Flags */}
+                              {r.red_flags?.length > 0 && (
+                                <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20">
+                                  <div className="text-[11px] font-semibold uppercase tracking-wider text-red-400 mb-2">
+                                    ⚠ Красные флаги
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {r.red_flags.map((f, i) => (
+                                      <span key={i} className="px-2 py-0.5 text-xs bg-red-500/10 text-red-400 rounded border border-red-500/20">
+                                        {f}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Contact + Resume */}
                               <div className="flex items-center gap-4 pt-2 border-t border-zinc-800/50">
                                 {r.application?.candidate_phone && (
                                   <a
                                     href={`tel:${r.application.candidate_phone}`}
                                     className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200"
-                                    onClick={(e) => e.stopPropagation()}
                                   >
                                     <Phone className="h-3.5 w-3.5" />
                                     {r.application.candidate_phone}
@@ -1069,7 +1094,6 @@ const Analysis: React.FC = () => {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300"
-                                    onClick={(e) => e.stopPropagation()}
                                   >
                                     <ExternalLink className="h-3.5 w-3.5" />
                                     Резюме на HH.ru

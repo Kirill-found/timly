@@ -73,12 +73,52 @@ export interface Application {
   created_at?: string;
 }
 
-// Композитные оценки AI (v2)
+// Композитные оценки AI (v2 - legacy)
 export interface AIScores {
   relevance: number;   // Релевантность позиции (1-5)
   expertise: number;   // Экспертиза в навыках (1-5)
   trajectory: number;  // Карьерная траектория (1-5)
   stability: number;   // Стабильность и риски (1-5)
+}
+
+// ==================== AI Analyzer v7.0 Types ====================
+
+// Вердикт v7.0 (заменяет числовой score)
+export type Verdict = 'High' | 'Medium' | 'Low' | 'Mismatch';
+
+// Must-have требование
+export interface MustHave {
+  requirement: string;
+  status: 'yes' | 'maybe' | 'no';
+  evidence: string | null;
+  reasoning: string;
+}
+
+// Холистический анализ кандидата
+export interface HolisticAnalysis {
+  career_summary: string;
+  relevance_assessment: string;
+  growth_pattern: 'растёт' | 'стабилен' | 'деградирует' | 'непонятно';
+}
+
+// Анализ вакансии
+export interface VacancyAnalysis {
+  position_type: 'operations' | 'growth' | 'launch';
+  niche_specifics: string;
+  what_critical: string;
+  what_learnable: string;
+}
+
+// Вопрос для интервью v7.0
+export interface InterviewQuestion {
+  question: string;
+  checks: string;
+}
+
+// Salary fit v7.0
+export interface SalaryFit {
+  status: string;
+  comment?: string;
 }
 
 // Анализ навыков
@@ -94,12 +134,22 @@ export type ConfidenceLevel = 'high' | 'medium' | 'low';
 // Tier кандидата (A - лучшие, B - хорошие, C - слабые)
 export type CandidateTier = 'A' | 'B' | 'C';
 
-// Результаты AI анализа (v2 - композитный скоринг)
+// Результаты AI анализа (v7.0 - Hybrid Expert)
 export interface AnalysisResult {
   id: string;
   application_id: string;
 
-  // === НОВЫЕ ПОЛЯ v2 ===
+  // === ПОЛЯ v7.0 (Hybrid Expert) ===
+  verdict?: Verdict;                       // High/Medium/Low/Mismatch
+  must_haves?: MustHave[];                 // Проверка ключевых требований
+  holistic_analysis?: HolisticAnalysis;    // Холистический анализ
+  vacancy_analysis?: VacancyAnalysis;      // Анализ вакансии
+  reasoning_for_hr?: string;               // Развёрнутое объяснение для HR
+  interview_questions_v7?: InterviewQuestion[]; // Вопросы с checks
+  salary_fit?: SalaryFit;                  // Соответствие зарплаты
+  concerns?: string[];                     // Сомнения/риски
+
+  // === ПОЛЯ v2 (legacy) ===
   tier?: CandidateTier;                    // Tier A/B/C
   scores?: AIScores;                       // 4 оценки по 1-5
   confidence?: ConfidenceLevel;            // Уверенность AI
@@ -107,7 +157,7 @@ export interface AnalysisResult {
   pros?: string[];                         // Плюсы (конкретные факты)
   cons?: string[];                         // Минусы (конкретные факты)
   green_flags?: string[];                  // Зелёные флаги (бонусы)
-  interview_questions?: string[];          // Вопросы для интервью
+  interview_questions?: string[];          // Вопросы для интервью (старый формат)
   summary?: string;                        // Короткое резюме (10-15 слов)
 
   // === Обратная совместимость (v1) ===
