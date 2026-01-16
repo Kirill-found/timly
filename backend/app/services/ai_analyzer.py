@@ -388,11 +388,15 @@ total = (MUST_HAVE × 0.40) + (RELEVANCE × 0.30) + (QUALITY × 0.20) + (OTHER �
         score = result["score"]
         result["tier"] = "A" if score >= 70 else "B" if score >= 45 else "C"
 
-        # Совместимость со старым форматом для Excel
+        # Совместимость со старым форматом для Excel и фронтенда
         result["pros"] = result.get("strengths", [])
         result["cons"] = result.get("concerns", [])
         result["weaknesses"] = result.get("concerns", [])
         result["summary_one_line"] = result.get("verdict_reason", "")
+
+        # Бары для фронтенда (skills_match, experience_match)
+        result["skills_match"] = scoring.get("must_have", {}).get("score", 0)
+        result["experience_match"] = scoring.get("relevance", {}).get("score", 0)
 
         # Ghost skills count
         skills_check = result.get("skills_check", [])
