@@ -132,6 +132,49 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
             'Mismatch': ('Не подходит', FILL['mismatch'], PALETTE['red'], '✕'),
         }.get(v, ('—', FILL['white'], PALETTE['slate'], '?'))
 
+    def get_priority(analysis):
+        """Получить приоритет v7.2"""
+        p = raw(analysis, 'priority', 'basic')
+        return p if p in ['top', 'strong', 'basic'] else 'basic'
+
+    def priority_stars(p):
+        """Приоритет → звёзды"""
+        return {'top': '★★★', 'strong': '★★', 'basic': '★'}.get(p, '★')
+
+    def get_one_liner(analysis):
+        """Получить one_liner или fallback"""
+        one = raw(analysis, 'one_liner', '')
+        if one:
+            return one
+        # Fallback to verdict_reason
+        return raw(analysis, 'verdict_reason', '') or ''
+
+    def get_salary_from_resume(app):
+        """Получить зарплату из резюме кандидата"""
+        resume = app.resume_data or {}
+        if isinstance(resume, str):
+            try:
+                resume = json.loads(resume)
+            except:
+                return None
+        salary = resume.get('salary', {})
+        if isinstance(salary, dict):
+            amount = salary.get('amount', 0) or salary.get('from', 0) or 0
+            if amount:
+                return int(amount * 1.15)  # NET → GROSS
+        return None
+
+    def has_cover_letter(app):
+        """Проверить наличие сопроводительного письма"""
+        resume = app.resume_data or {}
+        if isinstance(resume, str):
+            try:
+                resume = json.loads(resume)
+            except:
+                return False
+        cover = resume.get('cover_letter', '') or resume.get('message', '')
+        return bool(cover and len(str(cover).strip()) > 10)
+
     def bullets(items, max_n=5):
         if not items:
             return "—"
@@ -212,12 +255,14 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
     low_n = len([r for r, _ in results if get_verdict(r) == 'Low'])
     mismatch_n = total - high_n - medium_n - low_n
 
-    # Сортировка: High → Medium → Low → Mismatch
+    # Сортировка: High+top → High+strong → High+basic → Medium → Low → Mismatch
     def sort_key(item):
         v = get_verdict(item[0])
-        order = {'High': 0, 'Medium': 1, 'Low': 2, 'Mismatch': 3}
+        p = get_priority(item[0])
+        verdict_order = {'High': 0, 'Medium': 1, 'Low': 2, 'Mismatch': 3}
+        priority_order = {'top': 0, 'strong': 1, 'basic': 2}
         score = raw(item[0], 'score', 0) or 0
-        return (order.get(v, 3), -score)
+        return (verdict_order.get(v, 3), priority_order.get(p, 2), -score)
 
     sorted_results = sorted(results, key=sort_key)
 
@@ -226,8 +271,8 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
     # ══════════════════════════════════════════════════════════════
     ws = shortlist_ws
 
-    # Column widths (F шире для полного verdict_reason)
-    widths = {'A': 5, 'B': 20, 'C': 16, 'D': 12, 'E': 10, 'F': 65}
+    # Column widths v7.2: Приоритет | Кандидат | Вердикт | Зарплата | Письмо | Почему этот кандидат
+    widths = {'A': 6, 'B': 22, 'C': 14, 'D': 14, 'E': 7, 'F': 70}
     for col, w in widths.items():
         ws.column_dimensions[col].width = w
 
@@ -237,9 +282,11 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
     cell_style(c, font=FONT['title'], align=ALIGN['center'])
     ws.row_dimensions[1].height = 36
 
-    # Stats bar
+    # Stats bar v7.2
     ws.merge_cells('A2:F2')
-    stats = f"★ {high_n} рекомендую   ◆ {medium_n} рассмотреть   ▲ {low_n} сомнительно   ✕ {mismatch_n} не подходят   │   {total} всего"
+    # Count top priority
+    top_count = len([r for r, _ in results if get_verdict(r) == 'High' and get_priority(r) == 'top'])
+    stats = f"★★★ {top_count} топ   │   ★ {high_n} рекомендую   ◆ {medium_n} рассмотреть   ▲ {low_n} сомнительно   ✕ {mismatch_n} нет   │   {total} всего"
     c = ws.cell(row=2, column=1, value=stats)
     cell_style(c, font=FONT['subtitle'], align=ALIGN['center'], fill=FILL['cloud'])
     ws.row_dimensions[2].height = 26
@@ -247,32 +294,32 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
     # Spacer
     ws.row_dimensions[3].height = 6
 
-    # Headers
-    headers = ['', 'КАНДИДАТ', 'ВЕРДИКТ', 'КАРЬЕРА', 'ОПЫТ', 'КЛЮЧЕВОЙ ВЫВОД']
+    # Headers v7.2
+    headers = ['★', 'КАНДИДАТ', 'ВЕРДИКТ', 'ЗАРПЛАТА', '📝', 'ПОЧЕМУ ЭТОТ КАНДИДАТ']
     for i, h in enumerate(headers, 1):
         c = ws.cell(row=4, column=i, value=h)
         cell_style(c, font=FONT['header'], fill=FILL['header'], align=ALIGN['center'], border=BORDER)
     ws.row_dimensions[4].height = 28
     ws.freeze_panes = 'A5'
 
-    # Data rows
+    # Data rows v7.2
     for idx, (analysis, app) in enumerate(sorted_results, 1):
         row = idx + 4
         verdict = get_verdict(analysis)
+        priority = get_priority(analysis)
         label_ru, fill_v, color_v, icon = verdict_display(verdict)
         row_fill = FILL['white'] if idx % 2 else FILL['cloud']
 
-        resume = app.resume_data or {}
-        if isinstance(resume, str):
-            try:
-                resume = json.loads(resume)
-            except:
-                resume = {}
-
-        # Col 1: Verdict icon
-        c = ws.cell(row=row, column=1, value=icon)
-        cell_style(c, font=Font(name='Segoe UI', size=14, bold=True, color=color_v),
-                   fill=fill_v, align=ALIGN['center'], border=BORDER)
+        # Col 1: Priority stars (только для High)
+        if verdict == 'High':
+            stars = priority_stars(priority)
+            c = ws.cell(row=row, column=1, value=stars)
+            cell_style(c, font=Font(name='Segoe UI', size=11, color=PALETTE['amber']),
+                       fill=row_fill, align=ALIGN['center'], border=BORDER)
+        else:
+            c = ws.cell(row=row, column=1, value=icon)
+            cell_style(c, font=Font(name='Segoe UI', size=12, color=color_v),
+                       fill=fill_v, align=ALIGN['center'], border=BORDER)
 
         # Col 2: Name (with link)
         name = app.candidate_name or "—"
@@ -288,45 +335,28 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
         cell_style(c, font=Font(name='Segoe UI Semibold', size=10, bold=True, color=color_v),
                    fill=fill_v, align=ALIGN['center'], border=BORDER)
 
-        # Col 4: Growth pattern (траектория)
-        holistic = raw(analysis, 'holistic_analysis', {}) or {}
-        growth = holistic.get('growth_pattern', '') if isinstance(holistic, dict) else ''
-        c = ws.cell(row=row, column=4, value=format_growth_pattern(growth))
-        growth_color = PALETTE['emerald'] if growth == 'растёт' else (
-            PALETTE['amber'] if growth == 'деградирует' else PALETTE['slate'])
-        cell_style(c, font=Font(name='Segoe UI', size=9, color=growth_color),
+        # Col 4: Salary from resume
+        salary = get_salary_from_resume(app)
+        if salary:
+            salary_text = f"{salary:,}".replace(',', ' ') + " ₽"
+        else:
+            salary_text = "—"
+        c = ws.cell(row=row, column=4, value=salary_text)
+        cell_style(c, font=FONT['body'], fill=row_fill, align=ALIGN['center'], border=BORDER)
+
+        # Col 5: Cover letter indicator
+        has_cover = has_cover_letter(app)
+        c = ws.cell(row=row, column=5, value="✓" if has_cover else "—")
+        cover_color = PALETTE['emerald'] if has_cover else PALETTE['slate']
+        cell_style(c, font=Font(name='Segoe UI', size=10, color=cover_color),
                    fill=row_fill, align=ALIGN['center'], border=BORDER)
 
-        # Col 5: Experience
-        total_exp = resume.get('total_experience', {})
-        months = total_exp.get('months', 0) if isinstance(total_exp, dict) else 0
-        years = months // 12 if months else 0
-        exp_list = resume.get('experience', [])
-        working_now = False
-        if exp_list and isinstance(exp_list[0], dict):
-            working_now = exp_list[0].get('end') is None
-        exp_text = f"{years} лет" + (" •" if working_now else "")
-        c = ws.cell(row=row, column=5, value=exp_text)
-        cell_style(c, font=FONT['small'], fill=row_fill, align=ALIGN['center'], border=BORDER)
-
-        # Col 6: Key reasoning (verdict_reason — короткий, или начало reasoning_for_hr)
-        verdict_reason = raw(analysis, 'verdict_reason', '') or ''
-        reasoning_full = raw(analysis, 'reasoning_for_hr', '') or ''
-        # Приоритет: verdict_reason (он короче и чётче), иначе первые 2 предложения из reasoning_for_hr
-        if verdict_reason:
-            reasoning = verdict_reason
-        elif reasoning_full:
-            # Берём первые 2 предложения
-            sentences = reasoning_full.replace('。', '.').split('. ')
-            reasoning = '. '.join(sentences[:2])
-            if len(sentences) > 2:
-                reasoning += '.'
-        else:
-            reasoning = ''
-        c = ws.cell(row=row, column=6, value=reasoning or "—")
+        # Col 6: One-liner (почему этот кандидат)
+        one_liner = get_one_liner(analysis)
+        c = ws.cell(row=row, column=6, value=one_liner or "—")
         cell_style(c, font=FONT['reasoning'], fill=row_fill, align=ALIGN['top'], border=BORDER)
 
-        ws.row_dimensions[row].height = 48
+        ws.row_dimensions[row].height = 52
 
     ws.auto_filter.ref = f"A4:F{len(results) + 4}"
 

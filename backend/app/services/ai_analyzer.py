@@ -44,7 +44,7 @@ class AIAnalyzer:
     def _get_cache_key(self, vacancy_data: Dict, resume_data: Dict) -> str:
         vh = hashlib.md5(json.dumps(vacancy_data, sort_keys=True).encode()).hexdigest()[:8]
         rh = hashlib.md5(json.dumps(resume_data, sort_keys=True).encode()).hexdigest()[:8]
-        return f"analysis:v71:{vh}:{rh}"
+        return f"analysis:v72:{vh}:{rh}"
 
     def _get_cached(self, key: str) -> Optional[Dict]:
         if not self.cache:
@@ -286,9 +286,11 @@ class AIAnalyzer:
 
   "verdict": "Mismatch | Low | Medium | High",
 
-  "verdict_reason": "ЧЁТКОЕ объяснение ПОЧЕМУ именно такой вердикт. Например: 'High — есть прямой опыт работы с WB 2 года + рост оборотов в 4 раза' или 'Mismatch — нет опыта работы с маркетплейсами, только оффлайн-ритейл'",
+  "priority": "top | strong | basic",
 
-  "reasoning_for_hr": "Развёрнутое объяснение для HR. ОБЯЗАТЕЛЬНО включи: 1) Почему такой вердикт, 2) Что кандидат умеет делать, 3) Главные риски если есть. Пиши полными предложениями БЕЗ ОБРЫВОВ. 4-6 предложений.",
+  "one_liner": "ОДНО предложение (максимум 20 слов): почему ЭТОТ кандидат и чем он ОТЛИЧАЕТСЯ. Конкретика: цифры, компании, достижения. Пример: 'WB 3 года, вырастила оборот с 2М до 12М — лучший опыт среди откликнувшихся'",
+
+  "reasoning_for_hr": "Развёрнутое объяснение для HR (3-5 предложений). Включи: 1) Главное преимущество, 2) Релевантный опыт с конкретикой, 3) Основные риски. Пиши полными предложениями БЕЗ ОБРЫВОВ.",
 
   "interview_questions": [
     {{
@@ -303,28 +305,45 @@ class AIAnalyzer:
   }}
 }}
 
-⚠️ ВАЖНЫЕ ПРАВИЛА КАЧЕСТВА:
-1. НЕ обрывай предложения на полуслове — пиши законченные мысли
-2. НЕ дублируй информацию между полями (salary только в salary_fit, не в concerns)
-3. strengths — это ДОСТИЖЕНИЯ и НАВЫКИ, а не "работал в компании X с даты по дату"
-4. interview_questions должны быть УНИКАЛЬНЫМИ для этого кандидата, про его конкретные пробелы
-5. verdict_reason должен ОБЪЯСНЯТЬ логику: "High потому что..." или "Mismatch потому что..."
+⚠️ ПРАВИЛА ПРИОРИТЕТА (priority):
+- "top" = ВСЕ must-haves подтверждены (yes) + есть ИЗМЕРИМЫЕ достижения (цифры роста/выручки) + карьера растёт
+- "strong" = ВСЕ must-haves подтверждены + хороший релевантный опыт, но без wow-достижений
+- "basic" = must-haves есть, но некоторые "maybe" ИЛИ есть существенные concerns
 
-⚠️ НАПОМИНАНИЕ: Если любой must_have имеет status="no", verdict ДОЛЖЕН быть "Mismatch". Это железное правило."""
+⚠️ ПРАВИЛА КАЧЕСТВА:
+1. one_liner — ОДНО короткое предложение с КОНКРЕТИКОЙ (цифры, компании). НЕ общие слова типа "хороший опыт"
+2. НЕ дублируй информацию между полями
+3. strengths — ДОСТИЖЕНИЯ с цифрами, а не "работал в компании X"
+4. interview_questions — ПЕРСОНАЛИЗИРОВАННЫЕ под пробелы этого кандидата
+
+⚠️ ЖЕЛЕЗНОЕ ПРАВИЛО: Если любой must_have имеет status="no" → verdict="Mismatch", priority="basic"."""
 
     def _enrich(self, result: Dict) -> Dict:
-        """Обогащение результата v7.0"""
+        """Обогащение результата v7.2 с приоритетом"""
 
         verdict = result.get("verdict", "Low")
+        priority = result.get("priority", "basic")
 
-        # Маппинг verdict → score для совместимости с фронтендом
-        verdict_to_score = {
-            "High": 85,
-            "Medium": 60,
-            "Low": 35,
-            "Mismatch": 15
+        # Маппинг verdict + priority → score для сортировки
+        # High: top=95, strong=85, basic=75
+        # Medium: 55-65
+        # Low: 35-45
+        # Mismatch: 15
+        score_map = {
+            ("High", "top"): 95,
+            ("High", "strong"): 85,
+            ("High", "basic"): 75,
+            ("Medium", "top"): 65,
+            ("Medium", "strong"): 58,
+            ("Medium", "basic"): 52,
+            ("Low", "top"): 45,
+            ("Low", "strong"): 40,
+            ("Low", "basic"): 35,
+            ("Mismatch", "top"): 15,
+            ("Mismatch", "strong"): 15,
+            ("Mismatch", "basic"): 15,
         }
-        result["score"] = verdict_to_score.get(verdict, 50)
+        result["score"] = score_map.get((verdict, priority), 50)
         result["rank_score"] = result["score"]
 
         # Recommendation на основе вердикта

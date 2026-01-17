@@ -134,13 +134,18 @@ export type ConfidenceLevel = 'high' | 'medium' | 'low';
 // Tier кандидата (A - лучшие, B - хорошие, C - слабые)
 export type CandidateTier = 'A' | 'B' | 'C';
 
-// Результаты AI анализа (v7.0 - Hybrid Expert)
+// Приоритет кандидата v7.2
+export type Priority = 'top' | 'strong' | 'basic';
+
+// Результаты AI анализа (v7.2 - Hybrid Expert + Priority)
 export interface AnalysisResult {
   id: string;
   application_id: string;
 
-  // === ПОЛЯ v7.0 (Hybrid Expert) ===
+  // === ПОЛЯ v7.2 (Priority + One-liner) ===
   verdict?: Verdict;                       // High/Medium/Low/Mismatch
+  priority?: Priority;                     // top/strong/basic — приоритет внутри вердикта
+  one_liner?: string;                      // Одно предложение: почему этот кандидат
   must_haves?: MustHave[];                 // Проверка ключевых требований
   holistic_analysis?: HolisticAnalysis;    // Холистический анализ
   vacancy_analysis?: VacancyAnalysis;      // Анализ вакансии
