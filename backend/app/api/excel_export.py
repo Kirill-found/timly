@@ -156,12 +156,10 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
         lines = []
         for m in must_haves[:5]:
             if isinstance(m, dict):
-                req = m.get('requirement', '')[:35]
+                req = m.get('requirement', '')
                 status = m.get('status', 'no')
                 icon = '✓' if status == 'yes' else ('?' if status == 'maybe' else '✗')
-                evidence = m.get('evidence', '')
-                if evidence and len(evidence) > 40:
-                    evidence = evidence[:38] + "..."
+                evidence = m.get('evidence', '') or ''
                 line = f"{icon} {req}"
                 if evidence:
                     line += f"\n   → {evidence}"
@@ -228,8 +226,8 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
     # ══════════════════════════════════════════════════════════════
     ws = shortlist_ws
 
-    # Column widths
-    widths = {'A': 5, 'B': 20, 'C': 16, 'D': 12, 'E': 10, 'F': 55}
+    # Column widths (F шире для полного verdict_reason)
+    widths = {'A': 5, 'B': 20, 'C': 16, 'D': 12, 'E': 10, 'F': 65}
     for col, w in widths.items():
         ws.column_dimensions[col].width = w
 
@@ -311,14 +309,24 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
         c = ws.cell(row=row, column=5, value=exp_text)
         cell_style(c, font=FONT['small'], fill=row_fill, align=ALIGN['center'], border=BORDER)
 
-        # Col 6: Key reasoning (reasoning_for_hr или verdict_reason)
-        reasoning = raw(analysis, 'reasoning_for_hr', '') or raw(analysis, 'verdict_reason', '') or ''
-        if len(reasoning) > 85:
-            reasoning = reasoning[:83] + "..."
+        # Col 6: Key reasoning (verdict_reason — короткий, или начало reasoning_for_hr)
+        verdict_reason = raw(analysis, 'verdict_reason', '') or ''
+        reasoning_full = raw(analysis, 'reasoning_for_hr', '') or ''
+        # Приоритет: verdict_reason (он короче и чётче), иначе первые 2 предложения из reasoning_for_hr
+        if verdict_reason:
+            reasoning = verdict_reason
+        elif reasoning_full:
+            # Берём первые 2 предложения
+            sentences = reasoning_full.replace('。', '.').split('. ')
+            reasoning = '. '.join(sentences[:2])
+            if len(sentences) > 2:
+                reasoning += '.'
+        else:
+            reasoning = ''
         c = ws.cell(row=row, column=6, value=reasoning or "—")
-        cell_style(c, font=FONT['reasoning'], fill=row_fill, align=ALIGN['left'], border=BORDER)
+        cell_style(c, font=FONT['reasoning'], fill=row_fill, align=ALIGN['top'], border=BORDER)
 
-        ws.row_dimensions[row].height = 38
+        ws.row_dimensions[row].height = 48
 
     ws.auto_filter.ref = f"A4:F{len(results) + 4}"
 
