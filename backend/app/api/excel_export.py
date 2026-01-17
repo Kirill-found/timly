@@ -1,10 +1,12 @@
 """
-Excel экспорт v9.0 — HR отчёт
-Под формат AI v6.0-lite: GHOST_SKILL, must-have проверка, прозрачный скоринг
+Excel экспорт v10.0 — HR отчёт для AI Analyzer v7.0 (Hybrid Expert)
+
+Design: Dark Industrial — монохром с акцентами
+Формат: Вердикты High/Medium/Low/Mismatch + Must-haves + Reasoning
 
 2 вкладки:
-- Сводка: Вывод + тип позиции + ghost skills
-- Детальный анализ: Must-have, навыки, вопросы с good/bad
+- Шортлист: Быстрый обзор кандидатов за 30 секунд
+- Полный анализ: reasoning_for_hr, must-haves, вопросы с checks
 """
 from fastapi.responses import FileResponse
 from typing import Optional
@@ -14,7 +16,7 @@ import json
 
 
 def create_excel_export(vacancy, results: list, recommendation_filter: Optional[str] = None) -> str:
-    """Excel v9.0 — под AI v6.0-lite"""
+    """Excel v10.0 — под AI v7.0 Hybrid Expert"""
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
@@ -23,47 +25,57 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
 
-    summary_ws = wb.create_sheet("Сводка", 0)
-    deep_ws = wb.create_sheet("Детали", 1)
+    shortlist_ws = wb.create_sheet("Шортлист", 0)
+    deep_ws = wb.create_sheet("Полный анализ", 1)
 
     # ══════════════════════════════════════════════════════════════
-    # DESIGN SYSTEM
+    # DESIGN SYSTEM — Dark Industrial
+    # Монохромная база (zinc) + яркие акценты для вердиктов
     # ══════════════════════════════════════════════════════════════
 
     PALETTE = {
-        'navy': '1E293B',
-        'slate': '64748B',
-        'cloud': 'F8FAFC',
+        # Base — Dark Industrial
+        'ink': '18181B',       # zinc-900 — заголовки
+        'charcoal': '27272A',  # zinc-800 — header bg
+        'steel': '3F3F46',     # zinc-700 — secondary
+        'slate': '71717A',     # zinc-500 — muted text
+        'silver': 'A1A1AA',    # zinc-400 — subtle
+        'cloud': 'F4F4F5',     # zinc-100 — row alt
         'white': 'FFFFFF',
-        'border': 'E2E8F0',
-        'green': '059669',
-        'green_bg': 'D1FAE5',
-        'amber': 'D97706',
+        'border': 'E4E4E7',    # zinc-200
+
+        # Verdict accents — Bold & Clear
+        'emerald': '059669',      # High — рекомендую
+        'emerald_bg': 'D1FAE5',
+        'blue': '2563EB',         # Medium — на рассмотрение
+        'blue_bg': 'DBEAFE',
+        'amber': 'D97706',        # Low — сомнительно
         'amber_bg': 'FEF3C7',
-        'coral': 'DC2626',
-        'coral_bg': 'FEE2E2',
-        'purple': '7C3AED',
+        'red': 'DC2626',          # Mismatch — не подходит
+        'red_bg': 'FEE2E2',
     }
 
+    # Typography — Clean & Professional
     FONT = {
-        'title': Font(name='Segoe UI', size=18, bold=True, color=PALETTE['navy']),
+        'title': Font(name='Segoe UI Semibold', size=16, bold=True, color=PALETTE['ink']),
         'subtitle': Font(name='Segoe UI', size=10, color=PALETTE['slate']),
-        'header': Font(name='Segoe UI', size=9, bold=True, color=PALETTE['white']),
-        'name': Font(name='Segoe UI', size=11, bold=True, color=PALETTE['navy']),
-        'body': Font(name='Segoe UI', size=10, color='374151'),
+        'header': Font(name='Segoe UI Semibold', size=9, bold=True, color=PALETTE['white']),
+        'name': Font(name='Segoe UI Semibold', size=11, bold=True, color=PALETTE['ink']),
+        'body': Font(name='Segoe UI', size=10, color=PALETTE['steel']),
         'small': Font(name='Segoe UI', size=9, color=PALETTE['slate']),
-        'link': Font(name='Segoe UI', size=10, color='2563EB', underline='single'),
-        'ghost': Font(name='Segoe UI', size=9, color=PALETTE['coral']),
-        'verified': Font(name='Segoe UI', size=9, color=PALETTE['green']),
+        'link': Font(name='Segoe UI', size=10, color=PALETTE['blue'], underline='single'),
+        'reasoning': Font(name='Segoe UI', size=10, color=PALETTE['ink']),
     }
 
     FILL = {
-        'header': PatternFill(start_color=PALETTE['navy'], fill_type="solid"),
+        'header': PatternFill(start_color=PALETTE['charcoal'], fill_type="solid"),
         'cloud': PatternFill(start_color=PALETTE['cloud'], fill_type="solid"),
         'white': PatternFill(start_color=PALETTE['white'], fill_type="solid"),
-        'green': PatternFill(start_color=PALETTE['green_bg'], fill_type="solid"),
-        'amber': PatternFill(start_color=PALETTE['amber_bg'], fill_type="solid"),
-        'coral': PatternFill(start_color=PALETTE['coral_bg'], fill_type="solid"),
+        # Verdict backgrounds
+        'high': PatternFill(start_color=PALETTE['emerald_bg'], fill_type="solid"),
+        'medium': PatternFill(start_color=PALETTE['blue_bg'], fill_type="solid"),
+        'low': PatternFill(start_color=PALETTE['amber_bg'], fill_type="solid"),
+        'mismatch': PatternFill(start_color=PALETTE['red_bg'], fill_type="solid"),
     }
 
     BORDER = Border(
@@ -84,76 +96,161 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
     # ══════════════════════════════════════════════════════════════
 
     def raw(analysis, key, default=None):
+        """Получить значение из raw_result"""
         r = getattr(analysis, 'raw_result', None) or {}
         return r.get(key, default)
 
-    def verdict_style(v):
+    def get_verdict(analysis):
+        """Получить вердикт v7.0 или смапить из старого формата"""
+        v = raw(analysis, 'verdict')
+        if v in ['High', 'Medium', 'Low', 'Mismatch']:
+            return v
+        # Маппинг старых значений
+        old_v = raw(analysis, 'verdict', '')
+        if old_v == 'GREEN':
+            return 'High'
+        elif old_v == 'YELLOW':
+            return 'Medium'
+        elif old_v == 'RED':
+            return 'Low'
+        # По score если нет verdict
+        score = raw(analysis, 'score', 0) or 0
+        if score >= 75:
+            return 'High'
+        elif score >= 50:
+            return 'Medium'
+        elif score >= 25:
+            return 'Low'
+        return 'Mismatch'
+
+    def verdict_display(v):
+        """Вердикт → (label_ru, fill, color, icon)"""
         return {
-            'GREEN': (FILL['green'], PALETTE['green'], '●'),
-            'YELLOW': (FILL['amber'], PALETTE['amber'], '●'),
-            'RED': (FILL['coral'], PALETTE['coral'], '●'),
-        }.get(v, (FILL['amber'], PALETTE['amber'], '●'))
+            'High': ('Рекомендую', FILL['high'], PALETTE['emerald'], '★'),
+            'Medium': ('На рассмотрение', FILL['medium'], PALETTE['blue'], '◆'),
+            'Low': ('Сомнительно', FILL['low'], PALETTE['amber'], '▲'),
+            'Mismatch': ('Не подходит', FILL['mismatch'], PALETTE['red'], '✕'),
+        }.get(v, ('—', FILL['white'], PALETTE['slate'], '?'))
 
     def bullets(items, max_n=5):
-        if not items: return "—"
-        if isinstance(items, str): return items
+        if not items:
+            return "—"
+        if isinstance(items, str):
+            return items
         return "\n".join([f"• {i}" for i in items[:max_n] if i])
 
     def cell_style(cell, font=None, fill=None, align=None, border=None):
-        if font: cell.font = font
-        if fill: cell.fill = fill
-        if align: cell.alignment = align
-        if border: cell.border = border
+        if font:
+            cell.font = font
+        if fill:
+            cell.fill = fill
+        if align:
+            cell.alignment = align
+        if border:
+            cell.border = border
 
-    def position_type_short(ptype):
+    def format_must_haves_v7(must_haves):
+        """Форматирование must-haves v7.0 (yes/maybe/no)"""
+        if not must_haves:
+            return "—"
+        lines = []
+        for m in must_haves[:5]:
+            if isinstance(m, dict):
+                req = m.get('requirement', '')[:35]
+                status = m.get('status', 'no')
+                icon = '✓' if status == 'yes' else ('?' if status == 'maybe' else '✗')
+                evidence = m.get('evidence', '')
+                if evidence and len(evidence) > 40:
+                    evidence = evidence[:38] + "..."
+                line = f"{icon} {req}"
+                if evidence:
+                    line += f"\n   → {evidence}"
+                lines.append(line)
+        return "\n".join(lines) if lines else "—"
+
+    def format_interview_questions_v7(questions):
+        """Форматирование вопросов v7.0 (question + checks)"""
+        if not questions:
+            return "—"
+        lines = []
+        for i, q in enumerate(questions[:4], 1):
+            if isinstance(q, dict):
+                question = q.get('question', '')
+                checks = q.get('checks', '')
+                lines.append(f"{i}. {question}")
+                if checks:
+                    lines.append(f"   Проверяем: {checks}")
+                lines.append("")
+            elif isinstance(q, str):
+                lines.append(f"{i}. {q}")
+        return "\n".join(lines).strip() if lines else "—"
+
+    def format_growth_pattern(pattern):
+        """Траектория карьеры"""
         return {
-            'RESULTS': 'RES',
-            'EXPERTISE': 'EXP',
-            'OPERATIONS': 'OPS',
-            'COMMUNICATION': 'COM'
-        }.get(ptype, '?')
+            'растёт': '↗ Растёт',
+            'стабилен': '→ Стабилен',
+            'деградирует': '↘ Деградирует',
+            'непонятно': '? Непонятно',
+        }.get(pattern, '—')
 
-    # Stats
+    def format_salary_fit(salary_fit):
+        """Соответствие зарплаты"""
+        if not salary_fit:
+            return "—"
+        if isinstance(salary_fit, dict):
+            status = salary_fit.get('status', '')
+            comment = salary_fit.get('comment', '')
+            return f"{status}" + (f" ({comment})" if comment else "")
+        return str(salary_fit)
+
+    # ══════════════════════════════════════════════════════════════
+    # STATISTICS
+    # ══════════════════════════════════════════════════════════════
+
     total = len(results)
-    green_n = len([r for r, _ in results if raw(r, 'verdict') == 'GREEN'])
-    yellow_n = len([r for r, _ in results if raw(r, 'verdict') == 'YELLOW'])
-    red_n = total - green_n - yellow_n
+    high_n = len([r for r, _ in results if get_verdict(r) == 'High'])
+    medium_n = len([r for r, _ in results if get_verdict(r) == 'Medium'])
+    low_n = len([r for r, _ in results if get_verdict(r) == 'Low'])
+    mismatch_n = total - high_n - medium_n - low_n
 
-    # Sort: GREEN → YELLOW → RED, then by score
+    # Сортировка: High → Medium → Low → Mismatch
     def sort_key(item):
-        v = raw(item[0], 'verdict', 'RED')
+        v = get_verdict(item[0])
+        order = {'High': 0, 'Medium': 1, 'Low': 2, 'Mismatch': 3}
         score = raw(item[0], 'score', 0) or 0
-        return ({'GREEN': 0, 'YELLOW': 1, 'RED': 2}.get(v, 2), -score)
+        return (order.get(v, 3), -score)
 
     sorted_results = sorted(results, key=sort_key)
 
     # ══════════════════════════════════════════════════════════════
-    # SHEET 1: SUMMARY — Shortlist за 30 секунд
+    # SHEET 1: ШОРТЛИСТ — Быстрый обзор за 30 секунд
     # ══════════════════════════════════════════════════════════════
-    ws = summary_ws
+    ws = shortlist_ws
 
-    # Column widths: ● | ИМЯ | ДОЛЖНОСТЬ | ОПЫТ | БАЛЛ | ТИП | GHOST | ВЫВОД
-    widths = {'A': 4, 'B': 22, 'C': 24, 'D': 14, 'E': 7, 'F': 6, 'G': 8, 'H': 52}
+    # Column widths
+    widths = {'A': 5, 'B': 20, 'C': 16, 'D': 12, 'E': 10, 'F': 55}
     for col, w in widths.items():
         ws.column_dimensions[col].width = w
 
-    # Title
-    ws.merge_cells('A1:H1')
-    c = ws.cell(row=1, column=1, value=f"{vacancy.title}")
+    # Title row
+    ws.merge_cells('A1:F1')
+    c = ws.cell(row=1, column=1, value=vacancy.title)
     cell_style(c, font=FONT['title'], align=ALIGN['center'])
-    ws.row_dimensions[1].height = 32
+    ws.row_dimensions[1].height = 36
 
     # Stats bar
-    ws.merge_cells('A2:H2')
-    stats = f"● {green_n} звонить   ● {yellow_n} рассмотреть   ● {red_n} отклонить   │   {total} всего"
+    ws.merge_cells('A2:F2')
+    stats = f"★ {high_n} рекомендую   ◆ {medium_n} рассмотреть   ▲ {low_n} сомнительно   ✕ {mismatch_n} не подходят   │   {total} всего"
     c = ws.cell(row=2, column=1, value=stats)
     cell_style(c, font=FONT['subtitle'], align=ALIGN['center'], fill=FILL['cloud'])
-    ws.row_dimensions[2].height = 24
+    ws.row_dimensions[2].height = 26
 
+    # Spacer
     ws.row_dimensions[3].height = 6
 
-    # Headers v9: ● | ИМЯ | ДОЛЖНОСТЬ | ОПЫТ | БАЛЛ | ТИП | 👻 | ВЫВОД
-    headers = ['', 'ИМЯ', 'ДОЛЖНОСТЬ', 'ОПЫТ', 'БАЛЛ', 'ТИП', '👻', 'ВЫВОД']
+    # Headers
+    headers = ['', 'КАНДИДАТ', 'ВЕРДИКТ', 'КАРЬЕРА', 'ОПЫТ', 'КЛЮЧЕВОЙ ВЫВОД']
     for i, h in enumerate(headers, 1):
         c = ws.cell(row=4, column=i, value=h)
         cell_style(c, font=FONT['header'], fill=FILL['header'], align=ALIGN['center'], border=BORDER)
@@ -163,9 +260,8 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
     # Data rows
     for idx, (analysis, app) in enumerate(sorted_results, 1):
         row = idx + 4
-        v = raw(analysis, 'verdict', 'YELLOW')
-        fill_v, color_v, symbol = verdict_style(v)
-        score = raw(analysis, 'score') or raw(analysis, 'rank_score') or 0
+        verdict = get_verdict(analysis)
+        label_ru, fill_v, color_v, icon = verdict_display(verdict)
         row_fill = FILL['white'] if idx % 2 else FILL['cloud']
 
         resume = app.resume_data or {}
@@ -175,9 +271,10 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
             except:
                 resume = {}
 
-        # Col 1: Verdict indicator
-        c = ws.cell(row=row, column=1, value=symbol)
-        cell_style(c, font=Font(name='Segoe UI', size=14, color=color_v), fill=fill_v, align=ALIGN['center'], border=BORDER)
+        # Col 1: Verdict icon
+        c = ws.cell(row=row, column=1, value=icon)
+        cell_style(c, font=Font(name='Segoe UI', size=14, bold=True, color=color_v),
+                   fill=fill_v, align=ALIGN['center'], border=BORDER)
 
         # Col 2: Name (with link)
         name = app.candidate_name or "—"
@@ -188,153 +285,75 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
         else:
             cell_style(c, font=FONT['name'], fill=row_fill, align=ALIGN['left'], border=BORDER)
 
-        # Col 3: Должность
-        candidate_title = resume.get('title', '') or ''
-        if len(candidate_title) > 26:
-            candidate_title = candidate_title[:24] + "..."
-        c = ws.cell(row=row, column=3, value=candidate_title or "—")
-        cell_style(c, font=FONT['body'], fill=row_fill, align=ALIGN['left'], border=BORDER)
+        # Col 3: Verdict label
+        c = ws.cell(row=row, column=3, value=label_ru)
+        cell_style(c, font=Font(name='Segoe UI Semibold', size=10, bold=True, color=color_v),
+                   fill=fill_v, align=ALIGN['center'], border=BORDER)
 
-        # Col 4: ОПЫТ — "5 лет • работает"
+        # Col 4: Growth pattern (траектория)
+        holistic = raw(analysis, 'holistic_analysis', {}) or {}
+        growth = holistic.get('growth_pattern', '') if isinstance(holistic, dict) else ''
+        c = ws.cell(row=row, column=4, value=format_growth_pattern(growth))
+        growth_color = PALETTE['emerald'] if growth == 'растёт' else (
+            PALETTE['amber'] if growth == 'деградирует' else PALETTE['slate'])
+        cell_style(c, font=Font(name='Segoe UI', size=9, color=growth_color),
+                   fill=row_fill, align=ALIGN['center'], border=BORDER)
+
+        # Col 5: Experience
         total_exp = resume.get('total_experience', {})
         months = total_exp.get('months', 0) if isinstance(total_exp, dict) else 0
         years = months // 12 if months else 0
         exp_list = resume.get('experience', [])
-        last_end = None
+        working_now = False
         if exp_list and isinstance(exp_list[0], dict):
-            end = exp_list[0].get('end')
-            if end is None:
-                last_end = "работает"
-            elif isinstance(end, str):
-                last_end = f"до {end[:4]}" if len(end) >= 4 else "—"
-            elif isinstance(end, dict):
-                last_end = f"до {end.get('year', '?')}"
-        exp_text = f"{years}л • {last_end}" if last_end else f"{years} лет"
-        c = ws.cell(row=row, column=4, value=exp_text)
+            working_now = exp_list[0].get('end') is None
+        exp_text = f"{years} лет" + (" •" if working_now else "")
+        c = ws.cell(row=row, column=5, value=exp_text)
         cell_style(c, font=FONT['small'], fill=row_fill, align=ALIGN['center'], border=BORDER)
 
-        # Col 5: Score
-        c = ws.cell(row=row, column=5, value=score)
-        score_color = PALETTE['green'] if score >= 70 else (PALETTE['amber'] if score >= 45 else PALETTE['coral'])
-        cell_style(c, font=Font(name='Segoe UI', size=12, bold=True, color=score_color), fill=row_fill, align=ALIGN['center'], border=BORDER)
+        # Col 6: Key reasoning (reasoning_for_hr или verdict_reason)
+        reasoning = raw(analysis, 'reasoning_for_hr', '') or raw(analysis, 'verdict_reason', '') or ''
+        if len(reasoning) > 85:
+            reasoning = reasoning[:83] + "..."
+        c = ws.cell(row=row, column=6, value=reasoning or "—")
+        cell_style(c, font=FONT['reasoning'], fill=row_fill, align=ALIGN['left'], border=BORDER)
 
-        # Col 6: Position Type (short)
-        ptype = raw(analysis, 'position_type', 'RESULTS')
-        c = ws.cell(row=row, column=6, value=position_type_short(ptype))
-        cell_style(c, font=FONT['small'], fill=row_fill, align=ALIGN['center'], border=BORDER)
+        ws.row_dimensions[row].height = 38
 
-        # Col 7: Ghost skills count
-        ghost_count = raw(analysis, 'ghost_skills_count', 0) or 0
-        ghost_text = str(ghost_count) if ghost_count > 0 else "—"
-        c = ws.cell(row=row, column=7, value=ghost_text)
-        ghost_color = PALETTE['coral'] if ghost_count >= 3 else (PALETTE['amber'] if ghost_count > 0 else PALETTE['slate'])
-        cell_style(c, font=Font(name='Segoe UI', size=10, color=ghost_color), fill=row_fill, align=ALIGN['center'], border=BORDER)
-
-        # Col 8: ВЫВОД — verdict_reason
-        verdict_reason = raw(analysis, 'verdict_reason', '') or ''
-        if len(verdict_reason) > 75:
-            verdict_reason = verdict_reason[:73] + "..."
-        c = ws.cell(row=row, column=8, value=verdict_reason or "—")
-        cell_style(c, font=FONT['body'], fill=row_fill, align=ALIGN['left'], border=BORDER)
-
-        ws.row_dimensions[row].height = 36
-
-    ws.auto_filter.ref = f"A4:H{len(results) + 4}"
-
-    # Data bars для Score
-    if len(results) > 0:
-        score_range = f"E5:E{len(results) + 4}"
-        rule = DataBarRule(start_type='num', start_value=0, end_type='num', end_value=100, color='059669')
-        ws.conditional_formatting.add(score_range, rule)
+    ws.auto_filter.ref = f"A4:F{len(results) + 4}"
 
     # ══════════════════════════════════════════════════════════════
-    # SHEET 2: DEEP DIVE — v9.0 под AI v6.0-lite
+    # SHEET 2: ПОЛНЫЙ АНАЛИЗ — v7.0 Hybrid Expert
     # ══════════════════════════════════════════════════════════════
     ws = deep_ws
 
-    # Columns: № | ИМЯ | ● | БАЛЛ | MUST-HAVE | НАВЫКИ | ПЛЮСЫ | МИНУСЫ | ВОПРОСЫ
-    widths = {'A': 4, 'B': 18, 'C': 5, 'D': 7, 'E': 32, 'F': 34, 'G': 30, 'H': 30, 'I': 45}
+    # Columns: № | КАНДИДАТ | ВЕРДИКТ | MUST-HAVES | РЕЗЮМЕ КАРЬЕРЫ | ПЛЮСЫ/МИНУСЫ | ВОПРОСЫ
+    widths = {'A': 4, 'B': 18, 'C': 14, 'D': 36, 'E': 42, 'F': 32, 'G': 48}
     for col, w in widths.items():
         ws.column_dimensions[col].width = w
 
     # Title
-    ws.merge_cells('A1:I1')
-    c = ws.cell(row=1, column=1, value=f"Детальный анализ: {vacancy.title}")
+    ws.merge_cells('A1:G1')
+    c = ws.cell(row=1, column=1, value=f"Полный анализ: {vacancy.title}")
     cell_style(c, font=FONT['title'], align=ALIGN['center'])
-    ws.row_dimensions[1].height = 32
+    ws.row_dimensions[1].height = 36
 
+    # Spacer
     ws.row_dimensions[2].height = 6
 
-    # Headers v9.0
-    headers = ['№', 'ИМЯ', '', 'БАЛЛ', 'MUST-HAVE', 'НАВЫКИ', 'ПЛЮСЫ', 'МИНУСЫ', 'ВОПРОСЫ НА ИНТЕРВЬЮ']
+    # Headers
+    headers = ['№', 'КАНДИДАТ', 'ВЕРДИКТ', 'MUST-HAVES', 'АНАЛИЗ КАРЬЕРЫ', 'ОЦЕНКА', 'ВОПРОСЫ ДЛЯ ИНТЕРВЬЮ']
     for i, h in enumerate(headers, 1):
         c = ws.cell(row=3, column=i, value=h)
         cell_style(c, font=FONT['header'], fill=FILL['header'], align=ALIGN['center'], border=BORDER)
     ws.row_dimensions[3].height = 28
     ws.freeze_panes = 'C4'
 
-    def format_must_have(must_have_list):
-        """Форматирование must_have проверок"""
-        if not must_have_list:
-            return "—"
-        lines = []
-        for m in must_have_list[:4]:
-            if isinstance(m, dict):
-                req = m.get('requirement', '')[:30]
-                status = m.get('status', 'UNCLEAR')
-                icon = '✅' if status == 'CONFIRMED' else ('⚠️' if status == 'UNCLEAR' else '❌')
-                lines.append(f"{icon} {req}")
-        return "\n".join(lines) if lines else "—"
-
-    def format_skills_check(skills_list):
-        """Форматирование проверки навыков с ghost detection"""
-        if not skills_list:
-            return "—"
-        lines = []
-        for s in skills_list[:5]:
-            if isinstance(s, dict):
-                skill = s.get('skill', '')[:20]
-                status = s.get('status', 'MISSING')
-                ghost = s.get('ghost', False)
-                if ghost:
-                    lines.append(f"👻 {skill}")
-                elif status == 'VERIFIED':
-                    lines.append(f"✅ {skill}")
-                elif status == 'MENTIONED':
-                    lines.append(f"⚠️ {skill}")
-                else:
-                    lines.append(f"❌ {skill}")
-        return "\n".join(lines) if lines else "—"
-
-    def format_questions(questions_list):
-        """Форматирование вопросов с good/bad answers"""
-        if not questions_list:
-            return "—"
-        lines = []
-        for q in questions_list[:3]:
-            if isinstance(q, dict):
-                question = q.get('question', '')
-                why = q.get('why', '')
-                good = q.get('good_answer', '')
-                bad = q.get('bad_answer', '')
-                lines.append(f"❓ {question}")
-                if why:
-                    lines.append(f"   Цель: {why}")
-                if good:
-                    lines.append(f"   ✅ {good[:50]}")
-                if bad:
-                    lines.append(f"   ❌ {bad[:50]}")
-                lines.append("")
-            elif isinstance(q, str):
-                lines.append(f"• {q}")
-        return "\n".join(lines).strip() if lines else "—"
-
     # Data
     for idx, (analysis, app) in enumerate(sorted_results, 1):
         row = idx + 3
-        v = raw(analysis, 'verdict', 'YELLOW')
-        fill_v, color_v, symbol = verdict_style(v)
-        score = raw(analysis, 'score') or raw(analysis, 'rank_score') or 0
+        verdict = get_verdict(analysis)
+        label_ru, fill_v, color_v, icon = verdict_display(verdict)
         row_fill = FILL['white'] if idx % 2 else FILL['cloud']
 
         # Col 1: №
@@ -350,48 +369,69 @@ def create_excel_export(vacancy, results: list, recommendation_filter: Optional[
         else:
             cell_style(c, font=FONT['name'], fill=row_fill, align=ALIGN['left'], border=BORDER)
 
-        # Col 3: Verdict indicator
-        c = ws.cell(row=row, column=3, value=symbol)
-        cell_style(c, font=Font(name='Segoe UI', size=12, color=color_v), fill=fill_v, align=ALIGN['center'], border=BORDER)
+        # Col 3: Verdict
+        verdict_text = f"{icon} {label_ru}"
+        c = ws.cell(row=row, column=3, value=verdict_text)
+        cell_style(c, font=Font(name='Segoe UI Semibold', size=10, bold=True, color=color_v),
+                   fill=fill_v, align=ALIGN['center'], border=BORDER)
 
-        # Col 4: Score
-        c = ws.cell(row=row, column=4, value=score)
-        score_color = PALETTE['green'] if score >= 70 else (PALETTE['amber'] if score >= 45 else PALETTE['coral'])
-        cell_style(c, font=Font(name='Segoe UI', size=11, bold=True, color=score_color), fill=row_fill, align=ALIGN['center'], border=BORDER)
+        # Col 4: Must-haves v7.0
+        must_haves = raw(analysis, 'must_haves', []) or raw(analysis, 'must_have', [])
+        c = ws.cell(row=row, column=4, value=format_must_haves_v7(must_haves))
+        # Color by status
+        no_count = sum(1 for m in (must_haves or []) if isinstance(m, dict) and m.get('status') == 'no')
+        mh_color = PALETTE['red'] if no_count > 0 else PALETTE['emerald']
+        cell_style(c, font=Font(name='Segoe UI', size=9, color=mh_color),
+                   fill=row_fill, align=ALIGN['top'], border=BORDER)
 
-        # Col 5: Must-have check
-        must_have = raw(analysis, 'must_have', [])
-        c = ws.cell(row=row, column=5, value=format_must_have(must_have))
-        # Color based on status
-        missing = sum(1 for m in (must_have or []) if isinstance(m, dict) and m.get('status') == 'MISSING')
-        mh_color = PALETTE['coral'] if missing > 0 else PALETTE['green']
-        cell_style(c, font=Font(name='Segoe UI', size=9, color=mh_color), fill=row_fill, align=ALIGN['top'], border=BORDER)
+        # Col 5: Career analysis (holistic + reasoning)
+        holistic = raw(analysis, 'holistic_analysis', {}) or {}
+        career_summary = holistic.get('career_summary', '') if isinstance(holistic, dict) else ''
+        relevance = holistic.get('relevance_assessment', '') if isinstance(holistic, dict) else ''
+        growth = holistic.get('growth_pattern', '') if isinstance(holistic, dict) else ''
+        reasoning = raw(analysis, 'reasoning_for_hr', '') or ''
 
-        # Col 6: Skills check (with ghost detection)
-        skills = raw(analysis, 'skills_check', [])
-        c = ws.cell(row=row, column=6, value=format_skills_check(skills))
-        ghost_count = sum(1 for s in (skills or []) if isinstance(s, dict) and s.get('ghost'))
-        sk_color = PALETTE['coral'] if ghost_count >= 3 else (PALETTE['amber'] if ghost_count > 0 else PALETTE['green'])
-        cell_style(c, font=Font(name='Segoe UI', size=9, color=sk_color), fill=row_fill, align=ALIGN['top'], border=BORDER)
+        career_text_parts = []
+        if career_summary:
+            career_text_parts.append(f"Карьера: {career_summary}")
+        if relevance:
+            career_text_parts.append(f"Релевантность: {relevance}")
+        if growth:
+            career_text_parts.append(f"Траектория: {format_growth_pattern(growth)}")
+        if reasoning:
+            career_text_parts.append(f"\n{reasoning}")
 
-        # Col 7: Плюсы (strengths)
-        strengths = raw(analysis, 'strengths', []) or raw(analysis, 'pros', [])
-        c = ws.cell(row=row, column=7, value=bullets(strengths, 4))
+        career_text = "\n".join(career_text_parts) if career_text_parts else "—"
+        c = ws.cell(row=row, column=5, value=career_text)
         cell_style(c, font=FONT['body'], fill=row_fill, align=ALIGN['top'], border=BORDER)
 
-        # Col 8: Минусы (concerns)
-        concerns = raw(analysis, 'concerns', []) or raw(analysis, 'cons', [])
-        c = ws.cell(row=row, column=8, value=bullets(concerns, 4))
+        # Col 6: Pros/Cons + Concerns + Salary
+        concerns = raw(analysis, 'concerns', []) or []
+        salary_fit = raw(analysis, 'salary_fit', None)
+        strengths = raw(analysis, 'strengths', []) or raw(analysis, 'pros', []) or []
+        weaknesses = raw(analysis, 'weaknesses', []) or raw(analysis, 'cons', []) or []
+
+        assessment_parts = []
+        if strengths:
+            assessment_parts.append("Плюсы:\n" + bullets(strengths, 3))
+        if weaknesses or concerns:
+            all_concerns = list(weaknesses) + list(concerns)
+            assessment_parts.append("Минусы:\n" + bullets(all_concerns, 3))
+        if salary_fit:
+            assessment_parts.append(f"Зарплата: {format_salary_fit(salary_fit)}")
+
+        c = ws.cell(row=row, column=6, value="\n\n".join(assessment_parts) if assessment_parts else "—")
         cell_style(c, font=FONT['body'], fill=row_fill, align=ALIGN['top'], border=BORDER)
 
-        # Col 9: Interview Questions (with good/bad)
-        questions = raw(analysis, 'interview_questions', [])
-        c = ws.cell(row=row, column=9, value=format_questions(questions))
-        cell_style(c, font=Font(name='Segoe UI', size=9, color=PALETTE['navy']), fill=row_fill, align=ALIGN['top'], border=BORDER)
+        # Col 7: Interview Questions v7.0 (with checks)
+        questions = raw(analysis, 'interview_questions_v7', []) or raw(analysis, 'interview_questions', [])
+        c = ws.cell(row=row, column=7, value=format_interview_questions_v7(questions))
+        cell_style(c, font=Font(name='Segoe UI', size=9, color=PALETTE['ink']),
+                   fill=row_fill, align=ALIGN['top'], border=BORDER)
 
-        ws.row_dimensions[row].height = 110
+        ws.row_dimensions[row].height = 130
 
-    ws.auto_filter.ref = f"A3:I{len(results) + 3}"
+    ws.auto_filter.ref = f"A3:G{len(results) + 3}"
 
     # ══════════════════════════════════════════════════════════════
     # SAVE
