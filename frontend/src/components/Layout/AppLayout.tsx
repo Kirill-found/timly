@@ -3,7 +3,7 @@
  */
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, Settings, LogOut, Menu, Loader2, Search, Users, Clock, FileText, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Settings, LogOut, Menu, Loader2, Search, Users, Clock, FileText, MessageSquare, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/store/AuthContext';
@@ -16,7 +16,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { activeAnalysis } = useApp();
 
   const navItems = [
@@ -29,14 +29,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { href: '/export', icon: FileText, label: 'Шаблоны' },
     { href: '/settings', icon: Settings, label: 'Настройки' },
   ];
-  const bottomItems = [{ href: '/pricing', icon: MessageSquare, label: 'Поддержка' }];
+  const bottomItems = [
+    ...(user?.role === 'admin' ? [{ href: '/admin', icon: Shield, label: 'Админ-панель' }] : []),
+    { href: '/pricing', icon: MessageSquare, label: 'Поддержка' },
+  ];
 
   const handleLogout = async () => { await logout(); navigate('/login'); };
 
   const getPageTitle = () => {
     const titles: Record<string, string> = {
       '/dashboard': 'Dashboard', '/analysis': 'Вакансии', '/manual-analysis': 'Кандидаты',
-      '/sync': 'История', '/settings': 'Настройки', '/export': 'Экспорт', '/pricing': 'Тарифы'
+      '/sync': 'История', '/settings': 'Настройки', '/export': 'Экспорт', '/pricing': 'Тарифы', '/admin': 'Админ-панель'
     };
     return titles[location.pathname] || 'Timly';
   };
