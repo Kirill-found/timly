@@ -2,78 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Typography: Geist - Vercel's clean, modern font */
-@import url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/style.css');
+/* Typography: Inter - Clean, professional */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    /* Dark Industrial Palette */
-    --background: 0 0% 4%;           /* #0a0a0a */
-    --foreground: 0 0% 98%;          /* #fafafa */
+    /* Soft UI Light Theme */
+    --background: 0 0% 96%;              /* #F5F5F5 */
+    --foreground: 0 0% 7%;               /* #111111 */
 
-    --card: 0 0% 7%;                 /* #111111 */
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 100%;                   /* #FFFFFF */
+    --card-foreground: 0 0% 7%;
 
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 7%;
 
-    /* White primary for buttons */
-    --primary: 0 0% 98%;             /* #fafafa */
-    --primary-foreground: 0 0% 4%;   /* #0a0a0a */
+    /* Black primary for buttons */
+    --primary: 0 0% 7%;                  /* #111111 */
+    --primary-foreground: 0 0% 100%;    /* #FFFFFF */
 
-    --secondary: 0 0% 10%;           /* #191919 */
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96%;               /* #F5F5F5 */
+    --secondary-foreground: 0 0% 7%;
 
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 45%;    /* #737373 */
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;        /* #737373 */
 
-    --accent: 0 0% 10%;
-    --accent-foreground: 0 0% 63%;   /* #a1a1a1 */
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 7%;
 
-    --destructive: 0 84% 60%;        /* #ef4444 */
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%;            /* #ef4444 */
+    --destructive-foreground: 0 0% 100%;
 
-    --success: 142 71% 45%;          /* #22c55e */
-    --success-foreground: 0 0% 98%;
+    --success: 142 71% 45%;              /* #22c55e */
+    --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 50%;           /* #f59e0b */
-    --warning-foreground: 0 0% 4%;
+    --warning: 38 92% 50%;               /* #f59e0b */
+    --warning-foreground: 0 0% 7%;
 
-    --border: 0 0% 15%;              /* #262626 */
-    --input: 0 0% 15%;
-    --ring: 0 0% 63%;
+    --border: 0 0% 91%;                  /* #E8E8E8 */
+    --input: 0 0% 91%;
+    --ring: 0 0% 7%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    /* Chart colors - professional palette */
-    --chart-1: 142 71% 45%;          /* Green */
-    --chart-2: 217 91% 60%;          /* Blue */
-    --chart-3: 38 92% 50%;           /* Amber */
-    --chart-4: 0 84% 60%;            /* Red */
-    --chart-5: 0 0% 63%;             /* Gray */
-  }
-
-  .dark {
-    /* Same as default - we're dark-first now */
-    --background: 0 0% 4%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 4%;
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 0 0% 10%;
-    --accent-foreground: 0 0% 63%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 0 0% 63%;
+    /* Chart colors - Orange palette like Adon */
+    --chart-1: 28 100% 63%;              /* #FF9F43 */
+    --chart-2: 32 100% 73%;              /* #FFB976 */
+    --chart-3: 32 100% 83%;              /* #FFD4A8 */
+    --chart-4: 220 13% 91%;              /* #E5E7EB */
   }
 }
 
@@ -83,7 +59,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -95,17 +71,17 @@
 }
 
 @layer utilities {
-  /* Status colors */
+  /* Status colors - Soft text only */
   .status-hire {
-    @apply bg-green-500/15 text-green-500;
+    @apply text-green-600;
   }
   .status-interview {
-    @apply bg-blue-500/15 text-blue-500;
+    @apply text-teal-600;
   }
   .status-maybe {
-    @apply bg-amber-500/15 text-amber-500;
+    @apply text-amber-600;
   }
   .status-reject {
-    @apply bg-red-500/15 text-red-500;
+    @apply text-red-500;
   }
 }

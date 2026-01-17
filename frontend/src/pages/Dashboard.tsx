@@ -1,25 +1,26 @@
 /**
- * Dashboard - Панель управления Timly
- * Design: Dark Industrial - минималистичный, профессиональный
+ * Dashboard - Soft UI Light Theme (Adon-style)
  */
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   RefreshCw,
   Settings,
   ArrowRight,
+  Users,
+  Briefcase,
+  Star,
+  ChevronRight,
+  Play,
+  Download,
+  Zap,
+  TrendingUp,
+  Clock,
+  DollarSign,
 } from 'lucide-react';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -41,15 +42,18 @@ interface DashboardStats {
     score: number;
     recommendation: string;
     analyzed_at: string;
+    one_liner?: string;
   }>;
 }
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const { activeSyncJobs } = useApp();
+  const { activeSyncJobs, vacancies: contextVacancies } = useApp();
+  const navigate = useNavigate();
+  const vacancies = Array.isArray(contextVacancies) ? contextVacancies : [];
+
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'hire' | 'reject'>('all');
 
   useEffect(() => {
     const loadDashboardStats = async () => {
@@ -73,98 +77,57 @@ const Dashboard: React.FC = () => {
 
   const getRecommendationStyle = (recommendation: string) => {
     switch (recommendation) {
-      case 'hire':
-        return 'status-hire';
-      case 'interview':
-        return 'status-interview';
-      case 'maybe':
-        return 'status-maybe';
-      case 'reject':
-        return 'status-reject';
-      default:
-        return 'bg-zinc-800 text-zinc-400';
+      case 'hire': return 'text-green-600';
+      case 'interview': return 'text-teal-600';
+      case 'maybe': return 'text-amber-600';
+      case 'reject': return 'text-red-500';
+      default: return 'text-muted-foreground';
     }
   };
 
   const getRecommendationText = (recommendation: string) => {
     switch (recommendation) {
-      case 'hire': return 'Нанять';
-      case 'interview': return 'Собеседование';
-      case 'maybe': return 'Возможно';
-      case 'reject': return 'Отклонить';
+      case 'hire': return 'Рекомендую';
+      case 'interview': return 'Рассмотреть';
+      case 'maybe': return 'Сомнительно';
+      case 'reject': return 'Не подходит';
       default: return recommendation;
     }
   };
 
-  const getTimeAgo = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'только что';
-    if (diffMins < 60) return `${diffMins} мин назад`;
-    if (diffHours < 24) return `${diffHours} ч назад`;
-    return `${diffDays} дн назад`;
+  const getPriorityStars = (score: number) => {
+    if (score >= 80) return 3;
+    if (score >= 60) return 2;
+    return 1;
   };
 
-  // Данные для графика
-  const monthlyData = [
-    { name: 'Авг', value: 120 },
-    { name: 'Сен', value: 160 },
-    { name: 'Окт', value: 140 },
-    { name: 'Ноя', value: 180 },
-    { name: 'Дек', value: dashboardStats?.analyses_this_month || 200 },
-  ];
-
-  // Распределение по рекомендациям
-  const getDistribution = () => {
-    if (!dashboardStats?.recent_analyses?.length) {
-      return [
-        { label: 'Нанять', count: 156, percent: 29, color: 'bg-green-500' },
-        { label: 'Собеседование', count: 187, percent: 29, color: 'bg-blue-500' },
-        { label: 'Возможно', count: 124, percent: 19, color: 'bg-amber-500' },
-        { label: 'Отклонить', count: 145, percent: 23, color: 'bg-red-500' },
-      ];
-    }
-    // Расчёт из реальных данных
-    const total = dashboardStats.total_analyses || 1;
-    return [
-      { label: 'Нанять', count: dashboardStats.top_candidates_count, percent: Math.round((dashboardStats.top_candidates_count / total) * 100), color: 'bg-green-500' },
-      { label: 'Собеседование', count: Math.round(total * 0.29), percent: 29, color: 'bg-blue-500' },
-      { label: 'Возможно', count: Math.round(total * 0.19), percent: 19, color: 'bg-amber-500' },
-      { label: 'Отклонить', count: Math.round(total * 0.23), percent: 23, color: 'bg-red-500' },
-    ];
-  };
-
-  const filteredAnalyses = dashboardStats?.recent_analyses?.filter(item => {
-    if (activeFilter === 'all') return true;
-    if (activeFilter === 'hire') return item.recommendation === 'hire';
-    if (activeFilter === 'reject') return item.recommendation === 'reject';
-    return true;
-  }) || [];
-
-  // Анимации
   const fadeIn = {
     initial: { opacity: 0, y: 8 },
     animate: { opacity: 1, y: 0 },
     transition: { duration: 0.3 }
   };
 
-  // Состояние без токена HH.ru
+  const topCandidates = dashboardStats?.recent_analyses
+    ?.filter(a => a.recommendation === 'hire' || a.recommendation === 'interview')
+    ?.slice(0, 5) || [];
+
+  const getVacancyTopCount = (vacancyTitle: string) => {
+    return dashboardStats?.recent_analyses?.filter(
+      a => a.vacancy_title === vacancyTitle && (a.recommendation === 'hire' || a.recommendation === 'interview')
+    ).length || 0;
+  };
+
   if (!user?.has_hh_token) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center p-6">
         <motion.div {...fadeIn} className="max-w-md w-full">
-          <Card className="border-dashed border-zinc-700">
+          <Card className="border-dashed border-border">
             <CardContent className="pt-8 pb-8 text-center">
-              <div className="w-14 h-14 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center mx-auto mb-6">
-                <Settings className="h-6 w-6 text-zinc-400" />
+              <div className="w-14 h-14 rounded-lg bg-muted border border-border flex items-center justify-center mx-auto mb-6">
+                <Settings className="h-6 w-6 text-muted-foreground" />
               </div>
               <h2 className="text-xl font-semibold mb-2">Настройте интеграцию</h2>
-              <p className="text-zinc-500 mb-6 text-sm">
+              <p className="text-muted-foreground mb-6 text-sm">
                 Подключите HH.ru чтобы получать отклики и анализировать резюме
               </p>
               <Button asChild>
@@ -180,176 +143,161 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // Загрузка
   if (statsLoading) {
     return (
       <div className="p-6 space-y-6">
-        <div className="grid grid-cols-4 gap-px bg-zinc-800 border border-zinc-800 rounded-lg overflow-hidden">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-28 bg-zinc-900" />
+        <div className="grid grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-24 bg-muted rounded-lg" />
           ))}
         </div>
-        <div className="grid gap-6 lg:grid-cols-5">
-          <Skeleton className="h-72 lg:col-span-3 bg-zinc-900 rounded-lg" />
-          <Skeleton className="h-72 lg:col-span-2 bg-zinc-900 rounded-lg" />
-        </div>
+        <Skeleton className="h-48 bg-muted rounded-lg" />
+        <Skeleton className="h-64 bg-muted rounded-lg" />
       </div>
     );
   }
 
+  const totalApplications = vacancies.reduce((sum, v) => sum + (v.applications_count || 0), 0);
+  const usagePercent = dashboardStats?.analyses_limit
+    ? Math.round((dashboardStats.analyses_this_month / dashboardStats.analyses_limit) * 100)
+    : 0;
+
   return (
     <div className="p-6 space-y-6">
-      {/* Активные синхронизации */}
       {activeSyncJobs.length > 0 && (
-        <Alert className="border-blue-500/30 bg-blue-500/10">
-          <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
-          <AlertDescription className="ml-2 text-zinc-300">
-            <span className="font-medium text-zinc-100">Синхронизация</span>
-            <span className="text-zinc-400"> — активных задач: {activeSyncJobs.length}</span>
-            <Link to="/sync" className="ml-2 text-blue-400 hover:text-blue-300">
+        <Alert className="border-blue-200 bg-blue-50">
+          <RefreshCw className="h-4 w-4 animate-spin text-blue-600" />
+          <AlertDescription className="ml-2 text-foreground">
+            <span className="font-medium text-foreground">Синхронизация</span>
+            <span className="text-muted-foreground"> — активных задач: {activeSyncJobs.length}</span>
+            <Link to="/sync" className="ml-2 text-blue-600 hover:text-blue-600">
               Подробнее →
             </Link>
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Stats Row */}
-      <motion.div {...fadeIn} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-zinc-800 border border-zinc-800 rounded-lg overflow-hidden">
-        <div className="bg-card p-5">
-          <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
-            Всего анализов
+      {/* Quick Stats - 3 карточки */}
+      <motion.div {...fadeIn} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-card border border-border rounded-lg p-5 hover:border-muted-foreground/30 transition-colors">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+              <Briefcase className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Вакансии</div>
           </div>
-          <div className="text-3xl font-semibold tracking-tight mb-1">
-            {dashboardStats?.total_analyses?.toLocaleString() || 0}
-          </div>
-          <div className="text-xs text-green-500">+12% за месяц</div>
+          <div className="text-3xl font-semibold tracking-tight">{vacancies.length}</div>
+          <div className="text-xs text-muted-foreground mt-1">активных позиций</div>
         </div>
 
-        <div className="bg-card p-5">
-          <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
-            За этот месяц
+        <div className="bg-card border border-border rounded-lg p-5 hover:border-muted-foreground/30 transition-colors">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+              <Users className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Отклики</div>
           </div>
-          <div className="text-3xl font-semibold tracking-tight mb-1">
-            {dashboardStats?.analyses_this_month || 0}
-          </div>
-          <div className="text-xs text-zinc-500">
-            из {dashboardStats?.analyses_limit || 500} лимита
-          </div>
+          <div className="text-3xl font-semibold tracking-tight">{totalApplications}</div>
+          <div className="text-xs text-muted-foreground mt-1">всего кандидатов</div>
         </div>
 
-        <div className="bg-card p-5">
-          <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
-            Средний балл
+        <div className="bg-card border border-border rounded-lg p-5 hover:border-muted-foreground/30 transition-colors">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+              <Star className="h-5 w-5 text-green-600" />
+            </div>
+            <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Топ кандидаты</div>
           </div>
-          <div className="text-3xl font-semibold tracking-tight mb-1">
-            {dashboardStats?.avg_score?.toFixed(0) || 0}
-            <span className="text-lg text-zinc-500 font-normal">/100</span>
-          </div>
-          <div className="text-xs text-zinc-500">качество кандидатов</div>
-        </div>
-
-        <div className="bg-card p-5">
-          <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-2">
-            Рекомендовано к найму
-          </div>
-          <div className="text-3xl font-semibold tracking-tight mb-1">
+          <div className="text-3xl font-semibold tracking-tight text-green-600">
             {dashboardStats?.top_candidates_count || 0}
           </div>
-          <div className="text-xs text-green-500">
-            {dashboardStats?.total_analyses
-              ? Math.round((dashboardStats.top_candidates_count / dashboardStats.total_analyses) * 100)
-              : 0}% от общего
-          </div>
+          <div className="text-xs text-muted-foreground mt-1">рекомендованы к найму</div>
         </div>
       </motion.div>
 
-      {/* Charts Row */}
-      <div className="grid gap-6 lg:grid-cols-5">
-        {/* Chart */}
-        <motion.div {...fadeIn} className="lg:col-span-3">
-          <Card>
-            <CardHeader className="pb-0 flex flex-row items-center justify-between">
-              <CardTitle className="text-[13px] font-medium uppercase tracking-wide">
-                Динамика
-              </CardTitle>
-              <div className="flex gap-1">
-                {['6м', '12м', 'Всё'].map((tab, i) => (
-                  <button
-                    key={tab}
-                    className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                      i === 0
-                        ? 'bg-zinc-800 text-zinc-100'
-                        : 'text-zinc-500 hover:text-zinc-300'
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <div className="h-52">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={monthlyData}>
-                    <XAxis
-                      dataKey="name"
-                      stroke="#525252"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="#525252"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                      width={30}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#191919',
-                        border: '1px solid #262626',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                      }}
-                      labelStyle={{ color: '#a1a1a1' }}
-                      itemStyle={{ color: '#fafafa' }}
-                      formatter={(value: number) => [`${value}`, 'Анализов']}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="value"
-                      stroke="#a1a1a1"
-                      strokeWidth={1.5}
-                      dot={false}
-                      activeDot={{ r: 4, fill: '#fafafa' }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Distribution */}
-        <motion.div {...fadeIn} className="lg:col-span-2">
-          <Card className="h-full">
-            <CardHeader className="pb-0">
-              <CardTitle className="text-[13px] font-medium uppercase tracking-wide">
-                Распределение
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-5">
-                {getDistribution().map((item) => (
-                  <div key={item.label} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-sm ${item.color}`} />
-                      <span className="text-[13px] text-zinc-400">{item.label}</span>
+      {/* Вакансии с топ-кандидатами */}
+      {vacancies.length > 0 && (
+        <motion.div {...fadeIn}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">Ваши вакансии</h2>
+            <Link to="/sync" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+              Синхронизировать <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {vacancies.slice(0, 6).map((vacancy) => {
+              const topCount = getVacancyTopCount(vacancy.title);
+              return (
+                <button
+                  key={vacancy.id}
+                  onClick={() => navigate('/analysis?vacancy=' + vacancy.id)}
+                  className="bg-card border border-border rounded-lg p-4 text-left hover:border-muted-foreground/30 hover:bg-muted transition-all group"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="font-medium text-foreground group-hover:text-foreground truncate pr-2">
+                      {vacancy.title}
                     </div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-sm font-semibold">{item.count}</span>
-                      <span className="text-xs text-zinc-500">{item.percent}%</span>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-muted-foreground flex-shrink-0" />
+                  </div>
+                  <div className="flex items-center gap-4 text-xs">
+                    <span className="text-muted-foreground">
+                      <Users className="h-3 w-3 inline mr-1" />
+                      {vacancy.applications_count} откликов
+                    </span>
+                    {topCount > 0 && (
+                      <span className="text-green-600">
+                        <Star className="h-3 w-3 inline mr-1" />
+                        {topCount} топ
+                      </span>
+                    )}
+                    {vacancy.new_applications_count > 0 && (
+                      <span className="text-blue-600">+{vacancy.new_applications_count} новых</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Топ кандидаты с one-liner */}
+      {topCandidates.length > 0 && (
+        <motion.div {...fadeIn}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">Лучшие кандидаты</h2>
+            <Link to="/analysis" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+              Все результаты <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <Card>
+            <CardContent className="p-0">
+              <div className="divide-y divide-border">
+                {topCandidates.map((candidate, index) => (
+                  <div
+                    key={index}
+                    className="p-4 hover:bg-card transition-colors cursor-pointer"
+                    onClick={() => navigate('/analysis')}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-200 to-orange-300 flex items-center justify-center text-[11px] font-medium text-orange-800 flex-shrink-0">
+                        {candidate.candidate_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-foreground">{candidate.candidate_name}</span>
+                          <span className="text-amber-400 text-xs">
+                            {'★'.repeat(getPriorityStars(candidate.score))}
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mb-2">{candidate.vacancy_title}</div>
+                        <div className="text-sm text-muted-foreground italic">
+                          "{candidate.one_liner || 'Релевантный опыт, оценка ' + candidate.score + '%'}"
+                        </div>
+                      </div>
+                      <span className={'px-2 py-1 rounded text-[11px] font-medium border flex-shrink-0 ' + getRecommendationStyle(candidate.recommendation)}>
+                        {getRecommendationText(candidate.recommendation)}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -357,97 +305,79 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         </motion.div>
-      </div>
+      )}
 
-      {/* Table */}
-      <motion.div {...fadeIn}>
-        <Card>
-          <CardHeader className="pb-0 flex flex-row items-center justify-between">
-            <CardTitle className="text-[13px] font-medium uppercase tracking-wide">
-              Последние анализы
-            </CardTitle>
-            <div className="flex gap-1">
-              {[
-                { key: 'all', label: 'Все' },
-                { key: 'hire', label: 'Нанять' },
-                { key: 'reject', label: 'Отказ' },
-              ].map((filter) => (
-                <button
-                  key={filter.key}
-                  onClick={() => setActiveFilter(filter.key as typeof activeFilter)}
-                  className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                    activeFilter === filter.key
-                      ? 'bg-zinc-800 text-zinc-100'
-                      : 'text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4 px-0">
-            {filteredAnalyses.length > 0 ? (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-zinc-800">
-                    <th className="text-left py-3 px-5 text-[11px] font-medium uppercase tracking-wider text-zinc-500 bg-background">
-                      Кандидат
-                    </th>
-                    <th className="text-left py-3 px-5 text-[11px] font-medium uppercase tracking-wider text-zinc-500 bg-background">
-                      Балл
-                    </th>
-                    <th className="text-left py-3 px-5 text-[11px] font-medium uppercase tracking-wider text-zinc-500 bg-background">
-                      Статус
-                    </th>
-                    <th className="text-left py-3 px-5 text-[11px] font-medium uppercase tracking-wider text-zinc-500 bg-background">
-                      Время
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAnalyses.slice(0, 5).map((item, index) => (
-                    <tr
-                      key={index}
-                      className="border-b border-zinc-800/50 hover:bg-zinc-900/50 transition-colors"
-                    >
-                      <td className="py-4 px-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-md bg-zinc-800 flex items-center justify-center text-[10px] font-medium text-zinc-500">
-                            {item.candidate_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
-                          </div>
-                          <div>
-                            <div className="text-[13px] font-medium">{item.candidate_name}</div>
-                            <div className="text-xs text-zinc-500 mt-0.5">{item.vacancy_title}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-5">
-                        <span className="text-sm font-semibold tabular-nums">{item.score}</span>
-                      </td>
-                      <td className="py-4 px-5">
-                        <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-medium ${getRecommendationStyle(item.recommendation)}`}>
-                          {getRecommendationText(item.recommendation)}
-                        </span>
-                      </td>
-                      <td className="py-4 px-5 text-xs text-zinc-500">
-                        {getTimeAgo(item.analyzed_at)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-zinc-500 text-sm">Анализов пока нет</p>
-                <Button asChild className="mt-4" size="sm">
-                  <Link to="/analysis">Начать анализ</Link>
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Quick Actions + Usage */}
+      <motion.div {...fadeIn} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Button
+            variant="outline"
+            className="h-auto py-4 px-4 flex flex-col items-center gap-2 border-border hover:border-muted-foreground/30 hover:bg-muted"
+            onClick={() => navigate('/analysis')}
+          >
+            <Play className="h-5 w-5 text-muted-foreground" />
+            <span className="text-sm font-medium">Запустить анализ</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="h-auto py-4 px-4 flex flex-col items-center gap-2 border-border hover:border-muted-foreground/30 hover:bg-muted"
+            onClick={() => navigate('/sync')}
+          >
+            <RefreshCw className="h-5 w-5 text-muted-foreground" />
+            <span className="text-sm font-medium">Синхронизация</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="h-auto py-4 px-4 flex flex-col items-center gap-2 border-border hover:border-muted-foreground/30 hover:bg-muted"
+            onClick={() => navigate('/export')}
+          >
+            <Download className="h-5 w-5 text-muted-foreground" />
+            <span className="text-sm font-medium">Экспорт Excel</span>
+          </Button>
+        </div>
+
+        <div className="bg-card border border-border rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap className="h-4 w-4 text-muted-foreground" />
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Лимит</span>
+          </div>
+          <div className="flex items-baseline gap-2 mb-2">
+            <span className="text-2xl font-semibold">{dashboardStats?.analyses_this_month || 0}</span>
+            <span className="text-muted-foreground">/ {dashboardStats?.analyses_limit || 500}</span>
+          </div>
+          <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden mb-2">
+            <div
+              className="h-full bg-foreground rounded-full transition-all"
+              style={{ width: Math.min(usagePercent, 100) + '%' }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">{usagePercent}% использовано</span>
+            <Link to="/pricing" className="text-muted-foreground hover:text-foreground">Тарифы →</Link>
+          </div>
+        </div>
       </motion.div>
+
+      {/* Empty state если нет вакансий */}
+      {vacancies.length === 0 && (
+        <motion.div {...fadeIn}>
+          <Card className="border-dashed border-border">
+            <CardContent className="py-12 text-center">
+              <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">Нет вакансий</h3>
+              <p className="text-muted-foreground text-sm mb-6">
+                Синхронизируйте данные с HH.ru чтобы начать работу
+              </p>
+              <Button asChild>
+                <Link to="/sync">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Синхронизировать
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </div>
   );
 };
